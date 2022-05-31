@@ -8,8 +8,10 @@ from cmem.cmempy.workspace.tasks import get_task
 from cmem_plugin_base.dataintegration.description import Plugin, PluginParameter
 from cmem_plugin_base.dataintegration.parameter.dataset import DatasetParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
-from cmem_plugin_base.dataintegration.utils import split_task_id, setup_cmempy_super_user_access
-
+from cmem_plugin_base.dataintegration.utils import (
+    split_task_id,
+    setup_cmempy_super_user_access
+)
 from .utils import KafkaProducer, KafkaMessageHandler
 
 
@@ -92,12 +94,6 @@ class KafkaPlugin(WorkflowPlugin):
 
     def execute(self, inputs=()):
         self.log.info("Start Kafka Plugin")
-        # config = {'bootstrap.servers': 'pkc-41p56.asia-south1.gcp.confluent.cloud:9092',
-        #           'security.protocol': 'SASL_SSL',
-        #           "sasl.mechanisms": 'PLAIN',
-        #           'sasl.username': 'TC2IW5HENF4SKHQZ',
-        #           'sasl.password': 'HpXkv3NEQREF9olPA1PHWUzHVaw3oIh9J0+TsVEewZODf2atlpd4kzhSKi7h9zr6'}
-
         kafka_connection_config = {'bootstrap.servers': self.bootstrap_servers,
                                    'security.protocol': self.security_protocol,
                                    "sasl.mechanisms": self.sasl_mechanisms,
@@ -108,7 +104,8 @@ class KafkaPlugin(WorkflowPlugin):
         # turn off namespaces
         parser.setFeature(xml.sax.handler.feature_namespaces, 0)
         # override the default ContextHandler
-        handler = KafkaMessageHandler(KafkaProducer(kafka_connection_config, self.kafka_topic))
+        handler = KafkaMessageHandler(KafkaProducer(kafka_connection_config,
+                                                    self.kafka_topic))
         parser.setContentHandler(handler)
 
         with self.get_resource_from_dataset() as response:

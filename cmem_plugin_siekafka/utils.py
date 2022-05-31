@@ -1,6 +1,5 @@
 import xml.sax
 from xml.sax.saxutils import escape
-import xml.etree.ElementTree as ET
 from confluent_kafka import Producer
 
 
@@ -22,6 +21,7 @@ class KafkaMessageHandler(xml.sax.handler.ContentHandler):
         super().__init__()
         self._message = ""
         self._kafka_producer = kafka_producer
+        self._level = 0
 
     @staticmethod
     def attrs_s(attrs):
@@ -35,23 +35,29 @@ class KafkaMessageHandler(xml.sax.handler.ContentHandler):
     def startElement(self, tag, attributes):
         """Call when an element starts"""
         if tag == 'Message':
-            self.rest_for_next_message()
-        else:
+            self._level += 1
+            if self._level == 1:
+                self.rest_for_next_message()
+        elif self._level > 0:
             open_tag = '<%s%s>' % (tag, self.attrs_s(attributes))
             self._message += open_tag
 
     def endElement(self, tag):
         """Call when an elements end"""
-        if tag == "Message":
-            self._kafka_producer.process(self._message)
-            self.rest_for_next_message()
-        else:
+
+        if tag == "Message" and self._level >= 1:
+            self._level -= 1
+            if self._level == 0:
+                self._kafka_producer.process(self._message)
+                self.rest_for_next_message()
+        elif self._level > 0:
             end_tag = f'</{tag}>'
             self._message += end_tag
 
     def characters(self, content: str):
         """Call when a character is read"""
-        self._message += content
+        if self._level > 0:
+            self._message += content
 
     def endDocument(self):
         self._kafka_producer.poll(1000)
@@ -59,4 +65,3 @@ class KafkaMessageHandler(xml.sax.handler.ContentHandler):
     def rest_for_next_message(self):
         """To reset _message"""
         self._message = '<?xml version="1.0" encoding="UTF-8"?>'
-
