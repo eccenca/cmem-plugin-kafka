@@ -61,6 +61,7 @@ class KafkaMessageHandler(xml.sax.handler.ContentHandler):
         self._message += content
 
     def endDocument(self):
+        """End of the file"""
         self._kafka_producer.poll(1000)
 
     def rest_for_next_message(self):
