@@ -1,7 +1,7 @@
 """siemens playground plugin module"""
 
 import io
-import xml.sax
+from defusedxml import sax
 
 from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
 from cmem.cmempy.workspace.tasks import get_task
@@ -100,9 +100,8 @@ class KafkaPlugin(WorkflowPlugin):
                                    'sasl.username': self.sasl_username,
                                    'sasl.password': self.sasl_password}
 
-        parser = xml.sax.make_parser()
-        # turn off namespaces
-        parser.setFeature(xml.sax.handler.feature_namespaces, 0)
+        parser = sax.make_parser()
+
         # override the default ContextHandler
         handler = KafkaMessageHandler(KafkaProducer(kafka_connection_config,
                                                     self.kafka_topic))
@@ -115,6 +114,7 @@ class KafkaPlugin(WorkflowPlugin):
             parser.parse(xml_stream)
 
     def get_resource_from_dataset(self):
+        """Get resource from dataset"""
         setup_cmempy_super_user_access()
         project_id, task_id = split_task_id(self.message_dataset)
         task_meta_data = get_task(
