@@ -1,4 +1,5 @@
 """Kafka utils modules"""
+import logging
 import re
 from xml.sax.handler import ContentHandler  # nosec B406
 from xml.sax.saxutils import escape  # nosec B406
@@ -24,11 +25,17 @@ class KafkaProducer:
 
 class KafkaMessageHandler(ContentHandler):
     """Custom Callback Kafka XML content handler"""
-    def __init__(self, kafka_producer: KafkaProducer):
+    def __init__(self, kafka_producer: KafkaProducer, plugin_logger=None):
         super().__init__()
         self._message = ""
         self._kafka_producer = kafka_producer
         self._level = 0
+        self._no_of_children = 0
+        # if plugin logger is None, use default logger.
+        if plugin_logger is not None:
+            self._log = plugin_logger
+        else:
+            self._log = logging
 
     @staticmethod
     def attrs_s(attrs):
@@ -41,25 +48,38 @@ class KafkaMessageHandler(ContentHandler):
 
     def startElement(self, name, attrs):
         """Call when an element starts"""
-        if name == 'Message' and self._level == 1:
+        self._level += 1
+
+        if name == 'Message' and self._level == 2:
             self.rest_for_next_message()
         else:
-            self._level += 1
             open_tag = f'<{name}{self.attrs_s(attrs)}>'
             self._message += open_tag
+
+        # Number of child for Message tag
+        if self._level == 3:
+            self._no_of_children += 1
 
     def endElement(self, name):
         """Call when an elements end"""
 
-        if name == "Message" and self._level == 1:
-            final_message = re.sub(r'>[ \n]+<', '><', self._message)
-            final_message = re.sub(r'[\n ]+$', '', final_message)
-            self._kafka_producer.process(final_message)
+        if name == "Message" and self._level == 2:
+            # If number of children are more than 1,
+            # We can not construct proper kafka xml message.
+            # So, log the error message
+            if self._no_of_children == 1:
+                final_message = re.sub(r'>[ \n]+<', '><', self._message)
+                final_message = re.sub(r'[\n ]+$', '', final_message)
+                self._kafka_producer.process(final_message)
+            else:
+                self._log.error("Not able to process this message. "
+                                "Reason: Identified more than one children.")
+
             self.rest_for_next_message()
         else:
-            self._level -= 1
             end_tag = f'</{name}>'
             self._message += end_tag
+        self._level -= 1
 
     def characters(self, content: str):
         """Call when a character is read"""
@@ -72,3 +92,4 @@ class KafkaMessageHandler(ContentHandler):
     def rest_for_next_message(self):
         """To reset _message"""
         self._message = '<?xml version="1.0" encoding="UTF-8"?>'
+        self._no_of_children = 0

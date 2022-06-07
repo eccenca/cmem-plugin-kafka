@@ -104,7 +104,8 @@ class KafkaPlugin(WorkflowPlugin):
 
         # override the default ContextHandler
         handler = KafkaMessageHandler(KafkaProducer(kafka_connection_config,
-                                                    self.kafka_topic))
+                                                    self.kafka_topic),
+                                      plugin_logger=self.log)
         parser.setContentHandler(handler)
 
         with self.get_resource_from_dataset() as response:
