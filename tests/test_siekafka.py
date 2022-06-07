@@ -1,6 +1,7 @@
 """Plugin tests."""
 import pytest
 import requests
+from cmem_plugin_base.dataintegration.utils import setup_cmempy_super_user_access
 
 from cmem_plugin_siekafka.config import (
     BOOTSTRAP_SERVER,
@@ -11,6 +12,7 @@ from cmem_plugin_siekafka.config import (
     TOPIC
 )
 from cmem_plugin_siekafka import KafkaPlugin
+from .utils import needs_cmem
 
 
 def test_execution_dataset():
@@ -28,7 +30,8 @@ def test_execution_dataset():
         plugin.execute()
 
 
-def test_execution_():
+@needs_cmem
+def test_execution_valid():
     """Test plugin execution"""
     plugin = KafkaPlugin(
         message_dataset='kafka-producer:kafka-message-duplicates.xml',
@@ -40,6 +43,5 @@ def test_execution_():
         kafka_topic=TOPIC
     )
     with pytest.raises(requests.exceptions.HTTPError):
+        setup_cmempy_super_user_access()
         plugin.execute()
-
-
