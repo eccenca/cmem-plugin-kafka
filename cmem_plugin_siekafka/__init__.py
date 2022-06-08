@@ -37,7 +37,7 @@ from .utils import KafkaProducer, KafkaMessageHandler
         ),
         PluginParameter(
             name="bootstrap_servers",
-            label="Bootstrap Servers",
+            label="Bootstrap Server",
             description="server id to be connected",
         ),
         PluginParameter(
