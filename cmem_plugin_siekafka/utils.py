@@ -3,12 +3,12 @@ import logging
 import re
 from xml.sax.handler import ContentHandler  # nosec B406
 from xml.sax.saxutils import escape  # nosec B406
-
 from confluent_kafka import Producer
 
 
 class KafkaProducer:
     """Kafka producer wrapper over conflunet producer"""
+
     def __init__(self, config: dict, topic: str):
         """Create Producer instance"""
         self._producer = Producer(config)
@@ -25,12 +25,14 @@ class KafkaProducer:
 
 class KafkaMessageHandler(ContentHandler):
     """Custom Callback Kafka XML content handler"""
+
     def __init__(self, kafka_producer: KafkaProducer, plugin_logger=None):
         super().__init__()
         self._message = ""
         self._kafka_producer = kafka_producer
         self._level = 0
         self._no_of_children = 0
+        self._no_of_success_messages = 0
         # if plugin logger is None, use default logger.
         if plugin_logger is not None:
             self._log = plugin_logger
@@ -70,6 +72,7 @@ class KafkaMessageHandler(ContentHandler):
             if self._no_of_children == 1:
                 final_message = re.sub(r'>[ \n]+<', '><', self._message)
                 final_message = re.sub(r'[\n ]+$', '', final_message)
+                self._no_of_success_messages += 1
                 self._kafka_producer.process(final_message)
             else:
                 self._log.error("Not able to process this message. "
@@ -93,3 +96,7 @@ class KafkaMessageHandler(ContentHandler):
         """To reset _message"""
         self._message = '<?xml version="1.0" encoding="UTF-8"?>'
         self._no_of_children = 0
+
+    def get_success_messages_count(self) -> int:
+        """Return count of the successful messages"""
+        return self._no_of_success_messages

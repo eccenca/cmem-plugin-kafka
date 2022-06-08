@@ -1,18 +1,46 @@
 """siemens playground plugin module"""
 
 import io
+import uuid
+
+
 from defusedxml import sax
 
 from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
 from cmem.cmempy.workspace.tasks import get_task
-from cmem_plugin_base.dataintegration.description import Plugin, PluginParameter
+from cmem_plugin_base.dataintegration.entity import (
+    Entities, Entity, EntityPath, EntitySchema
+)
+from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
 from cmem_plugin_base.dataintegration.parameter.dataset import DatasetParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.utils import (
     split_task_id,
     setup_cmempy_super_user_access
 )
+
 from .utils import KafkaProducer, KafkaMessageHandler
+
+
+def generate_entities(messages_count: int) -> Entities:
+    """generates entities"""
+    # create the entities
+    entities = []
+    for _ in range(messages_count):
+        entity_uri = f"urn:uuid:{str(uuid.uuid4())}"
+        entities.append(Entity(uri=entity_uri, values=[]))
+
+    # create the schema
+    paths = []
+    for path_no in range(1):
+        path_uri = f"https://example.org/vocab/RandomValuePath/{path_no}"
+        paths.append(EntityPath(path=path_uri))
+    schema = EntitySchema(
+        type_uri="https://example.org/vocab/RandomValueRow",
+        paths=paths,
+    )
+
+    return Entities(entities=entities, schema=schema)
 
 
 @Plugin(
@@ -92,7 +120,7 @@ class KafkaPlugin(WorkflowPlugin):
         self.sasl_password = sasl_password
         self.kafka_topic = kafka_topic
 
-    def execute(self, inputs=()):
+    def execute(self, inputs=()) -> Entities:
         self.log.info("Start Kafka Plugin")
         kafka_connection_config = {'bootstrap.servers': self.bootstrap_servers,
                                    'security.protocol': self.security_protocol,
@@ -113,6 +141,9 @@ class KafkaPlugin(WorkflowPlugin):
 
         with data as xml_stream:
             parser.parse(xml_stream)
+
+        count = handler.get_success_messages_count()
+        return generate_entities(messages_count=count)
 
     def get_resource_from_dataset(self):
         """Get resource from dataset"""
