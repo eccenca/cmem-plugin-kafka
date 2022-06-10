@@ -1,8 +1,10 @@
 """Plugin tests."""
 import pytest
-import requests
-from cmem_plugin_base.dataintegration.utils import setup_cmempy_super_user_access
-
+from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset, get_dataset
+from cmem.cmempy.workspace.projects.project import make_new_project, delete_project
+from cmem.cmempy.workspace.projects.resources.resource import create_resource
+from confluent_kafka import cimpl
+from .utils import needs_cmem
 from cmem_plugin_siekafka.config import (
     BOOTSTRAP_SERVER,
     SECURITY_PROTOCOL,
@@ -12,36 +14,76 @@ from cmem_plugin_siekafka.config import (
     TOPIC
 )
 from cmem_plugin_siekafka import KafkaPlugin
-from .utils import needs_cmem
+
+PROJECT_NAME = "kafka_test_project"
+DATASET_NAME = "sample-test"
+DATASET_TYPE = 'xml'
+RESOURCE_NAME = f'{DATASET_NAME}.{DATASET_TYPE}'
+DATASET_ID = f'{PROJECT_NAME}:{DATASET_NAME}'
 
 
-def test_execution_dataset():
-    """Test plugin execution"""
-    plugin = KafkaPlugin(
-        message_dataset='sample',
-        bootstrap_servers=BOOTSTRAP_SERVER,
-        security_protocol=SECURITY_PROTOCOL,
-        sasl_mechanisms=SASL_MECHANISMS,
-        sasl_username=SASL_U,
-        sasl_password=SASL_P,
-        kafka_topic=TOPIC
+@pytest.fixture
+def setup(request):
+    make_new_project(PROJECT_NAME)
+    make_new_dataset(
+        project_name=PROJECT_NAME,
+        dataset_name=DATASET_NAME,
+        dataset_type=DATASET_TYPE,
+        parameters={"file": RESOURCE_NAME},
+        autoconfigure=False,
     )
-    with pytest.raises(ValueError):
-        plugin.execute()
+    with open('tests/sample-test.xml', 'rb') as response_file:
+        create_resource(
+            project_name=PROJECT_NAME,
+            resource_name=RESOURCE_NAME,
+            file_resource=response_file,
+            replace=True,
+        )
+
+    def teardown():
+        delete_project(PROJECT_NAME)
+
+    request.addfinalizer(teardown)
+
+    return get_dataset(PROJECT_NAME, DATASET_NAME)
 
 
 @needs_cmem
-def test_execution_valid():
+def test_execution(setup):
     """Test plugin execution"""
-    plugin = KafkaPlugin(
-        message_dataset='kafka-producer:kafka-message-duplicates.xml',
+    KafkaPlugin(
+        message_dataset=DATASET_ID,
         bootstrap_servers=BOOTSTRAP_SERVER,
         security_protocol=SECURITY_PROTOCOL,
         sasl_mechanisms=SASL_MECHANISMS,
         sasl_username=SASL_U,
         sasl_password=SASL_P,
         kafka_topic=TOPIC
-    )
-    with pytest.raises(requests.exceptions.HTTPError):
-        setup_cmempy_super_user_access()
-        plugin.execute()
+    ).execute()
+
+
+@needs_cmem
+def test_validate_invalid_inputs(setup):
+    # Invalid Dataset
+    with pytest.raises(ValueError):
+        KafkaPlugin(
+            message_dataset='sample',
+            bootstrap_servers=BOOTSTRAP_SERVER,
+            security_protocol=SECURITY_PROTOCOL,
+            sasl_mechanisms=SASL_MECHANISMS,
+            sasl_username=SASL_U,
+            sasl_password=SASL_P,
+            kafka_topic=TOPIC
+        ).execute()
+
+    # Invalid SECURITY PROTOCOL
+    with pytest.raises(cimpl.KafkaException):
+        KafkaPlugin(
+            message_dataset=DATASET_ID,
+            bootstrap_servers=BOOTSTRAP_SERVER,
+            security_protocol='INVALID_PROTOCOL',
+            sasl_mechanisms=SASL_MECHANISMS,
+            sasl_username=SASL_U,
+            sasl_password=SASL_P,
+            kafka_topic=TOPIC
+        ).execute()

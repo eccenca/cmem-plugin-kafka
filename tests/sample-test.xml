@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<KafkaMessages>
+  <Message>
+    <SingleTagHere>
+      <SubTagA>any content</SubTagA>
+      <SubTagB>can be delivered</SubTagB>
+      <SubTagC>here</SubTagC>
+    </SingleTagHere>
+  </Message>
+  <Message>
+    <SingleTagHere>
+      <SubTagD>any content</SubTagD>
+      <SubTagE>can be delivered</SubTagE>
+        <Message>
+          <SingleTagHere>
+            <SubTagX>any content</SubTagX>
+            <SubTagY>can be delivered</SubTagY>
+          </SingleTagHere>
+        </Message>
+      <SubTagF>here</SubTagF>
+    </SingleTagHere>
+  </Message>
+  <Message>
+    <SingleTagHere>
+      <SubTagG>any content</SubTagG>
+      <SubTagH>can be delivered</SubTagH>
+      <SubTagI>here</SubTagI>
+    </SingleTagHere>
+  </Message>
+</KafkaMessages>
