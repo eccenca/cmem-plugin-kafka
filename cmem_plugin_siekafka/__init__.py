@@ -120,6 +120,7 @@ class KafkaPlugin(WorkflowPlugin):
         self.sasl_username = sasl_username
         self.sasl_password = sasl_password
         self.kafka_topic = kafka_topic
+        self.validate_connection()
 
     def validate_connection(self):
         """Validate kafka configuration"""
