@@ -3,23 +3,24 @@
 import io
 import uuid
 
-
-from defusedxml import sax
-
 from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
 from cmem.cmempy.workspace.tasks import get_task
+from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
 from cmem_plugin_base.dataintegration.entity import (
     Entities, Entity, EntityPath, EntitySchema
 )
-from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
 from cmem_plugin_base.dataintegration.parameter.dataset import DatasetParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.utils import (
     split_task_id,
     setup_cmempy_super_user_access
 )
+from confluent_kafka.admin import AdminClient, ClusterMetadata, TopicMetadata
+from defusedxml import sax
 
 from .utils import KafkaProducer, KafkaMessageHandler
+
+KAFKA_TIMEOUT = 5
 
 
 def generate_entities(messages_count: int) -> Entities:
@@ -120,18 +121,34 @@ class KafkaPlugin(WorkflowPlugin):
         self.sasl_password = sasl_password
         self.kafka_topic = kafka_topic
 
+    def validate_connection(self):
+        """Validate kafka configuration"""
+        admin_client = AdminClient(self.get_config())
+        cluster_metadata: ClusterMetadata = \
+            admin_client.list_topics(topic=self.kafka_topic,
+                                     timeout=KAFKA_TIMEOUT)
+
+        topic_meta: TopicMetadata = cluster_metadata.topics[self.kafka_topic]
+        kafka_error = topic_meta.error
+
+        if kafka_error is not None:
+            raise kafka_error
+
+    def get_config(self):
+        """construct and return kafka connection configuration"""
+        return {'bootstrap.servers': self.bootstrap_servers,
+                'security.protocol': self.security_protocol,
+                "sasl.mechanisms": self.sasl_mechanisms,
+                'sasl.username': self.sasl_username,
+                'sasl.password': self.sasl_password}
+
     def execute(self, inputs=()) -> Entities:
         self.log.info("Start Kafka Plugin")
-        kafka_connection_config = {'bootstrap.servers': self.bootstrap_servers,
-                                   'security.protocol': self.security_protocol,
-                                   "sasl.mechanisms": self.sasl_mechanisms,
-                                   'sasl.username': self.sasl_username,
-                                   'sasl.password': self.sasl_password}
 
         parser = sax.make_parser()
 
         # override the default ContextHandler
-        handler = KafkaMessageHandler(KafkaProducer(kafka_connection_config,
+        handler = KafkaMessageHandler(KafkaProducer(self.get_config(),
                                                     self.kafka_topic),
                                       plugin_logger=self.log)
         parser.setContentHandler(handler)
