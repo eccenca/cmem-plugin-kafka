@@ -17,11 +17,13 @@ include = ["CHANGELOG.md"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-cmem-plugin-base = "^1"
+cmem-plugin-base = "^1.1.1"
 confluent-kafka = [
     { version = "1.8.2" },
     { markers = "sys_platform == 'darwin'", url = "https://files.pythonhosted.org/packages/fb/16/d04dded73439266a3dbcd585f1128483dcf509e039bacd93642ac5de97d4/confluent-kafka-1.8.2.tar.gz"}
 ]
+defusedxml = "^0.7.1"
+
 [tool.poetry.dev-dependencies]
 pytest = "^7.0"
 pytest-cov = "^3.0.0"
@@ -52,7 +54,7 @@ disable = "fixme"
 
 # https://black.readthedocs.io/en/stable/guides/using_black_with_other_tools.html#pylint
 [tool.pylint.messages_control]
-disable = "C0330, C0326, R0903"
+disable = "R0913"  # C0330, C0326,
 
 [tool.pylint.format]
 max-line-length = "88"
