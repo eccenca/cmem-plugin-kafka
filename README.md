@@ -1,6 +1,6 @@
-# cmem-plugin-siekafka
+# cmem-plugin-kafka
 
-Producer / consumer plugins for SIEPKN
+Producer / consumer plugins for kafka
 
 ## Development
 

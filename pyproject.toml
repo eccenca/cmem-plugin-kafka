@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "cmem-plugin-siekafka"
+name = "cmem-plugin-kafka"
 version = "0.0.1"
 license = "Apache-2.0"
-description = "Producer / consumer plugins for SIEPKN"
+description = "Producer / consumer plugins for kafka"
 authors = ["eccenca <cmempy-developer@eccenca.com>"]
 classifiers = [
     "Development Status :: 4 - Beta",
