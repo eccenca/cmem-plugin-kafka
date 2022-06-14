@@ -145,7 +145,8 @@ class KafkaPlugin(WorkflowPlugin):
 
     def execute(self, inputs=()) -> Entities:
         self.log.info("Start Kafka Plugin")
-
+        self.validate_connection()
+        
         parser = sax.make_parser()
 
         # override the default ContextHandler
