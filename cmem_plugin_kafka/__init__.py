@@ -29,15 +29,15 @@ def generate_entities(messages_count: int) -> Entities:
     entities = []
     for _ in range(messages_count):
         entity_uri = f"urn:uuid:{str(uuid.uuid4())}"
-        entities.append(Entity(uri=entity_uri, values=[]))
+        entities.append(Entity(uri=entity_uri, values=[[]]))
 
     # create the schema
     paths = []
     for path_no in range(1):
-        path_uri = f"https://example.org/vocab/RandomValuePath/{path_no}"
+        path_uri = f"https://example.org/vocab/KafkaValuePath/{path_no}"
         paths.append(EntityPath(path=path_uri))
     schema = EntitySchema(
-        type_uri="https://example.org/vocab/RandomValueRow",
+        type_uri="https://example.org/vocab/KafkaValueRow",
         paths=paths,
     )
 
