@@ -2,6 +2,7 @@
 
 import io
 import uuid
+from typing import Optional
 
 from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
 from cmem.cmempy.workspace.tasks import get_task
@@ -11,6 +12,7 @@ from cmem_plugin_base.dataintegration.entity import (
 )
 from cmem_plugin_base.dataintegration.parameter.dataset import DatasetParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
+from cmem_plugin_base.dataintegration.types import Autocompletion, StringParameterType
 from cmem_plugin_base.dataintegration.utils import (
     split_task_id,
     setup_cmempy_super_user_access
@@ -21,6 +23,45 @@ from defusedxml import sax
 from .utils import KafkaProducer, KafkaMessageHandler
 
 KAFKA_TIMEOUT = 5
+
+# Security Protocols
+SECURITY_PROTOCOLS = [
+    ["SASL_SSL", "if SSL encryption is enabled (SSL encryption"
+                 " should always be used if SASL mechanism is PLAIN)"],
+    ["SASL_PLAINTEXT", "if SSL encryption is not enabled"],
+    ["NONE", "if hosted Kafka"]
+]
+# SASL Mechanisms
+SASL_MECHANISMS = [
+    ["PLAIN", "if SASL mechanism is PLAIN"],
+    ["NONE", "if hosted Kafka"],
+]
+
+
+class DropDown(StringParameterType):
+    """Drop Down for a list"""
+
+    allow_only_autocompleted_values: bool = True
+
+    autocomplete_value_with_labels: bool = True
+
+    drop_list: list[list[str]] = [[]]
+
+    def __init__(
+            self, drop_list=None
+    ):
+        """Dataset parameter type."""
+        if drop_list is None:
+            drop_list = [[]]
+        self.drop_list = drop_list
+
+    def autocomplete(
+            self, query_terms: list[str], project_id: Optional[str] = None
+    ) -> list[Autocompletion]:
+        return [
+            Autocompletion(value=name, label=f"{name}: {description}")
+            for name, description in self.drop_list
+        ]
 
 
 def generate_entities(messages_count: int) -> Entities:
@@ -73,13 +114,13 @@ def generate_entities(messages_count: int) -> Entities:
             name="security_protocol",
             label="Security Protocol",
             description="specify the security protocol while connecting the server",
-            default_value="SASL_SSL"
+            param_type=DropDown(drop_list=SECURITY_PROTOCOLS)
         ),
         PluginParameter(
             name="sasl_mechanisms",
             label="SASL Mechanisms",
             description="specify the sasl mechanisms",
-            default_value="PLAIN"
+            param_type=DropDown(drop_list=SASL_MECHANISMS)
         ),
         PluginParameter(
             name="sasl_username",
