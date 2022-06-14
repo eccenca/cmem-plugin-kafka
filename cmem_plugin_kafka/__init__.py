@@ -89,15 +89,18 @@ def generate_entities(messages_count: int) -> Entities:
     label="Kafka",
     description="Plugin to manage producer and consumer messages of a topic",
     documentation="""This example workflow operator produces and
-    consumes messages from a topic of cluster on a given
-    bootstrap server.
-    Parameters to connect bootstrap server.
-    - 'bootstrap_servers': server id to be connected
-    - 'security_protocol': specify the security protocol while connecting the server
-    - 'sasl_mechanisms': specify the sasl mechanisms
-    - 'sasl_username': specify the username to connect to the server.
-    - 'sasl_password': specify the password to connect to the server.
-    """,
+consumes messages from a topic of cluster on a given
+bootstrap server.
+
+Parameters to connect bootstrap server.
+
+- `bootstrap_servers`: server id to be connected
+- `security_protocol`: specify the security protocol while connecting the server
+- `sasl_mechanisms`: specify the sasl mechanisms
+- `sasl_username`: specify the username to connect to the server.
+- `sasl_password`: specify the password to connect to the server.
+- `kafka_topic`: specify the topic for the data to be created.
+""",
     parameters=[
         PluginParameter(
             name="message_dataset",
