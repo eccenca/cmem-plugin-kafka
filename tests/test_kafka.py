@@ -62,6 +62,19 @@ def test_execution(setup):
     ).execute()
 
 
+def test_execution_plain_kafka(setup):
+    """Test plugin execution for Plain Kafka"""
+    KafkaPlugin(
+        message_dataset=DATASET_ID,
+        bootstrap_servers='172.17.0.1:9093',
+        security_protocol='PLAINTEXT',
+        sasl_mechanisms='PLAIN',
+        sasl_username='',
+        sasl_password='',
+        kafka_topic=TOPIC
+    ).execute()
+
+
 @needs_cmem
 def test_validate_invalid_inputs(setup):
     # Invalid Dataset
