@@ -1,19 +1,12 @@
 """Plugin tests."""
 import pytest
-from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset, get_dataset
+from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
 from cmem.cmempy.workspace.projects.project import make_new_project, delete_project
 from cmem.cmempy.workspace.projects.resources.resource import create_resource
 from confluent_kafka import cimpl
-from .utils import needs_cmem
-from cmem_plugin_kafka.config import (
-    BOOTSTRAP_SERVER,
-    SECURITY_PROTOCOL,
-    SASL_MECHANISMS,
-    SASL_U,
-    SASL_P,
-    TOPIC
-)
+
 from cmem_plugin_kafka import KafkaPlugin
+from .utils import needs_cmem, needs_kafka, get_kafka_config
 
 PROJECT_NAME = "kafka_test_project"
 DATASET_NAME = "sample-test"
@@ -21,9 +14,13 @@ DATASET_TYPE = 'xml'
 RESOURCE_NAME = f'{DATASET_NAME}.{DATASET_TYPE}'
 DATASET_ID = f'{PROJECT_NAME}:{DATASET_NAME}'
 
+KAFKA_CONFIG = get_kafka_config()
+DEFAULT_TOPIC = 'eccenca_kafka'
+
 
 @pytest.fixture
-def setup(request):
+def project(request):
+    """Provides the DI build project incl. assets."""
     make_new_project(PROJECT_NAME)
     make_new_dataset(
         project_name=PROJECT_NAME,
@@ -40,63 +37,73 @@ def setup(request):
             replace=True,
         )
 
-    def teardown():
-        delete_project(PROJECT_NAME)
-
-    request.addfinalizer(teardown)
-
-    return get_dataset(PROJECT_NAME, DATASET_NAME)
+    request.addfinalizer(lambda: delete_project(PROJECT_NAME))
 
 
 @needs_cmem
-def test_execution(setup):
-    """Test plugin execution"""
-    KafkaPlugin(
-        message_dataset=DATASET_ID,
-        bootstrap_servers=BOOTSTRAP_SERVER,
-        security_protocol=SECURITY_PROTOCOL,
-        sasl_mechanisms=SASL_MECHANISMS,
-        sasl_username=SASL_U,
-        sasl_password=SASL_P,
-        kafka_topic=TOPIC
-    ).execute()
-
-
-def test_execution_plain_kafka(setup):
+@needs_kafka
+def test_execution_plain_kafka(project):
     """Test plugin execution for Plain Kafka"""
     KafkaPlugin(
         message_dataset=DATASET_ID,
-        bootstrap_servers='172.17.0.1:9093',
-        security_protocol='PLAINTEXT',
-        sasl_mechanisms='PLAIN',
-        sasl_username='',
-        sasl_password='',
-        kafka_topic=TOPIC
+        bootstrap_servers=KAFKA_CONFIG['bootstrap_server'],
+        security_protocol=KAFKA_CONFIG['security_protocol'],
+        sasl_mechanisms=KAFKA_CONFIG['sasl_mechanisms'],
+        sasl_username=KAFKA_CONFIG['sasl_username'],
+        sasl_password=KAFKA_CONFIG['sasl_password'],
+        kafka_topic=DEFAULT_TOPIC
     ).execute()
 
 
 @needs_cmem
-def test_validate_invalid_inputs(setup):
+@needs_kafka
+def test_validate_invalid_inputs(project):
     # Invalid Dataset
     with pytest.raises(ValueError):
         KafkaPlugin(
             message_dataset='sample',
-            bootstrap_servers=BOOTSTRAP_SERVER,
-            security_protocol=SECURITY_PROTOCOL,
-            sasl_mechanisms=SASL_MECHANISMS,
-            sasl_username=SASL_U,
-            sasl_password=SASL_P,
-            kafka_topic=TOPIC
+            bootstrap_servers=KAFKA_CONFIG['bootstrap_server'],
+            security_protocol=KAFKA_CONFIG['security_protocol'],
+            sasl_mechanisms=KAFKA_CONFIG['sasl_mechanisms'],
+            sasl_username=KAFKA_CONFIG['sasl_username'],
+            sasl_password=KAFKA_CONFIG['sasl_password'],
+            kafka_topic=DEFAULT_TOPIC
         ).execute()
 
     # Invalid SECURITY PROTOCOL
     with pytest.raises(cimpl.KafkaException):
         KafkaPlugin(
             message_dataset=DATASET_ID,
-            bootstrap_servers=BOOTSTRAP_SERVER,
+            bootstrap_servers=KAFKA_CONFIG['bootstrap_server'],
             security_protocol='INVALID_PROTOCOL',
-            sasl_mechanisms=SASL_MECHANISMS,
-            sasl_username=SASL_U,
-            sasl_password=SASL_P,
-            kafka_topic=TOPIC
+            sasl_mechanisms=KAFKA_CONFIG['sasl_mechanisms'],
+            sasl_username=KAFKA_CONFIG['sasl_username'],
+            sasl_password=KAFKA_CONFIG['sasl_password'],
+            kafka_topic=DEFAULT_TOPIC
         ).execute()
+
+
+def test_validate_bootstrap_server():
+    """Validate bootstrap service value"""
+    with pytest.raises(ValueError, match="Specified server id is invalid"):
+        KafkaPlugin(
+            bootstrap_servers=1,
+            message_dataset=DATASET_ID,
+            security_protocol=KAFKA_CONFIG['security_protocol'],
+            sasl_mechanisms=KAFKA_CONFIG['sasl_mechanisms'],
+            sasl_username=KAFKA_CONFIG['sasl_username'],
+            sasl_password=KAFKA_CONFIG['sasl_password'],
+            kafka_topic=DEFAULT_TOPIC
+        )
+
+    with pytest.raises(cimpl.KafkaException, match="KafkaError{code=_TRANSPORT,val=-195,"
+                                                   "str=\"Failed to get metadata: Local: Broker transport failure\"}"):
+        KafkaPlugin(
+            bootstrap_servers='invalid_bootstrap_server:9092',
+            message_dataset=DATASET_ID,
+            security_protocol=KAFKA_CONFIG['security_protocol'],
+            sasl_mechanisms=KAFKA_CONFIG['sasl_mechanisms'],
+            sasl_username=KAFKA_CONFIG['sasl_username'],
+            sasl_password=KAFKA_CONFIG['sasl_password'],
+            kafka_topic=DEFAULT_TOPIC
+        )

@@ -164,8 +164,7 @@ class KafkaPlugin(WorkflowPlugin):
         self.sasl_username = sasl_username
         self.sasl_password = sasl_password
         self.kafka_topic = kafka_topic
-        if 'confluent' in bootstrap_servers:
-            self.validate_connection()
+        self.validate_connection()
 
     def validate_connection(self):
         """Validate kafka configuration"""
@@ -190,8 +189,7 @@ class KafkaPlugin(WorkflowPlugin):
 
     def execute(self, inputs=()) -> Entities:
         self.log.info("Start Kafka Plugin")
-        if 'confluent' in self.bootstrap_servers:
-            self.validate_connection()
+        self.validate_connection()
         parser = sax.make_parser()
 
         # override the default ContextHandler

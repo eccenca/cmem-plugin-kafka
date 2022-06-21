@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <KafkaMessages>
-  <Message>
+  <Message key="12345">
     <SingleTagHere>
       <SubTagA>any content</SubTagA>
       <SubTagB>can be delivered</SubTagB>
