@@ -101,9 +101,9 @@ def test_validate_bootstrap_server():
         KafkaPlugin(
             bootstrap_servers='invalid_bootstrap_server:9092',
             message_dataset=DATASET_ID,
-            security_protocol=KAFKA_CONFIG['security_protocol'],
-            sasl_mechanisms=KAFKA_CONFIG['sasl_mechanisms'],
-            sasl_username=KAFKA_CONFIG['sasl_username'],
-            sasl_password=KAFKA_CONFIG['sasl_password'],
+            security_protocol="PLAINTEXT",
+            sasl_mechanisms="PLAIN",
+            sasl_username=None,
+            sasl_password=None,
             kafka_topic=DEFAULT_TOPIC
         )
