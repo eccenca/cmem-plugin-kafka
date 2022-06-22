@@ -39,7 +39,6 @@ check:
       - ./dist/coverage
       - ./dist/coverage.xml
 
-
 build:
   stage: build
   script:
