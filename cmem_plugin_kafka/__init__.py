@@ -26,15 +26,14 @@ KAFKA_TIMEOUT = 5
 
 # Security Protocols
 SECURITY_PROTOCOLS = [
-    ["SASL_SSL", "if SSL encryption is enabled (SSL encryption"
-                 " should always be used if SASL mechanism is PLAIN)"],
-    ["SASL_PLAINTEXT", "if SSL encryption is not enabled"],
-    ["NONE", "if hosted Kafka"]
+    ["SASL_SSL", "SASL authenticated, SSL channel"],
+    ["SASL_PLAINTEXT", "SASL authenticated, non-encrypted channel"],
+    ["PLAINTEXT", "Un-authenticated, non-encrypted channel"]
 ]
 # SASL Mechanisms
 SASL_MECHANISMS = [
-    ["PLAIN", "if SASL mechanism is PLAIN"],
-    ["NONE", "if hosted Kafka"],
+    ["", "--None--"],
+    ["PLAIN", "Authentication based on username and passwords"]
 ]
 
 
@@ -60,6 +59,7 @@ class DropDown(StringParameterType):
     ) -> list[Autocompletion]:
         return [
             Autocompletion(value=name, label=f"{name}: {description}")
+            if name != '' else Autocompletion(value='', label='--None--')
             for name, description in self.drop_list
         ]
 
@@ -120,25 +120,32 @@ Parameters to connect bootstrap server.
             param_type=DropDown(drop_list=SECURITY_PROTOCOLS)
         ),
         PluginParameter(
+            name="kafka_topic",
+            label="kafka Topic",
+            description="specify the topic to post messages",
+        ),
+        PluginParameter(
             name="sasl_mechanisms",
             label="SASL Mechanisms",
             description="specify the sasl mechanisms",
-            param_type=DropDown(drop_list=SASL_MECHANISMS)
+            param_type=DropDown(drop_list=SASL_MECHANISMS),
+            advanced=True,
+            default_value=''
         ),
         PluginParameter(
             name="sasl_username",
             label="SASL username",
             description="specify the username to connect to the server.",
+            advanced=True,
+            default_value=''
+
         ),
         PluginParameter(
             name="sasl_password",
             label="SASL password",
             description="specify the password to connect to the server.",
-        ),
-        PluginParameter(
-            name="kafka_topic",
-            label="kafka Topic",
-            description="specify the topic to post messages",
+            advanced=True,
+            default_value=''
         )
     ]
 )
@@ -181,11 +188,15 @@ class KafkaPlugin(WorkflowPlugin):
 
     def get_config(self):
         """construct and return kafka connection configuration"""
-        return {'bootstrap.servers': self.bootstrap_servers,
-                'security.protocol': self.security_protocol,
+        config = {'bootstrap.servers': self.bootstrap_servers,
+                  'security.protocol': self.security_protocol}
+        if self.security_protocol.startswith('SASL'):
+            config.update({
                 "sasl.mechanisms": self.sasl_mechanisms,
                 'sasl.username': self.sasl_username,
-                'sasl.password': self.sasl_password}
+                'sasl.password': self.sasl_password
+            })
+        return config
 
     def execute(self, inputs=()) -> Entities:
         self.log.info("Start Kafka Plugin")
