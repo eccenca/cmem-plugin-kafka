@@ -181,11 +181,15 @@ class KafkaPlugin(WorkflowPlugin):
 
     def get_config(self):
         """construct and return kafka connection configuration"""
-        return {'bootstrap.servers': self.bootstrap_servers,
-                'security.protocol': self.security_protocol,
+        config = {'bootstrap.servers': self.bootstrap_servers,
+                  'security.protocol': self.security_protocol}
+        if self.security_protocol.startswith('SASL'):
+            config.update({
                 "sasl.mechanisms": self.sasl_mechanisms,
                 'sasl.username': self.sasl_username,
-                'sasl.password': self.sasl_password}
+                'sasl.password': self.sasl_password
+            })
+        return config
 
     def execute(self, inputs=()) -> Entities:
         self.log.info("Start Kafka Plugin")
