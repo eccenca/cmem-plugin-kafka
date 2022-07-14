@@ -5,6 +5,7 @@ import pytest
 
 # check for cmem environment and skip if not present
 from _pytest.mark import MarkDecorator
+from cmem_plugin_base.dataintegration.context import ExecutionContext, ReportContext, TaskContext
 
 needs_cmem: MarkDecorator = pytest.mark.skipif(
     "CMEM_BASE_URI" not in os.environ, reason="Needs CMEM configuration"
@@ -26,3 +27,16 @@ def get_kafka_config():
         "sasl_username": os.environ["KAFKA_SASL_USERNAME"] if "KAFKA_SASL_USERNAME" in os.environ else '',
         "sasl_password": os.environ["KAFKA_SASL_PASSWORD"] if "KAFKA_SASL_PASSWORD" in os.environ else ''
     }
+
+
+class TestExecutionContext(ExecutionContext):
+    """dummy execution context that can be used in tests"""
+
+    __test__ = False
+
+    def __init__(self, project_id: str = "dummyProject"):
+        self.report = ReportContext()
+        self.task = TaskContext()
+        self.task.project_id = lambda: project_id
+
+
