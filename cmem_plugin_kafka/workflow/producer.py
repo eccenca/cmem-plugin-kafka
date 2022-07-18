@@ -5,7 +5,9 @@ from typing import Sequence
 
 from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
 from cmem.cmempy.workspace.tasks import get_task
-from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport, UserContext
+from cmem_plugin_base.dataintegration.context import (
+    ExecutionContext, ExecutionReport, UserContext
+)
 from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
 from cmem_plugin_base.dataintegration.entity import (
     Entities
