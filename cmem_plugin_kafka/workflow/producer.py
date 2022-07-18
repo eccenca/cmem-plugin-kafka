@@ -5,16 +5,16 @@ from typing import Sequence
 
 from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
 from cmem.cmempy.workspace.tasks import get_task
-from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
+from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport, UserContext
 from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
 from cmem_plugin_base.dataintegration.entity import (
     Entities
 )
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
+from cmem_plugin_base.dataintegration.parameter.dataset import DatasetParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.utils import (
-    split_task_id,
-    setup_cmempy_super_user_access
+    split_task_id, setup_cmempy_user_access,
 )
 from confluent_kafka.admin import AdminClient, ClusterMetadata, TopicMetadata
 from defusedxml import sax
@@ -54,7 +54,8 @@ Parameters to connect bootstrap server.
         PluginParameter(
             name="message_dataset",
             label="Dataset",
-            description="Dateset name to retrieve Kafka XML Messages"
+            description="Dateset name to retrieve Kafka XML Messages",
+            param_type=DatasetParameterType(dataset_type='xml')
         ),
         PluginParameter(
             name="bootstrap_servers",
@@ -162,7 +163,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
         )
         parser.setContentHandler(handler)
 
-        with self.get_resource_from_dataset() as response:
+        with self.get_resource_from_dataset(context=context.user) as response:
             data = io.StringIO(response.text)
         context.report.update(
             ExecutionReport(
@@ -180,11 +181,10 @@ class KafkaProducerPlugin(WorkflowPlugin):
                 operation_desc='messages sent to kafka server'
             )
         )
-        # count = handler.get_success_messages_count()
 
-    def get_resource_from_dataset(self):
+    def get_resource_from_dataset(self, context: UserContext):
         """Get resource from dataset"""
-        setup_cmempy_super_user_access()
+        setup_cmempy_user_access(context=context)
         project_id, task_id = split_task_id(self.message_dataset)
         task_meta_data = get_task(
             project=project_id,
