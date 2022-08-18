@@ -80,7 +80,8 @@ Parameters to connect bootstrap server.
             label="SASL Mechanisms",
             description="specify the sasl mechanisms",
             param_type=ChoiceParameterType(SASL_MECHANISMS),
-            advanced=True
+            advanced=True,
+            default_value='PLAIN'
         ),
         PluginParameter(
             name="sasl_username",
