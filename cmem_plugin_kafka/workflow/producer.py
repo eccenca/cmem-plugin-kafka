@@ -125,6 +125,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
 
     def validate_connection(self):
         """Validate kafka configuration"""
+        self.log.info("Start validate connection")
         admin_client = AdminClient(self.get_config())
         cluster_metadata: ClusterMetadata = \
             admin_client.list_topics(topic=self.kafka_topic,
@@ -135,6 +136,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
 
         if kafka_error is not None:
             raise kafka_error
+        self.log.info("Connection details are valid")
 
     def get_config(self):
         """construct and return kafka connection configuration"""

@@ -44,6 +44,10 @@ class KafkaProducer:
         """Polls the producer for events and calls the corresponding callbacks"""
         self._producer.poll(timeout)
 
+    def flush(self):
+        """Wait for all messages in the Producer queue to be delivered."""
+        self._producer.flush()
+
 
 class KafkaMessageHandler(ContentHandler):
     """Custom Callback Kafka XML content handler"""
@@ -127,7 +131,7 @@ class KafkaMessageHandler(ContentHandler):
 
     def endDocument(self):
         """End of the file"""
-        self._kafka_producer.poll(1000)
+        self._kafka_producer.flush()
 
     def rest_for_next_message(self, attrs):
         """To reset _message"""
