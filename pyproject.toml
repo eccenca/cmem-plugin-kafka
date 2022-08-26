@@ -1,9 +1,10 @@
 [tool.poetry]
 name = "cmem-plugin-kafka"
 version = "1.0.0"
-license = "Apache-2.0"
 description = "Send messages from Apache Kafka"
+license = "Apache-2.0"
 authors = ["eccenca <cmempy-developer@eccenca.com>"]
+homepage = "https://github.com/eccenca/cmem-plugin-kafka"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Plugins",
@@ -13,7 +14,7 @@ classifiers = [
 ]
 readme = "README-public.md"
 keywords = [
-    "eccenca Corporate Memory", "plugin"
+    "eccenca Corporate Memory", "plugin", "kafka-producer"
 ]
 
 [tool.poetry.dependencies]
