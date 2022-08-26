@@ -38,6 +38,7 @@ SASL_MECHANISMS = collections.OrderedDict({
 
 @Plugin(
     label="Send messages to Apache Kafka",
+    plugin_id="cmem_plugin_kafka-SendMessages",
     description="Reads a prepared messages dataset and sends multiple messages to a"
                 " Kafka server.",
     documentation="""This workflow operator uses the Kafka Producer API to send
