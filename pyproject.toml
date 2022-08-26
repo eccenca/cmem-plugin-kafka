@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cmem-plugin-kafka"
-version = "1.0.0"
+version = "1.0.1"
 description = "Send messages to Apache Kafka"
 license = "Apache-2.0"
 authors = ["eccenca <cmempy-developer@eccenca.com>"]
