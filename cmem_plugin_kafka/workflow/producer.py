@@ -37,64 +37,88 @@ SASL_MECHANISMS = collections.OrderedDict({
 
 
 @Plugin(
-    label="Kafka Producer",
-    description="Plugin to manage producer and consumer messages of a topic",
-    documentation="""This example workflow operator produces and
-consumes messages from a topic of cluster on a given
-bootstrap server.
+    label="Send messages to Apache Kafka",
+    description="Reads a prepared messages dataset and sends multiple messages to a"
+                " Kafka server.",
+    documentation="""This workflow operator uses the Kafka Producer API to send
+messages to a [Apache Kafka](https://kafka.apache.org/).
 
-Parameters to connect bootstrap server.
+The need-to-send data has to be prepared upfront in an XML dataset. The dataset is
+parsed into messages and send to a Kafka topic according to the configuration.
 
-- `bootstrap_servers`: server id to be connected
-- `security_protocol`: specify the security protocol while connecting the server
-- `sasl_mechanisms`: specify the sasl mechanisms
-- `sasl_username`: specify the username to connect to the server.
-- `sasl_password`: specify the password to connect to the server.
-- `kafka_topic`: specify the topic for the data to be created.
+An example XML document is shown below. This document will be sent as two messages
+to the configured topic. Each message is created as a proper XML document.
+```
+<?xml version="1.0" encoding="utf-8"?>
+<KafkaMessages>
+  <Message>
+    <PurchaseOrder OrderDate="1996-04-06">
+      <ShipTo country="string">
+        <name>string</name>
+      </ShipTo>
+    </PurchaseOrder>
+  </Message>
+  <Message>
+    <PurchaseOrder OrderDate="1996-04-06">
+      <ShipTo country="string">
+        <name>string</name>
+      </ShipTo>
+    </PurchaseOrder>
+  </Message>
+</KafkaMessages>
+```
 """,
     parameters=[
         PluginParameter(
             name="message_dataset",
-            label="Dataset",
-            description="Dateset name to retrieve Kafka XML Messages",
+            label="Messages Dataset",
+            description="Where do you want to retrieve the messages from?"
+                        " The dropdown lists usable datasets from the current"
+                        " project only. In case you miss your dataset, check for"
+                        " the correct type (XML) and build project).",
             param_type=DatasetParameterType(dataset_type='xml')
         ),
         PluginParameter(
             name="bootstrap_servers",
             label="Bootstrap Server",
-            description="server id to be connected",
+            description="This is URL of one of the Kafka brokers. The task"
+                        " fetches the initial metadata about your Kafka cluster from"
+                        " this URL."
         ),
         PluginParameter(
             name="security_protocol",
             label="Security Protocol",
-            description="specify the security protocol while connecting the server",
+            description="Which security mechanisms need to be applied to connect?"
+                        " Use SASL in case you connect to a Confluent platform."
+                        " Use PLAINTEXT in case you connect to a plain Kafka, which"
+                        " is available inside your VPN."
+                        " In case you use SASL, you also need to specify your SASL"
+                        " account and password in the advanced section.",
             param_type=ChoiceParameterType(SECURITY_PROTOCOLS)
         ),
         PluginParameter(
             name="kafka_topic",
-            label="kafka Topic",
-            description="specify the topic to post messages",
+            label="Topic",
+            description="The topic is a category/feed name to which the messages are"
+                        " published.",
         ),
         PluginParameter(
             name="sasl_mechanisms",
             label="SASL Mechanisms",
-            description="specify the sasl mechanisms",
             param_type=ChoiceParameterType(SASL_MECHANISMS),
             advanced=True,
             default_value='PLAIN'
         ),
         PluginParameter(
             name="sasl_username",
-            label="SASL username",
-            description="specify the username to connect to the server.",
+            label="SASL Account",
             advanced=True,
             default_value=''
 
         ),
         PluginParameter(
             name="sasl_password",
-            label="SASL password",
-            description="specify the password to connect to the server.",
+            label="SASL Password",
             advanced=True,
             default_value=''
         )
