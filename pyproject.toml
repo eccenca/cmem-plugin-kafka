@@ -2,7 +2,7 @@
 name = "cmem-plugin-kafka"
 version = "1.0.0"
 license = "Apache-2.0"
-description = "Send and receive messages from Apache Kafka"
+description = "Send messages from Apache Kafka"
 authors = ["eccenca <cmempy-developer@eccenca.com>"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",

@@ -1,4 +1,4 @@
 # cmem-plugin-kafka
 
-Producer / consumer plugins for kafka
+This eccenca Corporate Memory plugin allows for sending messages to Apache Kafka.
 
