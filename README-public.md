@@ -1,4 +1,4 @@
-# cmem-plugin-siekafka
+# cmem-plugin-kafka
 
-Producer / consumer plugins for SIEPKN
+This eccenca Corporate Memory plugin allows for sending messages to Apache Kafka.
 

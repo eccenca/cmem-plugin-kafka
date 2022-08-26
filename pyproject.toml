@@ -1,27 +1,31 @@
 [tool.poetry]
-name = "cmem-plugin-siekafka"
-version = "0.0.1"
+name = "cmem-plugin-kafka"
+version = "1.0.0"
+description = "Send messages from Apache Kafka"
 license = "Apache-2.0"
-description = "Producer / consumer plugins for SIEPKN"
 authors = ["eccenca <cmempy-developer@eccenca.com>"]
+homepage = "https://github.com/eccenca/cmem-plugin-kafka"
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Plugins",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: Apache Software License",
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 readme = "README-public.md"
 keywords = [
-    "eccenca Corporate Memory", "plugin"
+    "eccenca Corporate Memory", "plugin", "kafka-producer"
 ]
-include = ["CHANGELOG.md"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-cmem-plugin-base = "^1"
+cmem-plugin-base = "^2.1.0"
 confluent-kafka = [
-    {platform = "darwin", url = "https://files.pythonhosted.org/packages/fb/16/d04dded73439266a3dbcd585f1128483dcf509e039bacd93642ac5de97d4/confluent-kafka-1.8.2.tar.gz" },
-    {platform = "linux", version = "1.8.2"}
+    { version = "1.8.2" },
+    { markers = "sys_platform == 'darwin'", url = "https://files.pythonhosted.org/packages/fb/16/d04dded73439266a3dbcd585f1128483dcf509e039bacd93642ac5de97d4/confluent-kafka-1.8.2.tar.gz"}
 ]
+defusedxml = "^0.7.1"
+
 [tool.poetry.dev-dependencies]
 pytest = "^7.0"
 pytest-cov = "^3.0.0"
@@ -52,7 +56,7 @@ disable = "fixme"
 
 # https://black.readthedocs.io/en/stable/guides/using_black_with_other_tools.html#pylint
 [tool.pylint.messages_control]
-disable = "C0330, C0326, R0903"
+disable = "R0913"  # C0330, C0326,
 
 [tool.pylint.format]
 max-line-length = "88"

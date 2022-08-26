@@ -1,12 +1,12 @@
-# cmem-plugin-siekafka
+# cmem-plugin-kafka
 
-Producer / consumer plugins for SIEPKN
+This eccenca Corporate Memory plugin allows for sending messages to Apache Kafka.
 
 ## Development
 
 - Run [task](https://taskfile.dev/) to see all major development tasks
 - Use [pre-commit](https://pre-commit.com/) to avoid errors before commit
-- This repository was created with [this]() [copier](https://copier.readthedocs.io/) template.
+- This repository was created with [this](https://github.com/eccenca/cmem-plugin-template) [copier](https://copier.readthedocs.io/) template.
 
 ### confluent-python installation
 
