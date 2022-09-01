@@ -1,7 +1,8 @@
 # Changes here will be overwritten by Copier
-_commit: v1.0.2
+_commit: v3.1.0
 _src_path: gh:eccenca/cmem-plugin-template
 author_mail: cmempy-developer@eccenca.com
 author_name: eccenca
-project_description: Send messages to Apache Kafka
+project_description: Send messages to Apache Kafka.
 project_slug: kafka
+
