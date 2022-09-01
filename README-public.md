@@ -8,6 +8,6 @@ You can install it with the [cmemc](https://eccenca.com/go/cmemc) command line
 clients like this:
 
 ```
-cmemc admin workspace python install kafka
+cmemc admin workspace python install cmem-plugin-kafka
 ```
 
