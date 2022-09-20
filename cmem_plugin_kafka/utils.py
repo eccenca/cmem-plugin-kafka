@@ -5,7 +5,7 @@ from xml.sax.saxutils import escape  # nosec B406
 
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
-from confluent_kafka import Producer
+from confluent_kafka import Producer, Consumer
 
 
 # pylint: disable-msg=too-few-public-methods
@@ -47,6 +47,53 @@ class KafkaProducer:
     def flush(self):
         """Wait for all messages in the Producer queue to be delivered."""
         self._producer.flush()
+
+
+class KafkaConsumer:
+    """Kafka consumer wrapper over confluent consumer"""
+
+    def __init__(self, config: dict, topic: str, _log: PluginLogger):
+        """Create consumer instance"""
+        try:
+            self._consumer = Consumer(config)
+            _log.info('Created Consumer')
+        except IndexError:
+            _log.info('Config Failure')
+        self._topic = topic
+        self._log = _log
+
+    def process(self):
+        """Produce message to topic."""
+        self._consumer.subscribe(topics=[self._topic])
+        self._log.info('subscribed topic')
+        self.poll()
+
+    def poll(self):
+        """Polls the producer for events and calls the corresponding callbacks"""
+        try:
+            self._log.info('🚀')
+            print('🚀 STARTED')
+            while True:
+                msg = self._consumer.poll(timeout=1.0)
+                if msg is None:
+                    continue
+                if msg.error():
+                    raise ValueError(msg.error())
+
+                self._log.info(f'{msg.topic()}, {msg.partition()}, '
+                               f'{msg.offset()}, {str(msg.key())}')
+                self._log.info(f'{msg.value()}')
+
+        except KeyboardInterrupt:
+            self._log.info('%% Aborted by user\n')
+
+        finally:
+            # Close down consumer to commit final offsets.
+            self.close()
+
+    def close(self):
+        """Wait for all messages in the Producer queue to be delivered."""
+        self._consumer.close()
 
 
 class KafkaMessageHandler(ContentHandler):
