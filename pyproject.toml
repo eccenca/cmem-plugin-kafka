@@ -1,9 +1,10 @@
 [tool.poetry]
 name = "cmem-plugin-kafka"
-version = "1.0.0"
+version = "1.0.1"
+description = "Send messages to Apache Kafka"
 license = "Apache-2.0"
-description = "Send messages from Apache Kafka"
 authors = ["eccenca <cmempy-developer@eccenca.com>"]
+homepage = "https://github.com/eccenca/cmem-plugin-kafka"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Plugins",
@@ -13,7 +14,7 @@ classifiers = [
 ]
 readme = "README-public.md"
 keywords = [
-    "eccenca Corporate Memory", "plugin"
+    "eccenca Corporate Memory", "plugin", "kafka-producer"
 ]
 
 [tool.poetry.dependencies]
@@ -21,6 +22,7 @@ python = "^3.9"
 cmem-plugin-base = "^2.1.0"
 confluent-kafka = [
     { version = "1.8.2" },
+    # before you publish, comment out this next line
     { markers = "sys_platform == 'darwin'", url = "https://files.pythonhosted.org/packages/fb/16/d04dded73439266a3dbcd585f1128483dcf509e039bacd93642ac5de97d4/confluent-kafka-1.8.2.tar.gz"}
 ]
 defusedxml = "^0.7.1"
