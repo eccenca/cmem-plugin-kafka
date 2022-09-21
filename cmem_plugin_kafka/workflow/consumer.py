@@ -32,6 +32,13 @@ SECURITY_PROTOCOLS = collections.OrderedDict({
 SASL_MECHANISMS = collections.OrderedDict({
     "PLAIN": "Authentication based on username and passwords (PLAIN)"
 })
+# Auto Offset Resets
+AUTO_OFFSET_RESET = collections.OrderedDict({
+    "earliest": "automatically reset the offset to the earliest offset (earliest)",
+    "latest": "automatically reset the offset to the latest offset (latest)",
+    "none": "throw exception to the consumer if no previous offset "
+            "is found for the consumer's group (none)"
+})
 
 
 @Plugin(
@@ -92,6 +99,13 @@ messages from a [Apache Kafka](https://kafka.apache.org/).""",
             default_value=''
         ),
         PluginParameter(
+            name="auto_offset_reset",
+            label="Auto Offset Reset",
+            param_type=ChoiceParameterType(AUTO_OFFSET_RESET),
+            advanced=True,
+            default_value='latest'
+        ),
+        PluginParameter(
             name="message_dataset",
             label="Messages Dataset",
             description="Where do you want to save the messages?"
@@ -116,7 +130,8 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             sasl_username: str,
             sasl_password: str,
             kafka_topic: str,
-            group_id: str
+            group_id: str,
+            auto_offset_reset: str
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError('Specified server id is invalid')
@@ -128,6 +143,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.sasl_password = sasl_password
         self.kafka_topic = kafka_topic
         self.group_id = group_id
+        self.auto_offset_reset = auto_offset_reset
         self.validate_connection()
 
     def validate_connection(self):
@@ -151,7 +167,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
                   'security.protocol': self.security_protocol,
                   'group.id': self.group_id,
                   'enable.auto.commit': True,
-                  'auto.offset.reset': 'earliest'
+                  'auto.offset.reset': self.auto_offset_reset
                   }
         if self.security_protocol.startswith('SASL'):
             config.update({
