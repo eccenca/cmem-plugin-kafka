@@ -112,7 +112,7 @@ messages from a [Apache Kafka](https://kafka.apache.org/).""",
                         " The dropdown lists usable datasets from the current"
                         " project only. In case you miss your dataset, check for"
                         " the correct type (XML) and build project).",
-            param_type=DatasetParameterType(dataset_type='xml'),
+            param_type=DatasetParameterType(dataset_type='text'),
             advanced=True
         ),
     ]
@@ -179,7 +179,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
 
     def execute(self, inputs: Sequence[Entities],
                 context: ExecutionContext) -> None:
-        self.log.info(" ")
+        self.log.info("Kafka Consumer Started")
         self.validate_connection()
         # Prefix project id to dataset name
         self.message_dataset = f'{context.task.project_id()}:{self.message_dataset}'
@@ -188,6 +188,9 @@ class KafkaConsumerPlugin(WorkflowPlugin):
                                         topic=self.kafka_topic,
                                         _log=self.log)
         _kafka_consumer.process()
+        _kafka_consumer.poll(dataset_id=self.message_dataset, context=context)
+
+        self.log.info("newly deployed")
 
         context.report.update(
             ExecutionReport(
