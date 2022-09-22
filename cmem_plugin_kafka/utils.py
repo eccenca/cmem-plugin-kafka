@@ -7,7 +7,7 @@ from xml.sax.saxutils import escape  # nosec B406
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
 from cmem_plugin_base.dataintegration.utils import write_to_dataset
-from confluent_kafka import Producer, Consumer
+from confluent_kafka import Producer, Consumer, KafkaError
 
 
 # pylint: disable-msg=too-few-public-methods
@@ -83,9 +83,15 @@ class KafkaConsumer:
                 if msg is None:
                     continue
                 if msg.error():
-                    raise ValueError(msg.error())
-                process_msg = re.sub(regex_pattern, "", msg.value().decode('utf-8'))
-                value += process_msg
+                    if msg.error().code() == KafkaError.BROKER_NOT_AVAILABLE:
+                        self._log.info(f'{msg.key()}, '
+                                       f'{msg.partition()}, {msg.partition()}')
+                    else:
+                        self._log.info("raising exception")
+                        self._log.error(f'{msg.error()}')
+                process_msg = re.sub(regex_pattern, "<Message>",
+                                     msg.value().decode('utf-8'))
+                value += process_msg + "</Message>"
                 counter += 1
 
         except KeyboardInterrupt:
