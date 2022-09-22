@@ -71,8 +71,12 @@ class KafkaConsumer:
 
     def poll(self, dataset_id: str, context: ExecutionContext):
         """Polls the producer for events and calls the corresponding callbacks"""
-        data = "start"
+        value = '<?xml version="1.0" encoding="UTF-8"?>'
+        start_tag = '<KafkaMessages>'
+        end_tag = '</KafkaMessages>'
+        regex_pattern = '<\\?xml.*\\?>'
         counter = 0
+        value += start_tag
         try:
             while counter < 3:
                 msg = self._consumer.poll(timeout=1.0)
@@ -80,8 +84,8 @@ class KafkaConsumer:
                     continue
                 if msg.error():
                     raise ValueError(msg.error())
-                self._log.info(data)
-                data += msg.value().decode('utf-8')
+                process_msg = re.sub(regex_pattern, "", msg.value().decode('utf-8'))
+                value += process_msg
                 counter += 1
 
         except KeyboardInterrupt:
@@ -90,7 +94,8 @@ class KafkaConsumer:
         finally:
             # Close down consumer to commit final offsets.
             self._log.info("😔 CLOSing")
-            self.close(dataset_id=dataset_id, data=data, context=context)
+            value += end_tag
+            self.close(dataset_id=dataset_id, data=value, context=context)
 
     def close(self, dataset_id: str, data: str, context: ExecutionContext):
         """Wait for all messages in the Producer queue to be delivered."""

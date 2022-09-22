@@ -112,7 +112,7 @@ messages from a [Apache Kafka](https://kafka.apache.org/).""",
                         " The dropdown lists usable datasets from the current"
                         " project only. In case you miss your dataset, check for"
                         " the correct type (XML) and build project).",
-            param_type=DatasetParameterType(dataset_type='text'),
+            param_type=DatasetParameterType(dataset_type='xml'),
             advanced=True
         ),
     ]
@@ -189,8 +189,6 @@ class KafkaConsumerPlugin(WorkflowPlugin):
                                         _log=self.log)
         _kafka_consumer.process()
         _kafka_consumer.poll(dataset_id=self.message_dataset, context=context)
-
-        self.log.info("newly deployed")
 
         context.report.update(
             ExecutionReport(
