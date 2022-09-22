@@ -78,10 +78,11 @@ class KafkaConsumer:
         counter = 0
         value += start_tag
         try:
-            while counter < 3:
+            while True:
                 msg = self._consumer.poll(timeout=1.0)
                 if msg is None:
-                    continue
+                    self._log.info(f'No New Messages Exists on count {counter}')
+                    break
                 if msg.error():
                     if msg.error().code() == KafkaError.BROKER_NOT_AVAILABLE:
                         self._log.info(f'{msg.key()}, '
@@ -93,26 +94,35 @@ class KafkaConsumer:
                                      msg.value().decode('utf-8'))
                 value += process_msg + "</Message>"
                 counter += 1
+                self._log.info(f'COUNTER {counter}, Offset: {msg.offset()},'
+                               f' Key: {msg.key()}, P:  {msg.partition()}')
 
-        except KeyboardInterrupt:
-            self._log.info('%% Aborted by user\n')
+        except KafkaError as kafka_error:
+            self._log.info(f'Kafka Error{kafka_error.code()}')
 
         finally:
             # Close down consumer to commit final offsets.
-            self._log.info("😔 CLOSing")
+            self._log.info(f'LAST COUNT {counter}')
             value += end_tag
             self.close(dataset_id=dataset_id, data=value, context=context)
+            context.report.update(
+                ExecutionReport(
+                    entity_count=counter,
+                    operation='wait',
+                    operation_desc='messages received from kafka server'
+                )
+            )
 
     def close(self, dataset_id: str, data: str, context: ExecutionContext):
         """Wait for all messages in the Producer queue to be delivered."""
+        self._consumer.close()
+        self._log.info("CLOSED")
         try:
             write_to_dataset(dataset_id=dataset_id,
                              file_resource=io.StringIO(data),
                              context=context.user)
         except FileNotFoundError:
             self._log.error('File Not Error')
-        self._consumer.close()
-        self._log.info("CLOSED")
 
 
 class KafkaMessageHandler(ContentHandler):

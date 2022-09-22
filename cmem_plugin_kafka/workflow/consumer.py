@@ -5,7 +5,7 @@ from typing import Sequence
 from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
 from cmem.cmempy.workspace.tasks import get_task
 from cmem_plugin_base.dataintegration.context import (
-    ExecutionContext, ExecutionReport, UserContext
+    ExecutionContext, UserContext
 )
 from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
 from cmem_plugin_base.dataintegration.entity import (
@@ -148,7 +148,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
 
     def validate_connection(self):
         """Validate kafka configuration"""
-        self.log.info("Start validate connection")
+        self.log.info("Start validate consumer connection")
         admin_client = AdminClient(self.get_config())
         cluster_metadata: ClusterMetadata = \
             admin_client.list_topics(topic=self.kafka_topic,
@@ -159,7 +159,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
 
         if kafka_error is not None:
             raise kafka_error
-        self.log.info("Connection details are valid")
+        self.log.info("Consumer Connection details are valid")
 
     def get_config(self):
         """construct and return kafka connection configuration"""
@@ -189,13 +189,6 @@ class KafkaConsumerPlugin(WorkflowPlugin):
                                         _log=self.log)
         _kafka_consumer.process()
         _kafka_consumer.poll(dataset_id=self.message_dataset, context=context)
-
-        context.report.update(
-            ExecutionReport(
-                operation='write',
-                operation_desc='messages received from kafka server'
-            )
-        )
 
     def get_resource_from_dataset(self, context: UserContext):
         """Get resource from dataset"""
