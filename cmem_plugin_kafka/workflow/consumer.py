@@ -69,8 +69,8 @@ messages from a [Apache Kafka](https://kafka.apache.org/).""",
         PluginParameter(
             name="group_id",
             label="Group",
-            description="The id is a category/feed name to which the messages are"
-                        " published.",
+            description="The id is to specify the name of the consumer group of a "
+                        "[Kafka consumer](https://docs.confluent.io/kafka-clients/python/current/overview.html#ak-consumer) belongs to",  # noqa: E501 # pylint: disable=line-too-long
         ),
         PluginParameter(
             name="kafka_topic",
