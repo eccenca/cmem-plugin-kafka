@@ -25,7 +25,7 @@ class KafkaMessage:
         Kafka message payload
     """
 
-    def __init__(self, key: str = '', value: str = ''):
+    def __init__(self, key: str = "", value: str = ""):
         self.value: str = value
         self.key: str = key
 
@@ -58,58 +58,62 @@ class KafkaConsumer:
         """Create consumer instance"""
         try:
             self._consumer = Consumer(config)
-            _log.info('Created Consumer')
+            _log.info("Created Consumer")
         except IndexError:
-            _log.info('Config Failure')
+            _log.info("Config Failure")
         self._topic = topic
         self._log = _log
 
     def process(self):
         """Produce message to topic."""
         self._consumer.subscribe(topics=[self._topic])
-        self._log.info('subscribed topic')
+        self._log.info("subscribed topic")
 
     def poll(self, dataset_id: str, context: ExecutionContext):
         """Polls the producer for events and calls the corresponding callbacks"""
         value = '<?xml version="1.0" encoding="UTF-8"?>'
-        start_tag = '<KafkaMessages>'
-        end_tag = '</KafkaMessages>'
-        regex_pattern = '<\\?xml.*\\?>'
+        start_tag = "<KafkaMessages>"
+        end_tag = "</KafkaMessages>"
+        regex_pattern = "<\\?xml.*\\?>"
         counter = 0
         value += start_tag
         try:
             while True:
                 msg = self._consumer.poll(timeout=1.0)
                 if msg is None:
-                    self._log.info(f'No New Messages Exists on count {counter}')
+                    self._log.info(f"No New Messages Exists on count {counter}")
                     break
                 if msg.error():
                     if msg.error().code() == KafkaError.BROKER_NOT_AVAILABLE:
-                        self._log.info(f'{msg.key()}, '
-                                       f'{msg.partition()}, {msg.partition()}')
+                        self._log.info(
+                            f"{msg.key()}, " f"{msg.partition()}, {msg.partition()}"
+                        )
                     else:
                         self._log.info("raising exception")
-                        self._log.error(f'{msg.error()}')
-                process_msg = re.sub(regex_pattern, "<Message>",
-                                     msg.value().decode('utf-8'))
+                        self._log.error(f"{msg.error()}")
+                process_msg = re.sub(
+                    regex_pattern, "<Message>", msg.value().decode("utf-8")
+                )
                 value += process_msg + "</Message>"
                 counter += 1
-                self._log.info(f'COUNTER {counter}, Offset: {msg.offset()},'
-                               f' Key: {msg.key()}, P:  {msg.partition()}')
+                self._log.info(
+                    f"COUNTER {counter}, Offset: {msg.offset()},"
+                    f" Key: {msg.key()}, P:  {msg.partition()}"
+                )
 
         except KafkaError as kafka_error:
-            self._log.info(f'Kafka Error{kafka_error.code()}')
+            self._log.info(f"Kafka Error{kafka_error.code()}")
 
         finally:
             # Close down consumer to commit final offsets.
-            self._log.info(f'LAST COUNT {counter}')
+            self._log.info(f"LAST COUNT {counter}")
             value += end_tag
             self.close(dataset_id=dataset_id, data=value, context=context)
             context.report.update(
                 ExecutionReport(
                     entity_count=counter,
-                    operation='wait',
-                    operation_desc='messages received from kafka server'
+                    operation="wait",
+                    operation_desc="messages received from kafka server",
                 )
             )
 
@@ -118,15 +122,18 @@ class KafkaConsumer:
         self._consumer.close()
         self._log.info("CLOSED")
         try:
-            write_to_dataset(dataset_id=dataset_id,
-                             file_resource=io.StringIO(data),
-                             context=context.user)
+            write_to_dataset(
+                dataset_id=dataset_id,
+                file_resource=io.StringIO(data),
+                context=context.user,
+            )
         except FileNotFoundError:
-            self._log.error('File Not Error')
+            self._log.error("File Not Error")
 
 
 class KafkaMessageHandler(ContentHandler):
     """Custom Callback Kafka XML content handler"""
+
     _message: KafkaMessage
     _log: PluginLogger
     _context: ExecutionContext
@@ -134,9 +141,9 @@ class KafkaMessageHandler(ContentHandler):
     _no_of_children: int = 0
     _no_of_success_messages: int = 0
 
-    def __init__(self, kafka_producer: KafkaProducer,
-                 context: ExecutionContext,
-                 plugin_logger):
+    def __init__(
+        self, kafka_producer: KafkaProducer, context: ExecutionContext, plugin_logger
+    ):
         super().__init__()
 
         self._kafka_producer = kafka_producer
@@ -146,18 +153,18 @@ class KafkaMessageHandler(ContentHandler):
 
     @staticmethod
     def attrs_s(attrs):
-        """ This generates the XML attributes from an element attribute list """
-        attribute_list = ['']
+        """This generates the XML attributes from an element attribute list"""
+        attribute_list = [""]
         for item in attrs.items():
             attribute_list.append(f'{item[0]}="{escape(item[1])}"')
 
-        return ' '.join(attribute_list)
+        return " ".join(attribute_list)
 
     @staticmethod
     def get_key(attrs):
         """get message key attribute from element attributes list"""
         for item in attrs.items():
-            if item[0] == 'key':
+            if item[0] == "key":
                 return escape(item[1])
         return None
 
@@ -165,10 +172,10 @@ class KafkaMessageHandler(ContentHandler):
         """Call when an element starts"""
         self._level += 1
 
-        if name == 'Message' and self._level == 2:
+        if name == "Message" and self._level == 2:
             self.rest_for_next_message(attrs)
         else:
-            open_tag = f'<{name}{self.attrs_s(attrs)}>'
+            open_tag = f"<{name}{self.attrs_s(attrs)}>"
             self._message.value += open_tag
 
         # Number of child for Message tag
@@ -185,19 +192,21 @@ class KafkaMessageHandler(ContentHandler):
             if self._no_of_children == 1:
                 self._no_of_success_messages += 1
                 # Remove newline and white space between open and close tag
-                final_message = re.sub(r'>[ \n]+<', '><', self._message.value)
+                final_message = re.sub(r">[ \n]+<", "><", self._message.value)
                 # Remove new and white space at the end of the xml
-                self._message.value = re.sub(r'[\n ]+$', '', final_message)
+                self._message.value = re.sub(r"[\n ]+$", "", final_message)
 
                 self._kafka_producer.process(self._message)
                 if self._no_of_success_messages % 10 == 0:
                     self.update_report()
             else:
-                self._log.error("Not able to process this message. "
-                                "Reason: Identified more than one children.")
+                self._log.error(
+                    "Not able to process this message. "
+                    "Reason: Identified more than one children."
+                )
 
         else:
-            end_tag = f'</{name}>'
+            end_tag = f"</{name}>"
             self._message.value += end_tag
         self._level -= 1
 
@@ -225,7 +234,7 @@ class KafkaMessageHandler(ContentHandler):
         self._context.report.update(
             ExecutionReport(
                 entity_count=self.get_success_messages_count(),
-                operation='wait',
-                operation_desc='messages sent to kafka server'
+                operation="wait",
+                operation_desc="messages sent to kafka server",
             )
         )
