@@ -1,6 +1,7 @@
 """Kafka utils modules"""
 import io
 import re
+from typing import Dict, Any
 from xml.sax.handler import ContentHandler  # nosec B406
 from xml.sax.saxutils import escape  # nosec B406
 
@@ -8,6 +9,9 @@ from cmem_plugin_base.dataintegration.context import ExecutionContext, Execution
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
 from cmem_plugin_base.dataintegration.utils import write_to_dataset
 from confluent_kafka import Producer, Consumer, KafkaError
+from confluent_kafka.admin import AdminClient, TopicMetadata, ClusterMetadata
+
+from .constants import KAFKA_TIMEOUT
 
 
 # pylint: disable-msg=too-few-public-methods
@@ -238,3 +242,18 @@ class KafkaMessageHandler(ContentHandler):
                 operation_desc="messages sent to kafka server",
             )
         )
+
+
+def validate_kafka_config(config: Dict[str, Any], topic: str, log: PluginLogger):
+    """Validate kafka configuration"""
+    admin_client = AdminClient(config)
+    cluster_metadata: ClusterMetadata = admin_client.list_topics(
+        topic=topic, timeout=KAFKA_TIMEOUT
+    )
+
+    topic_meta: TopicMetadata = cluster_metadata.topics[topic]
+    kafka_error = topic_meta.error
+
+    if kafka_error is not None:
+        raise kafka_error
+    log.info("Connection details are valid")

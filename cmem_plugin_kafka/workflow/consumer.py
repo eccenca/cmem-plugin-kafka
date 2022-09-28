@@ -13,7 +13,6 @@ from cmem_plugin_base.dataintegration.utils import (
     split_task_id,
     setup_cmempy_user_access,
 )
-from confluent_kafka.admin import AdminClient, ClusterMetadata, TopicMetadata
 
 from ..constants import (
     SECURITY_PROTOCOLS,
@@ -21,9 +20,8 @@ from ..constants import (
     AUTO_OFFSET_RESET,
     BOOTSTRAP_SERVERS_DESCRIPTION,
     SECURITY_PROTOCOL_DESCRIPTION,
-    KAFKA_TIMEOUT,
 )
-from ..utils import KafkaConsumer
+from ..utils import KafkaConsumer, validate_kafka_config
 
 
 @Plugin(
@@ -115,22 +113,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.kafka_topic = kafka_topic
         self.group_id = group_id
         self.auto_offset_reset = auto_offset_reset
-        self.validate_connection()
-
-    def validate_connection(self):
-        """Validate kafka configuration"""
-        self.log.info("Start validate consumer connection")
-        admin_client = AdminClient(self.get_config())
-        cluster_metadata: ClusterMetadata = admin_client.list_topics(
-            topic=self.kafka_topic, timeout=KAFKA_TIMEOUT
-        )
-
-        topic_meta: TopicMetadata = cluster_metadata.topics[self.kafka_topic]
-        kafka_error = topic_meta.error
-
-        if kafka_error is not None:
-            raise kafka_error
-        self.log.info("Consumer Connection details are valid")
+        validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
 
     def get_config(self) -> Dict[str, Any]:
         """construct and return kafka connection configuration"""
@@ -153,7 +136,6 @@ class KafkaConsumerPlugin(WorkflowPlugin):
 
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
         self.log.info("Kafka Consumer Started")
-        self.validate_connection()
         # Prefix project id to dataset name
         self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
 

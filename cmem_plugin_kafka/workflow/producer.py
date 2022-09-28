@@ -1,6 +1,6 @@
 """Kafka producer plugin module"""
 import io
-from typing import Sequence
+from typing import Sequence, Dict, Any
 
 from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
 from cmem.cmempy.workspace.tasks import get_task
@@ -18,7 +18,6 @@ from cmem_plugin_base.dataintegration.utils import (
     split_task_id,
     setup_cmempy_user_access,
 )
-from confluent_kafka.admin import AdminClient, ClusterMetadata, TopicMetadata
 from defusedxml import sax
 
 from ..constants import (
@@ -26,9 +25,8 @@ from ..constants import (
     SASL_MECHANISMS,
     SECURITY_PROTOCOL_DESCRIPTION,
     BOOTSTRAP_SERVERS_DESCRIPTION,
-    KAFKA_TIMEOUT,
 )
-from ..utils import KafkaProducer, KafkaMessageHandler
+from ..utils import KafkaProducer, KafkaMessageHandler, validate_kafka_config
 
 
 @Plugin(
@@ -128,24 +126,9 @@ class KafkaProducerPlugin(WorkflowPlugin):
         self.sasl_username = sasl_username
         self.sasl_password = sasl_password
         self.kafka_topic = kafka_topic
-        self.validate_connection()
+        validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
 
-    def validate_connection(self):
-        """Validate kafka configuration"""
-        self.log.info("Start validate connection")
-        admin_client = AdminClient(self.get_config())
-        cluster_metadata: ClusterMetadata = admin_client.list_topics(
-            topic=self.kafka_topic, timeout=KAFKA_TIMEOUT
-        )
-
-        topic_meta: TopicMetadata = cluster_metadata.topics[self.kafka_topic]
-        kafka_error = topic_meta.error
-
-        if kafka_error is not None:
-            raise kafka_error
-        self.log.info("Connection details are valid")
-
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         """construct and return kafka connection configuration"""
         config = {
             "bootstrap.servers": self.bootstrap_servers,
@@ -163,7 +146,6 @@ class KafkaProducerPlugin(WorkflowPlugin):
 
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
         self.log.info("Start Kafka Plugin")
-        self.validate_connection()
         # Prefix project id to dataset name
         self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
 
