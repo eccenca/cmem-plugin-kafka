@@ -52,7 +52,7 @@ def project(request):
         autoconfigure=False,
     )
 
-    # request.addfinalizer(lambda: delete_project(PROJECT_NAME))
+    request.addfinalizer(lambda: delete_project(PROJECT_NAME))
 
 
 @needs_cmem
