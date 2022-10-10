@@ -133,6 +133,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
         config = {
             "bootstrap.servers": self.bootstrap_servers,
             "security.protocol": self.security_protocol,
+            "client.id": "cmem-plugin-kafka",
         }
         if self.security_protocol.startswith("SASL"):
             config.update(

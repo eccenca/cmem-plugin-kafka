@@ -123,6 +123,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             "group.id": self.group_id,
             "enable.auto.commit": True,
             "auto.offset.reset": self.auto_offset_reset,
+            "client.id": "cmem-plugin-kafka",
         }
         if self.security_protocol.startswith("SASL"):
             config.update(
