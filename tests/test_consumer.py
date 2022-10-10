@@ -21,9 +21,9 @@ PRODUCER_DATASET_ID = f"{PRODUCER_DATASET_NAME}"
 CONSUMER_DATASET_ID = f"{CONSUMER_DATASET_NAME}"
 
 KAFKA_CONFIG = get_kafka_config()
-DEFAULT_GROUP = 'eccenca'
+DEFAULT_GROUP = "eccenca"
 DEFAULT_TOPIC = "eccenca_kafka"
-DEFAULT_RESET = 'latest'
+DEFAULT_RESET = "latest"
 
 
 @pytest.fixture
@@ -80,7 +80,7 @@ def test_execution_plain_kafka(project):
         sasl_password=KAFKA_CONFIG["sasl_password"],
         kafka_topic=DEFAULT_TOPIC,
         group_id=DEFAULT_GROUP,
-        auto_offset_reset=DEFAULT_RESET
+        auto_offset_reset=DEFAULT_RESET,
     ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
 
@@ -98,7 +98,7 @@ def test_validate_invalid_inputs(project):
             sasl_password=KAFKA_CONFIG["sasl_password"],
             kafka_topic=DEFAULT_TOPIC,
             group_id=DEFAULT_GROUP,
-            auto_offset_reset=DEFAULT_RESET
+            auto_offset_reset=DEFAULT_RESET,
         ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
     # Invalid SECURITY PROTOCOL
@@ -112,7 +112,7 @@ def test_validate_invalid_inputs(project):
             sasl_password=KAFKA_CONFIG["sasl_password"],
             kafka_topic=DEFAULT_TOPIC,
             group_id=DEFAULT_GROUP,
-            auto_offset_reset=DEFAULT_RESET
+            auto_offset_reset=DEFAULT_RESET,
         ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
 
@@ -128,13 +128,13 @@ def test_validate_bootstrap_server():
             sasl_password=KAFKA_CONFIG["sasl_password"],
             kafka_topic=DEFAULT_TOPIC,
             group_id=DEFAULT_GROUP,
-            auto_offset_reset=DEFAULT_RESET
+            auto_offset_reset=DEFAULT_RESET,
         )
 
     with pytest.raises(
-            cimpl.KafkaException,
-            match="KafkaError{code=_TRANSPORT,val=-195,"
-                  'str="Failed to get metadata: Local: Broker transport failure"}',
+        cimpl.KafkaException,
+        match="KafkaError{code=_TRANSPORT,val=-195,"
+        'str="Failed to get metadata: Local: Broker transport failure"}',
     ):
         KafkaConsumerPlugin(
             bootstrap_servers="invalid_bootstrap_server:9092",
@@ -145,5 +145,5 @@ def test_validate_bootstrap_server():
             sasl_password=None,
             kafka_topic=DEFAULT_TOPIC,
             group_id=DEFAULT_GROUP,
-            auto_offset_reset=DEFAULT_RESET
+            auto_offset_reset=DEFAULT_RESET,
         )

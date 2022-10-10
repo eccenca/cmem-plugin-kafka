@@ -68,14 +68,14 @@ class KafkaConsumer:
         self._topic = topic
         self._log = _log
 
-    def process(self):
+    def subscribe(self):
         """Produce message to topic."""
         self._consumer.subscribe(topics=[self._topic])
         self._log.info("subscribed topic")
 
     def poll(self, dataset_id: str, context: ExecutionContext):
         """Polls the producer for events and calls the corresponding callbacks"""
-        value = '<?xml version="1.0" encoding="UTF-8"?>'
+        value = '<?xml version="1.0" encoding="UTF-8"?>\n'
         start_tag = "<KafkaMessages>"
         end_tag = "</KafkaMessages>"
         regex_pattern = "<\\?xml.*\\?>"

@@ -142,7 +142,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         _kafka_consumer = KafkaConsumer(
             config=self.get_config(), topic=self.kafka_topic, _log=self.log
         )
-        _kafka_consumer.process()
+        _kafka_consumer.subscribe()
         _kafka_consumer.poll(dataset_id=self.message_dataset, context=context)
 
     def get_resource_from_dataset(self, context: UserContext):
