@@ -7,14 +7,18 @@ from cmem.cmempy.workspace.projects.resources.resource import create_resource
 from confluent_kafka import cimpl
 
 from cmem_plugin_kafka.workflow.consumer import KafkaConsumerPlugin
+from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
 from .utils import needs_cmem, needs_kafka, get_kafka_config, TestExecutionContext
 
-PROJECT_NAME = "kafka_test_project"
-DATASET_NAME = "sample-test"
+PROJECT_NAME = "kafka_consumer_project"
+PRODUCER_DATASET_NAME = "sample-test"
+CONSUMER_DATASET_NAME = "sample-test-result"
 DATASET_TYPE = "xml"
-RESOURCE_NAME = f"{DATASET_NAME}.{DATASET_TYPE}"
+PRODUCER_RESOURCE_NAME = f"{PRODUCER_DATASET_NAME}.{DATASET_TYPE}"
+CONSUMER_RESOURCE_NAME = f"{CONSUMER_DATASET_NAME}.{DATASET_TYPE}"
 # DATASET_ID = f'{PROJECT_NAME}:{DATASET_NAME}'
-DATASET_ID = f"{DATASET_NAME}"
+PRODUCER_DATASET_ID = f"{PRODUCER_DATASET_NAME}"
+CONSUMER_DATASET_ID = f"{CONSUMER_DATASET_NAME}"
 
 KAFKA_CONFIG = get_kafka_config()
 DEFAULT_GROUP = 'eccenca'
@@ -28,28 +32,47 @@ def project(request):
     make_new_project(PROJECT_NAME)
     make_new_dataset(
         project_name=PROJECT_NAME,
-        dataset_name=DATASET_NAME,
+        dataset_name=PRODUCER_DATASET_NAME,
         dataset_type=DATASET_TYPE,
-        parameters={"file": RESOURCE_NAME},
+        parameters={"file": PRODUCER_RESOURCE_NAME},
         autoconfigure=False,
     )
     with open("tests/sample-test.xml", "rb") as response_file:
         create_resource(
             project_name=PROJECT_NAME,
-            resource_name=RESOURCE_NAME,
+            resource_name=PRODUCER_RESOURCE_NAME,
             file_resource=response_file,
             replace=True,
         )
+    make_new_dataset(
+        project_name=PROJECT_NAME,
+        dataset_name=CONSUMER_DATASET_NAME,
+        dataset_type=DATASET_TYPE,
+        parameters={"file": CONSUMER_RESOURCE_NAME},
+        autoconfigure=False,
+    )
 
-    request.addfinalizer(lambda: delete_project(PROJECT_NAME))
+    # request.addfinalizer(lambda: delete_project(PROJECT_NAME))
 
 
 @needs_cmem
 @needs_kafka
 def test_execution_plain_kafka(project):
     """Test plugin execution for Plain Kafka"""
+    # Producer
+    KafkaProducerPlugin(
+        message_dataset=PRODUCER_DATASET_ID,
+        bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
+        security_protocol=KAFKA_CONFIG["security_protocol"],
+        sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
+        sasl_username=KAFKA_CONFIG["sasl_username"],
+        sasl_password=KAFKA_CONFIG["sasl_password"],
+        kafka_topic=DEFAULT_TOPIC,
+    ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
+
+    # Consumer
     KafkaConsumerPlugin(
-        message_dataset=DATASET_ID,
+        message_dataset=CONSUMER_DATASET_ID,
         bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
         security_protocol=KAFKA_CONFIG["security_protocol"],
         sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
@@ -81,7 +104,7 @@ def test_validate_invalid_inputs(project):
     # Invalid SECURITY PROTOCOL
     with pytest.raises(cimpl.KafkaException):
         KafkaConsumerPlugin(
-            message_dataset=DATASET_ID,
+            message_dataset=CONSUMER_DATASET_ID,
             bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
             security_protocol="INVALID_PROTOCOL",
             sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
@@ -98,7 +121,7 @@ def test_validate_bootstrap_server():
     with pytest.raises(ValueError, match="Specified server id is invalid"):
         KafkaConsumerPlugin(
             bootstrap_servers=1,
-            message_dataset=DATASET_ID,
+            message_dataset=CONSUMER_DATASET_ID,
             security_protocol=KAFKA_CONFIG["security_protocol"],
             sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
             sasl_username=KAFKA_CONFIG["sasl_username"],
@@ -109,13 +132,13 @@ def test_validate_bootstrap_server():
         )
 
     with pytest.raises(
-        cimpl.KafkaException,
-        match="KafkaError{code=_TRANSPORT,val=-195,"
-        'str="Failed to get metadata: Local: Broker transport failure"}',
+            cimpl.KafkaException,
+            match="KafkaError{code=_TRANSPORT,val=-195,"
+                  'str="Failed to get metadata: Local: Broker transport failure"}',
     ):
         KafkaConsumerPlugin(
             bootstrap_servers="invalid_bootstrap_server:9092",
-            message_dataset=DATASET_ID,
+            message_dataset=CONSUMER_DATASET_ID,
             security_protocol="PLAINTEXT",
             sasl_mechanisms="PLAIN",
             sasl_username=None,
