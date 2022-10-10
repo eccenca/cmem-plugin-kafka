@@ -145,12 +145,3 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         )
         _kafka_consumer.subscribe()
         _kafka_consumer.poll(dataset_id=self.message_dataset, context=context)
-
-    def get_resource_from_dataset(self, context: UserContext):
-        """Get resource from dataset"""
-        setup_cmempy_user_access(context=context)
-        project_id, task_id = split_task_id(self.message_dataset)
-        task_meta_data = get_task(project=project_id, task=task_id)
-        resource_name = str(task_meta_data["data"]["parameters"]["file"]["value"])
-
-        return get_resource_response(project_id, resource_name)
