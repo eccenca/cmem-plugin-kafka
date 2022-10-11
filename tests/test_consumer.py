@@ -8,7 +8,16 @@ from confluent_kafka import cimpl
 
 from cmem_plugin_kafka.workflow.consumer import KafkaConsumerPlugin
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
-from .utils import needs_cmem, needs_kafka, get_kafka_config, TestExecutionContext
+from cmem_plugin_kafka.utils import (
+    get_resource_from_dataset
+)
+from .utils import (
+    needs_cmem,
+    needs_kafka,
+    get_kafka_config,
+    TestExecutionContext,
+    TestUserContext
+)
 
 PROJECT_NAME = "kafka_consumer_project"
 PRODUCER_DATASET_NAME = "sample-test"
@@ -83,6 +92,10 @@ def test_execution_plain_kafka(project):
         auto_offset_reset=DEFAULT_RESET,
     ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
+    with get_resource_from_dataset(dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}",
+                                   context=TestUserContext()) as response:
+        assert len(response.text) >= sum(1 for _ in open("tests/sample-test.xml"))
+
 
 @needs_cmem
 @needs_kafka
@@ -132,9 +145,9 @@ def test_validate_bootstrap_server():
         )
 
     with pytest.raises(
-        cimpl.KafkaException,
-        match="KafkaError{code=_TRANSPORT,val=-195,"
-        'str="Failed to get metadata: Local: Broker transport failure"}',
+            cimpl.KafkaException,
+            match="KafkaError{code=_TRANSPORT,val=-195,"
+                  'str="Failed to get metadata: Local: Broker transport failure"}',
     ):
         KafkaConsumerPlugin(
             bootstrap_servers="invalid_bootstrap_server:9092",
