@@ -2,22 +2,15 @@
 import io
 from typing import Sequence, Dict, Any
 
-from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
-from cmem.cmempy.workspace.tasks import get_task
 from cmem_plugin_base.dataintegration.context import (
     ExecutionContext,
     ExecutionReport,
-    UserContext,
 )
 from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.parameter.dataset import DatasetParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
-from cmem_plugin_base.dataintegration.utils import (
-    split_task_id,
-    setup_cmempy_user_access,
-)
 from defusedxml import sax
 
 from ..constants import (
@@ -26,7 +19,12 @@ from ..constants import (
     SECURITY_PROTOCOL_DESCRIPTION,
     BOOTSTRAP_SERVERS_DESCRIPTION,
 )
-from ..utils import KafkaProducer, KafkaMessageHandler, validate_kafka_config
+from ..utils import (
+    KafkaProducer,
+    KafkaMessageHandler,
+    validate_kafka_config,
+    get_resource_from_dataset
+)
 
 
 @Plugin(
@@ -160,7 +158,9 @@ class KafkaProducerPlugin(WorkflowPlugin):
         )
         parser.setContentHandler(handler)
 
-        with self.get_resource_from_dataset(context=context.user) as response:
+        with get_resource_from_dataset(
+                dataset_id=self.message_dataset,
+                context=context.user) as response:
             data = io.StringIO(response.text)
         context.report.update(
             ExecutionReport(
@@ -178,12 +178,3 @@ class KafkaProducerPlugin(WorkflowPlugin):
                 operation_desc="messages sent to kafka server",
             )
         )
-
-    def get_resource_from_dataset(self, context: UserContext):
-        """Get resource from dataset"""
-        setup_cmempy_user_access(context=context)
-        project_id, task_id = split_task_id(self.message_dataset)
-        task_meta_data = get_task(project=project_id, task=task_id)
-        resource_name = str(task_meta_data["data"]["parameters"]["file"]["value"])
-
-        return get_resource_response(project_id, resource_name)

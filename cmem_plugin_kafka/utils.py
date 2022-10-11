@@ -5,9 +5,18 @@ from typing import Dict, Any
 from xml.sax.handler import ContentHandler  # nosec B406
 from xml.sax.saxutils import escape  # nosec B406
 
-from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
+from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
+from cmem.cmempy.workspace.tasks import get_task
+from cmem_plugin_base.dataintegration.context import (
+    ExecutionContext,
+    ExecutionReport,
+    UserContext
+)
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
-from cmem_plugin_base.dataintegration.utils import write_to_dataset
+from cmem_plugin_base.dataintegration.utils import (
+    write_to_dataset,
+    setup_cmempy_user_access,
+    split_task_id)
 from confluent_kafka import Producer, Consumer, KafkaError
 from confluent_kafka.admin import AdminClient, TopicMetadata, ClusterMetadata
 
@@ -146,7 +155,10 @@ class KafkaMessageHandler(ContentHandler):
     _no_of_success_messages: int = 0
 
     def __init__(
-        self, kafka_producer: KafkaProducer, context: ExecutionContext, plugin_logger
+            self,
+            kafka_producer: KafkaProducer,
+            context: ExecutionContext,
+            plugin_logger
     ):
         super().__init__()
 
@@ -257,3 +269,13 @@ def validate_kafka_config(config: Dict[str, Any], topic: str, log: PluginLogger)
     if kafka_error is not None:
         raise kafka_error
     log.info("Connection details are valid")
+
+
+def get_resource_from_dataset(dataset_id: str, context: UserContext):
+    """Get resource from dataset"""
+    setup_cmempy_user_access(context=context)
+    project_id, task_id = split_task_id(dataset_id)
+    task_meta_data = get_task(project=project_id, task=task_id)
+    resource_name = str(task_meta_data["data"]["parameters"]["file"]["value"])
+
+    return get_resource_response(project_id, resource_name)
