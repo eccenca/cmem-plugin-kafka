@@ -1,12 +1,15 @@
 """Kafka consumer plugin module"""
+import io
+import re
 from typing import Sequence, Dict, Any
 
-from cmem_plugin_base.dataintegration.context import ExecutionContext
+from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.parameter.dataset import DatasetParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
+from cmem_plugin_base.dataintegration.utils import write_to_dataset
 
 from ..constants import (
     SECURITY_PROTOCOLS,
@@ -15,7 +18,7 @@ from ..constants import (
     BOOTSTRAP_SERVERS_DESCRIPTION,
     SECURITY_PROTOCOL_DESCRIPTION,
 )
-from ..utils import KafkaConsumer, validate_kafka_config
+from ..utils import KafkaConsumer, validate_kafka_config, KafkaMessage
 
 
 @Plugin(
@@ -138,4 +141,37 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             config=self.get_config(), topic=self.kafka_topic, _log=self.log
         )
         _kafka_consumer.subscribe()
-        _kafka_consumer.poll(dataset_id=self.message_dataset, context=context)
+        count = 0
+        file_resource = io.StringIO()
+        file_resource.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+        file_resource.write("<KafkaMessages>")
+        for message in _kafka_consumer.poll():
+            count += 1
+            file_resource.write(self.get_message_with_wrapper(message))
+
+        file_resource.write("</KafkaMessages>")
+
+        _kafka_consumer.close()
+        context.report.update(
+            ExecutionReport(
+                entity_count=count,
+                operation="read",
+                operation_desc="messages received from kafka server",
+            )
+        )
+        file_resource.seek(0)
+        write_to_dataset(
+            dataset_id=self.message_dataset,
+            file_resource=file_resource,
+            context=context.user,
+        )
+
+    def get_message_with_wrapper(self, message: KafkaMessage) -> str:
+        """Wrap kafka message around Message tags"""
+        # strip xml metatadata
+        regex_pattern = "<\\?xml.*\\?>"
+        msg_with_wrapper = f'<Message key="{message.key}">'
+        # TODO Efficient way to remove xml doc string
+        msg_with_wrapper += re.sub(regex_pattern, "", message.value)
+        msg_with_wrapper += "</Message>\n"
+        return msg_with_wrapper

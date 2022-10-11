@@ -1,7 +1,6 @@
 """Kafka utils modules"""
-import io
 import re
-from typing import Dict, Any
+from typing import Dict, Any, Iterator
 from xml.sax.handler import ContentHandler  # nosec B406
 from xml.sax.saxutils import escape  # nosec B406
 
@@ -14,7 +13,6 @@ from cmem_plugin_base.dataintegration.context import (
 )
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
 from cmem_plugin_base.dataintegration.utils import (
-    write_to_dataset,
     setup_cmempy_user_access,
     split_task_id)
 from confluent_kafka import Producer, Consumer, KafkaError
@@ -82,17 +80,12 @@ class KafkaConsumer:
         self._consumer.subscribe(topics=[self._topic])
         self._log.info("subscribed topic")
 
-    def poll(self, dataset_id: str, context: ExecutionContext):
+    def poll(self) -> Iterator[KafkaMessage]:
         """Polls the producer for events and calls the corresponding callbacks"""
-        value = '<?xml version="1.0" encoding="UTF-8"?>\n'
-        start_tag = "<KafkaMessages>"
-        end_tag = "</KafkaMessages>"
-        regex_pattern = "<\\?xml.*\\?>"
         counter = 0
-        value += start_tag
         try:
             while True:
-                msg = self._consumer.poll(timeout=1.0)
+                msg = self._consumer.poll(timeout=KAFKA_TIMEOUT)
                 if msg is None:
                     self._log.info(f"No New Messages Exists on count {counter}")
                     break
@@ -104,44 +97,22 @@ class KafkaConsumer:
                     else:
                         self._log.info("raising exception")
                         self._log.error(f"{msg.error()}")
-                process_msg = re.sub(
-                    regex_pattern, "<Message>", msg.value().decode("utf-8")
-                )
-                value += process_msg + "</Message>"
-                counter += 1
                 self._log.info(
                     f"COUNTER {counter}, Offset: {msg.offset()},"
                     f" Key: {msg.key()}, P:  {msg.partition()}"
+                )
+                yield KafkaMessage(
+                    key=msg.key().decode("utf-8") if msg.key() else "",
+                    value=msg.value().decode("utf-8"),
                 )
 
         except KafkaError as kafka_error:
             self._log.info(f"Kafka Error{kafka_error.code()}")
 
-        finally:
-            # Close down consumer to commit final offsets.
-            self._log.info(f"LAST COUNT {counter}")
-            value += end_tag
-            self.close(dataset_id=dataset_id, data=value, context=context)
-            context.report.update(
-                ExecutionReport(
-                    entity_count=counter,
-                    operation="wait",
-                    operation_desc="messages received from kafka server",
-                )
-            )
-
-    def close(self, dataset_id: str, data: str, context: ExecutionContext):
+    def close(self):
         """Wait for all messages in the Producer queue to be delivered."""
         self._consumer.close()
         self._log.info("CLOSED")
-        try:
-            write_to_dataset(
-                dataset_id=dataset_id,
-                file_resource=io.StringIO(data),
-                context=context.user,
-            )
-        except FileNotFoundError:
-            self._log.error("File Not Error")
 
 
 class KafkaMessageHandler(ContentHandler):
