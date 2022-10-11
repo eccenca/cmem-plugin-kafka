@@ -1,18 +1,12 @@
 """Kafka consumer plugin module"""
 from typing import Sequence, Dict, Any
 
-from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
-from cmem.cmempy.workspace.tasks import get_task
-from cmem_plugin_base.dataintegration.context import ExecutionContext, UserContext
+from cmem_plugin_base.dataintegration.context import ExecutionContext
 from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.parameter.dataset import DatasetParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
-from cmem_plugin_base.dataintegration.utils import (
-    split_task_id,
-    setup_cmempy_user_access,
-)
 
 from ..constants import (
     SECURITY_PROTOCOLS,
