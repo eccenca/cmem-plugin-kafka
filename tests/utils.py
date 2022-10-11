@@ -1,7 +1,6 @@
 """Testing utilities."""
 import os
-from typing import Optional
-
+from defusedxml import ElementTree
 import pytest
 
 # check for cmem environment and skip if not present
@@ -56,8 +55,8 @@ class TestPluginContext(PluginContext):
     __test__ = False
 
     def __init__(
-        self,
-        project_id: str = "dummyProject",
+            self,
+            project_id: str = "dummyProject",
     ):
         self.project_id = project_id
         self.user = TestUserContext()
@@ -78,9 +77,16 @@ class TestExecutionContext(ExecutionContext):
     __test__ = False
 
     def __init__(
-        self,
-        project_id: str = "dummyProject",
+            self,
+            project_id: str = "dummyProject",
     ):
         self.report = ReportContext()
         self.task = TestTaskContext(project_id=project_id)
         self.user = TestUserContext()
+
+
+def xml_record_len(path: str):
+    """Return record len of xml file"""
+    tree = ElementTree.parse(path)
+    root = tree.getroot()
+    return len(root.findall('./Message'))
