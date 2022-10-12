@@ -85,8 +85,17 @@ class TestExecutionContext(ExecutionContext):
         self.user = TestUserContext()
 
 
-def xml_record_len(path: str):
-    """Return record len of xml file"""
-    tree = ElementTree.parse(path)
-    root = tree.getroot()
-    return len(root.findall('./Message'))
+class XMLUtils:
+    """ Standard xml utils class for testing"""
+    @staticmethod
+    def get_elements_len_fromstring(content: str) -> int:
+        """Return elements len from xml string data"""
+        tree = ElementTree.fromstring(content)
+        # returns the elements from depth level 1
+        return len(tree.findall('./'))
+
+    @staticmethod
+    def get_elements_len_from_file(path: str) -> int:
+        """Return elements len of xml file"""
+        tree = ElementTree.parse(path).getroot()
+        return len(tree.findall('./'))

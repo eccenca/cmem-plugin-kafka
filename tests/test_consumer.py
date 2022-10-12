@@ -1,5 +1,4 @@
 """Plugin tests."""
-import defusedxml.ElementTree
 import pytest
 import requests
 from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
@@ -16,7 +15,7 @@ from .utils import (
     needs_cmem,
     needs_kafka,
     get_kafka_config,
-    xml_record_len,
+    XMLUtils,
     TestExecutionContext,
     TestUserContext
 )
@@ -32,8 +31,8 @@ PRODUCER_DATASET_ID = f"{PRODUCER_DATASET_NAME}"
 CONSUMER_DATASET_ID = f"{CONSUMER_DATASET_NAME}"
 
 KAFKA_CONFIG = get_kafka_config()
-DEFAULT_GROUP = "eccenca-test"
-DEFAULT_TOPIC = "eccenca_kafka"
+DEFAULT_GROUP = "workflow"
+DEFAULT_TOPIC = "eccenca_kafka_workflow"
 DEFAULT_RESET = "latest"
 
 
@@ -68,7 +67,7 @@ def project(request):
 
 @needs_cmem
 @needs_kafka
-def test_execution_plain_kafka(project):
+def test_execution_kafka_producer_consumer(project):
     """Test plugin execution for Plain Kafka"""
     # Producer
     KafkaProducerPlugin(
@@ -82,7 +81,6 @@ def test_execution_plain_kafka(project):
     ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
     # Consumer
-    # FIXME: Consumer is working with an unregistered topic.
     KafkaConsumerPlugin(
         message_dataset=CONSUMER_DATASET_ID,
         bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
@@ -90,16 +88,19 @@ def test_execution_plain_kafka(project):
         sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
         sasl_username=KAFKA_CONFIG["sasl_username"],
         sasl_password=KAFKA_CONFIG["sasl_password"],
-        kafka_topic="DEFAULT_TOPIC",
+        kafka_topic=DEFAULT_TOPIC,
         group_id=DEFAULT_GROUP,
-        auto_offset_reset=DEFAULT_RESET,
+        auto_offset_reset="earliest",
     ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
-    assert xml_record_len(path='tests/sample-test.xml') == 3
-    with get_resource_from_dataset(dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}",
-                                   context=TestUserContext()) as response:
-        # TODO: Both records be equal
-        assert len(defusedxml.ElementTree.fromstring(response.text).findall('./')) != xml_record_len(path='tests/sample-test.xml')
+    # Ensure producer and consumer are working properly
+    assert XMLUtils.get_elements_len_from_file(path='tests/sample-test.xml') == 3
+    with get_resource_from_dataset(
+            dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}",
+            context=TestUserContext()) as response:
+
+        assert XMLUtils.get_elements_len_fromstring(response.text) == XMLUtils.get_elements_len_from_file(
+            path='tests/sample-test.xml')
 
 
 @needs_cmem
