@@ -31,7 +31,7 @@ from ..utils import (
     label="Send messages to Apache Kafka",
     plugin_id="cmem_plugin_kafka-SendMessages",
     description="Reads a prepared messages dataset and sends multiple messages to a"
-    " Kafka server.",
+                " Kafka server.",
     documentation="""This workflow operator uses the Kafka Producer API to send
 messages to a [Apache Kafka](https://kafka.apache.org/).
 
@@ -65,9 +65,9 @@ to the configured topic. Each message is created as a proper XML document.
             name="message_dataset",
             label="Messages Dataset",
             description="Where do you want to retrieve the messages from?"
-            " The dropdown lists usable datasets from the current"
-            " project only. In case you miss your dataset, check for"
-            " the correct type (XML) and build project).",
+                        " The dropdown lists usable datasets from the current"
+                        " project only. In case you miss your dataset, check for"
+                        " the correct type (XML) and build project).",
             param_type=DatasetParameterType(dataset_type="xml"),
         ),
         PluginParameter(
@@ -85,7 +85,7 @@ to the configured topic. Each message is created as a proper XML document.
             name="kafka_topic",
             label="Topic",
             description="The topic is a category/feed name to which the messages are"
-            " published.",
+                        " published.",
         ),
         PluginParameter(
             name="sasl_mechanisms",
@@ -106,14 +106,14 @@ class KafkaProducerPlugin(WorkflowPlugin):
     """Kafka Producer Plugin"""
 
     def __init__(
-        self,
-        message_dataset: str,
-        bootstrap_servers: str,
-        security_protocol: str,
-        sasl_mechanisms: str,
-        sasl_username: str,
-        sasl_password: str,
-        kafka_topic: str,
+            self,
+            message_dataset: str,
+            bootstrap_servers: str,
+            security_protocol: str,
+            sasl_mechanisms: str,
+            sasl_username: str,
+            sasl_password: str,
+            kafka_topic: str,
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError("Specified server id is invalid")
@@ -126,12 +126,18 @@ class KafkaProducerPlugin(WorkflowPlugin):
         self.kafka_topic = kafka_topic
         validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
 
+    def metrics_callback(self, json: str):
+        """sends producer metrics to server"""
+        self.log.info(json)
+
     def get_config(self) -> Dict[str, Any]:
         """construct and return kafka connection configuration"""
         config = {
             "bootstrap.servers": self.bootstrap_servers,
             "security.protocol": self.security_protocol,
             "client.id": "cmem-plugin-kafka",
+            "statistics.interval.ms": "250",
+            "stats_cb": self.metrics_callback,
         }
         if self.security_protocol.startswith("SASL"):
             config.update(

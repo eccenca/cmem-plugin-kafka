@@ -112,6 +112,10 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.auto_offset_reset = auto_offset_reset
         validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
 
+    def metrics_callback(self, json: str):
+        """sends producer metrics to server"""
+        self.log.info(json)
+
     def get_config(self) -> Dict[str, Any]:
         """construct and return kafka connection configuration"""
         config = {
@@ -121,6 +125,8 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             "enable.auto.commit": True,
             "auto.offset.reset": self.auto_offset_reset,
             "client.id": "cmem-plugin-kafka",
+            "statistics.interval.ms": "250",
+            "stats_cb": self.metrics_callback,
         }
         if self.security_protocol.startswith("SASL"):
             config.update(
