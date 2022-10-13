@@ -70,50 +70,38 @@ class KafkaConsumer:
         """Create consumer instance"""
         try:
             self._consumer = Consumer(config)
-            _log.info("Created Consumer")
         except IndexError:
-            _log.info("Config Failure")
+            _log.info("config settings failed to initialise consumer")
         self._topic = topic
         self._log = _log
 
     def subscribe(self):
-        """Produce message to topic."""
+        """Subscribes to a topic to consume messages"""
         self._consumer.subscribe(topics=[self._topic])
-        self._log.info("subscribed topic")
 
     def poll(self) -> Iterator[KafkaMessage]:
-        """Polls the producer for events and calls the corresponding callbacks"""
-        counter = 0
+        """Polls the consumer for events and calls the corresponding callbacks"""
         try:
             while True:
                 msg = self._consumer.poll(timeout=KAFKA_TIMEOUT)
                 if msg is None:
-                    self._log.info(f"No New Messages Exists on count {counter}")
+                    self._log.info('Messages are empty')
                     break
                 if msg.error():
                     if msg.error().code() == KafkaError.BROKER_NOT_AVAILABLE:
-                        self._log.info(
-                            f"{msg.key()}, " f"{msg.partition()}, {msg.partition()}"
-                        )
+                        self._log.error('kafka broker is not available')
                     else:
-                        self._log.info("raising exception")
-                        self._log.error(f"{msg.error()}")
-                self._log.info(
-                    f"COUNTER {counter}, Offset: {msg.offset()},"
-                    f" Key: {msg.key()}, P:  {msg.partition()}"
-                )
+                        self._log.error(f"KAFKA ERROR: {msg.error()}")
                 yield KafkaMessage(
                     key=msg.key().decode("utf-8") if msg.key() else "",
                     value=msg.value().decode("utf-8"),
                 )
-
         except KafkaError as kafka_error:
             self._log.info(f"Kafka Error{kafka_error.code()}")
 
     def close(self):
-        """Wait for all messages in the Producer queue to be delivered."""
+        """Closes the consumer once all messages were received."""
         self._consumer.close()
-        self._log.info("CLOSED")
 
 
 class KafkaMessageHandler(ContentHandler):
@@ -255,7 +243,7 @@ def get_resource_from_dataset(dataset_id: str, context: UserContext):
 
 def get_message_with_wrapper(message: KafkaMessage) -> str:
     """Wrap kafka message around Message tags"""
-    # strip xml metatadata
+    # strip xml metadata
     regex_pattern = "<\\?xml.*\\?>"
     msg_with_wrapper = f'<Message key="{message.key}">'
     # TODO Efficient way to remove xml doc string
