@@ -29,8 +29,32 @@ from ..utils import (
     label="Receive messages from Apache Kafka",
     plugin_id="cmem_plugin_kafka-ReceiveMessages",
     description="Receives multiple messages from a Apache Kafka server.",
-    documentation="""This workflow operator uses the Kafka Consumer API to receives
-messages from a [Apache Kafka](https://kafka.apache.org/).""",
+    documentation="""This workflow operator uses the Kafka Consumer API to receive
+messages from a [Apache Kafka](https://kafka.apache.org/).
+
+Need to specify a group id to receive messages from a Kafka topic. All messages received
+from a topic will be stored into a xml dataset. Sample response from the consumer will
+look this.
+```
+<?xml version="1.0" encoding="utf-8"?>
+<KafkaMessages>
+  <Message>
+    <PurchaseOrder OrderDate="1996-04-06">
+      <ShipTo country="string">
+        <name>string</name>
+      </ShipTo>
+    </PurchaseOrder>
+  </Message>
+  <Message>
+    <PurchaseOrder OrderDate="1996-04-06">
+      <ShipTo country="string">
+        <name>string</name>
+      </ShipTo>
+    </PurchaseOrder>
+  </Message>
+</KafkaMessages>
+```
+""",
     parameters=[
         PluginParameter(
             name="bootstrap_servers",
