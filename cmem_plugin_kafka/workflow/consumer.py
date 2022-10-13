@@ -18,7 +18,12 @@ from ..constants import (
     BOOTSTRAP_SERVERS_DESCRIPTION,
     SECURITY_PROTOCOL_DESCRIPTION,
 )
-from ..utils import KafkaConsumer, validate_kafka_config, KafkaMessage
+from ..utils import (
+    KafkaConsumer,
+    KafkaMessage,
+    validate_kafka_config,
+    get_kafka_statistics
+)
 
 
 @Plugin(
@@ -111,10 +116,14 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.group_id = group_id
         self.auto_offset_reset = auto_offset_reset
         validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
+        self._kafka_stats: dict = {}
 
     def metrics_callback(self, json: str):
         """sends producer metrics to server"""
         self.log.info(json)
+        self._kafka_stats = get_kafka_statistics(json_data=json)
+        for key, value in self._kafka_stats.items():
+            self.log.info(f'kafka-stats: {key:10} - {value:10}')
 
     def get_config(self) -> Dict[str, Any]:
         """construct and return kafka connection configuration"""
@@ -163,6 +172,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
                 entity_count=count,
                 operation="read",
                 operation_desc="messages received from kafka server",
+                summary=list(self._kafka_stats.items())
             )
         )
         file_resource.seek(0)
