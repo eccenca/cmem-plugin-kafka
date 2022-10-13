@@ -192,17 +192,16 @@ class KafkaProducerPlugin(WorkflowPlugin):
             plugin_logger=self.log
         )
         parser.setContentHandler(handler)
-
-        with self.get_resource_from_dataset(context=context.user) as response:
-            data = io.StringIO(response.text)
         context.report.update(
             ExecutionReport(
                 entity_count=0,
                 operation='wait',
+                operation_desc='messages sent to kafka server'
             )
         )
-        with data as xml_stream:
-            parser.parse(xml_stream)
+        with self.get_resource_from_dataset(context=context.user) as response:
+            response.raw.decode_content = True
+            parser.parse(response.raw)
 
         context.report.update(
             ExecutionReport(

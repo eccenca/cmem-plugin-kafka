@@ -115,6 +115,7 @@ class KafkaMessageHandler(ContentHandler):
 
                 self._kafka_producer.process(self._message)
                 if self._no_of_success_messages % 10 == 0:
+                    self._kafka_producer.poll(0)
                     self.update_report()
             else:
                 self._log.error("Not able to process this message. "
