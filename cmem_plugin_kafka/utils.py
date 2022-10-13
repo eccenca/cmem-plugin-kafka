@@ -154,6 +154,6 @@ class KafkaMessageHandler(ContentHandler):
             ExecutionReport(
                 entity_count=self.get_success_messages_count(),
                 operation="wait",
-                operation_desc="messages sent to kafka server",
+                operation_desc="messages sent",
             )
         )
