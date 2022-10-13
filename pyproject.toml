@@ -1,21 +1,21 @@
 [tool.poetry]
 name = "cmem-plugin-kafka"
-version = "1.0.1"
-description = "Send messages to Apache Kafka"
+version = "0.0.0"
 license = "Apache-2.0"
-authors = ["eccenca <cmempy-developer@eccenca.com>"]
-homepage = "https://github.com/eccenca/cmem-plugin-kafka"
+description = "Send messages to Apache Kafka."
+authors = ["eccenca GmbH <cmempy-developer@eccenca.com>"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Plugins",
+    "Topic :: Software Development :: Libraries :: Python Modules",
     "Intended Audience :: Information Technology",
     "License :: OSI Approved :: Apache Software License",
-    "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 readme = "README-public.md"
 keywords = [
     "eccenca Corporate Memory", "plugin", "kafka-producer"
 ]
+homepage = "https://github.com/eccenca/cmem-plugin-kafka"
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -42,8 +42,13 @@ coverage = "^6.3.2"
 defusedxml = "^0.7.1"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
+build-backend = "poetry_dynamic_versioning.backend"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+dirty = true
 
 [tool.pylint.MASTER]
 load-plugins="pylint_junit"
