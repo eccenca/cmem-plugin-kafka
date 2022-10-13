@@ -1,4 +1,5 @@
 """Kafka utils modules"""
+import json
 import re
 from typing import Dict, Any, Iterator
 from xml.sax.handler import ContentHandler  # nosec B406
@@ -250,3 +251,21 @@ def get_resource_from_dataset(dataset_id: str, context: UserContext):
     resource_name = str(task_meta_data["data"]["parameters"]["file"]["value"])
 
     return get_resource_response(project_id, resource_name)
+
+
+def get_kafka_statistics(json_data: str) -> dict:
+    """Return kafka statistics from json"""
+    extract_content = [
+        'name', 'client_id', 'type', 'time', 'msg_cnt', 'msg_size', 'topics'
+    ]
+    stats_dict: dict = {}
+    stats = json.loads(json_data)
+    for item in extract_content:
+        if item == 'topics':
+            topics = stats['topics']
+            for topic in topics:
+                stats_dict.setdefault('topics:', topic)
+        else:
+            stats_dict.setdefault(item, f'{stats[item]}')
+
+    return stats_dict
