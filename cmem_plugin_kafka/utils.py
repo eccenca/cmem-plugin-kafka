@@ -253,6 +253,17 @@ def get_resource_from_dataset(dataset_id: str, context: UserContext):
     return get_resource_response(project_id, resource_name)
 
 
+def get_message_with_wrapper(message: KafkaMessage) -> str:
+    """Wrap kafka message around Message tags"""
+    # strip xml metatadata
+    regex_pattern = "<\\?xml.*\\?>"
+    msg_with_wrapper = f'<Message key="{message.key}">'
+    # TODO Efficient way to remove xml doc string
+    msg_with_wrapper += re.sub(regex_pattern, "", message.value)
+    msg_with_wrapper += "</Message>\n"
+    return msg_with_wrapper
+
+
 def get_kafka_statistics(json_data: str) -> dict:
     """Return kafka statistics from json"""
     extract_content = [

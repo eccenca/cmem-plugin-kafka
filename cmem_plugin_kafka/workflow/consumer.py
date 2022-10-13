@@ -1,6 +1,5 @@
 """Kafka consumer plugin module"""
 import io
-import re
 from typing import Sequence, Dict, Any
 
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
@@ -20,9 +19,9 @@ from ..constants import (
 )
 from ..utils import (
     KafkaConsumer,
-    KafkaMessage,
     validate_kafka_config,
-    get_kafka_statistics
+    get_kafka_statistics,
+    get_message_with_wrapper
 )
 
 
@@ -162,7 +161,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         file_resource.write("<KafkaMessages>")
         for message in _kafka_consumer.poll():
             count += 1
-            file_resource.write(self.get_message_with_wrapper(message))
+            file_resource.write(get_message_with_wrapper(message))
 
         file_resource.write("</KafkaMessages>")
 
@@ -181,13 +180,3 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             file_resource=file_resource,
             context=context.user,
         )
-
-    def get_message_with_wrapper(self, message: KafkaMessage) -> str:
-        """Wrap kafka message around Message tags"""
-        # strip xml metatadata
-        regex_pattern = "<\\?xml.*\\?>"
-        msg_with_wrapper = f'<Message key="{message.key}">'
-        # TODO Efficient way to remove xml doc string
-        msg_with_wrapper += re.sub(regex_pattern, "", message.value)
-        msg_with_wrapper += "</Message>\n"
-        return msg_with_wrapper
