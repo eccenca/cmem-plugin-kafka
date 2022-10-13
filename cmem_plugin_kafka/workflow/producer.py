@@ -23,7 +23,8 @@ from ..utils import (
     KafkaProducer,
     KafkaMessageHandler,
     validate_kafka_config,
-    get_resource_from_dataset
+    get_resource_from_dataset,
+    get_kafka_statistics
 )
 
 
@@ -102,6 +103,7 @@ to the configured topic. Each message is created as a proper XML document.
         ),
     ],
 )
+# pylint: disable-msg=too-many-instance-attributes
 class KafkaProducerPlugin(WorkflowPlugin):
     """Kafka Producer Plugin"""
 
@@ -125,10 +127,13 @@ class KafkaProducerPlugin(WorkflowPlugin):
         self.sasl_password = sasl_password
         self.kafka_topic = kafka_topic
         validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
+        self._kafka_stats: dict = {}
 
     def metrics_callback(self, json: str):
         """sends producer metrics to server"""
-        self.log.info(json)
+        self._kafka_stats = get_kafka_statistics(json_data=json)
+        for key, value in self._kafka_stats.items():
+            self.log.info(f'kafka-stats: {key:10} - {value:10}')
 
     def get_config(self) -> Dict[str, Any]:
         """construct and return kafka connection configuration"""
@@ -182,5 +187,6 @@ class KafkaProducerPlugin(WorkflowPlugin):
                 entity_count=handler.get_success_messages_count(),
                 operation="write",
                 operation_desc="messages sent to kafka server",
+                summary=list(self._kafka_stats.items())
             )
         )
