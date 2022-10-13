@@ -1,6 +1,5 @@
 """Kafka producer plugin module"""
 import collections
-import io
 from typing import Sequence
 
 from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
