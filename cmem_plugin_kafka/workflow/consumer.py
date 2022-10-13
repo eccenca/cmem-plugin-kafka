@@ -143,7 +143,6 @@ class KafkaConsumerPlugin(WorkflowPlugin):
 
     def metrics_callback(self, json: str):
         """sends producer metrics to server"""
-        self.log.info(json)
         self._kafka_stats = get_kafka_statistics(json_data=json)
         for key, value in self._kafka_stats.items():
             self.log.info(f'kafka-stats: {key:10} - {value:10}')
