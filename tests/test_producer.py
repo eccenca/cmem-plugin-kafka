@@ -38,7 +38,7 @@ def project(request):
             file_resource=response_file,
             replace=True,
         )
-
+    yield request
     request.addfinalizer(lambda: delete_project(PROJECT_NAME))
 
 

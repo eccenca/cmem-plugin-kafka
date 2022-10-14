@@ -61,7 +61,7 @@ def project(request):
         parameters={"file": CONSUMER_RESOURCE_NAME},
         autoconfigure=False,
     )
-
+    yield request
     request.addfinalizer(lambda: delete_project(PROJECT_NAME))
 
 
