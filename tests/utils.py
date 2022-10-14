@@ -1,5 +1,6 @@
 """Testing utilities."""
 import os
+from typing import Optional
 from defusedxml import ElementTree
 import pytest
 
@@ -77,13 +78,13 @@ class TestExecutionContext(ExecutionContext):
     __test__ = False
 
     def __init__(
-            self,
-            project_id: str = "dummyProject",
+        self,
+        project_id: str = "dummyProject",
+        user: Optional[UserContext] = TestUserContext(),
     ):
         self.report = ReportContext()
         self.task = TestTaskContext(project_id=project_id)
-        self.user = TestUserContext()
-
+        self.user = user
 
 class XMLUtils:
     """ Standard xml utils class for testing"""

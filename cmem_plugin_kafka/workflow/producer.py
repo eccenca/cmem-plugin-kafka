@@ -1,5 +1,4 @@
 """Kafka producer plugin module"""
-import io
 from typing import Sequence, Dict, Any
 
 from cmem_plugin_base.dataintegration.context import (
@@ -16,8 +15,6 @@ from defusedxml import sax
 from ..constants import (
     SECURITY_PROTOCOLS,
     SASL_MECHANISMS,
-    SECURITY_PROTOCOL_DESCRIPTION,
-    BOOTSTRAP_SERVERS_DESCRIPTION,
 )
 from ..utils import (
     KafkaProducer,
@@ -74,12 +71,19 @@ to the configured topic. Each message is created as a proper XML document.
         PluginParameter(
             name="bootstrap_servers",
             label="Bootstrap Server",
-            description=BOOTSTRAP_SERVERS_DESCRIPTION,
+            description="This is URL of one of the Kafka brokers. The task"
+                        " fetches the initial metadata about your Kafka cluster from"
+                        " this URL.",
         ),
         PluginParameter(
             name="security_protocol",
             label="Security Protocol",
-            description=SECURITY_PROTOCOL_DESCRIPTION,
+            description="Which security mechanisms need to be applied to connect?"
+                        " Use SASL in case you connect to a Confluent platform."
+                        " Use PLAINTEXT in case you connect to a plain Kafka, which"
+                        " is available inside your VPN."
+                        " In case you use SASL, you also need to specify your SASL"
+                        " account and password in the advanced section.",
             param_type=ChoiceParameterType(SECURITY_PROTOCOLS),
         ),
         PluginParameter(
@@ -169,18 +173,17 @@ class KafkaProducerPlugin(WorkflowPlugin):
         )
         parser.setContentHandler(handler)
 
+        context.report.update(
+            ExecutionReport(
+                entity_count=0, operation="wait", operation_desc="messages sent"
+            )
+        )
+
         with get_resource_from_dataset(
                 dataset_id=self.message_dataset,
                 context=context.user) as response:
-            data = io.StringIO(response.text)
-        context.report.update(
-            ExecutionReport(
-                entity_count=0,
-                operation="wait",
-            )
-        )
-        with data as xml_stream:
-            parser.parse(xml_stream)
+            response.raw.decode_content = True
+            parser.parse(response.raw)
 
         context.report.update(
             ExecutionReport(
