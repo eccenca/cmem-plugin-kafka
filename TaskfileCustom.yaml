@@ -1,0 +1,19 @@
+# https://taskfile.dev
+---
+version: '3'
+
+tasks:
+
+  kafka:start:
+    desc: Start or restart the kafka orchestration
+    cmds:
+      - >
+        docker-compose -f docker/docker-compose.yml up
+        --wait --no-color --force-recreate --renew-anon-volumes
+
+  kafka:stop:
+    desc: Stop the kafka orchestration
+    cmds:
+      - docker-compose -f docker/docker-compose.yml stop
+      - docker-compose -f docker/docker-compose.yml rm -f
+
