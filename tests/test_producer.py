@@ -44,7 +44,6 @@ def project(request):
     request.addfinalizer(lambda: delete_project(PROJECT_NAME))
 
 
-
 @pytest.fixture
 def perf_project(request):
     """Provides the DI build project incl. assets."""
@@ -66,6 +65,7 @@ def perf_project(request):
             )
 
     request.addfinalizer(lambda: delete_project(PROJECT_NAME))
+
 
 @needs_cmem
 @needs_kafka
