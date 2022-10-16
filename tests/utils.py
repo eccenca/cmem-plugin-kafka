@@ -12,6 +12,7 @@ from cmem_plugin_base.dataintegration.context import (
     ReportContext,
     TaskContext,
     UserContext,
+    PluginContext,
 )
 
 needs_cmem: MarkDecorator = pytest.mark.skipif(
@@ -43,8 +44,23 @@ class TestUserContext(UserContext):
 
     def __init__(self):
         # get access token from default service account
-        access_token: str = get_token()["access_token"]
+        access_token = os.environ.get("OAUTH_ACCESS_TOKEN", "")
+        if not access_token:
+            access_token = get_token()["access_token"]
         self.token = lambda: access_token
+
+
+class TestPluginContext(PluginContext):
+    """dummy plugin context that can be used in tests"""
+
+    __test__ = False
+
+    def __init__(
+        self,
+        project_id: str = "dummyProject",
+    ):
+        self.project_id = project_id
+        self.user = TestUserContext()
 
 
 class TestTaskContext(TaskContext):
@@ -64,8 +80,7 @@ class TestExecutionContext(ExecutionContext):
     def __init__(
         self,
         project_id: str = "dummyProject",
-        user: Optional[UserContext] = TestUserContext(),
     ):
         self.report = ReportContext()
         self.task = TestTaskContext(project_id=project_id)
-        self.user = user
+        self.user = TestUserContext()
