@@ -56,8 +56,8 @@ class TestPluginContext(PluginContext):
     __test__ = False
 
     def __init__(
-            self,
-            project_id: str = "dummyProject",
+        self,
+        project_id: str = "dummyProject",
     ):
         self.project_id = project_id
         self.user = TestUserContext()
@@ -80,11 +80,10 @@ class TestExecutionContext(ExecutionContext):
     def __init__(
         self,
         project_id: str = "dummyProject",
-        user: Optional[UserContext] = TestUserContext(),
     ):
         self.report = ReportContext()
         self.task = TestTaskContext(project_id=project_id)
-        self.user = user
+        self.user = TestUserContext()
 
 class XMLUtils:
     """ Standard xml utils class for testing"""

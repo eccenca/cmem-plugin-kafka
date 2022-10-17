@@ -12,6 +12,34 @@ This eccenca Corporate Memory plugin allows for sending messages to Apache Kafka
 - Use [pre-commit](https://pre-commit.com/) to avoid errors before commit
 - This repository was created with [this](https://github.com/eccenca/cmem-plugin-template) [copier](https://copier.readthedocs.io/) template.
 
+### Running Test
+
+This plugin needs needs running Kafka and Corporate Memory orchestrations:
+
+In order to setup access to your Corporate Memory uses [cmemc](https://eccenca.com/go/cmemc)'s config eval command to fill environment variables:
+```shell-session
+$ eval $(cmemc -c my-cmem config eval)
+```
+
+In order to setup access to your Kafka, write the connection details to the `.env` file:
+```shell-session
+$ cat .env
+KAFKA_BOOTSTRAP_SERVER=localhost:9092
+KAFKA_SECURITY_PROTOCOL=PLAINTEXT
+```
+
+To run a Kafka orchestration locally, you can use task:
+```shell-session
+$ task custom:kafka:start
+task: [custom:kafka:start] docker-compose -f docker/docker-compose.yml up --wait --no-color --force-recreate --renew-anon-volumes
+
+[+] Running 2/2
+ ⠿ Container docker-zookeeper-1  Healthy                                          1.1s
+ ⠿ Container docker-kafka-1      Healthy                                          1.1s
+```
+
+Having Kafka as well as Corporate Memory in place, run the test suite with `task check`.
+
 ### confluent-python installation
 
 #### ARM based Macs
