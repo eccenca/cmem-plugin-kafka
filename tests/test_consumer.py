@@ -67,7 +67,6 @@ def project(request):
     request.addfinalizer(lambda: delete_project(PROJECT_NAME))
 
 
-
 @needs_cmem
 @needs_kafka
 def test_execution_kafka_producer_consumer(project):

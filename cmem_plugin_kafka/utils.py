@@ -285,7 +285,7 @@ def get_message_with_wrapper(message: KafkaMessage) -> str:
 
 def get_kafka_statistics(json_data: str) -> dict:
     """Return kafka statistics from json"""
-    extract_content = [
+    interested_keys = [
         "name",
         "client_id",
         "type",
@@ -294,14 +294,8 @@ def get_kafka_statistics(json_data: str) -> dict:
         "msg_size",
         "topics",
     ]
-    stats_dict: dict = {}
     stats = json.loads(json_data)
-    for item in extract_content:
-        if item == "topics":
-            topics = stats["topics"]
-            for topic in topics:
-                stats_dict.setdefault("topics:", topic)
-        else:
-            stats_dict.setdefault(item, f"{stats[item]}")
-
-    return stats_dict
+    return {
+        key: f"{stats[key]}" if type(stats[key]) == str else ",".join(stats[key])
+        for key in interested_keys
+    }

@@ -1,4 +1,3 @@
-
 import zipfile
 from contextlib import suppress
 
@@ -10,7 +9,14 @@ from cmem.cmempy.workspace.projects.resources.resource import create_resource
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
 from cmem_plugin_kafka.utils import get_resource_from_dataset
 from cmem_plugin_kafka.workflow.consumer import KafkaConsumerPlugin
-from .utils import needs_cmem, needs_kafka, get_kafka_config, TestExecutionContext, XMLUtils, TestUserContext
+from .utils import (
+    needs_cmem,
+    needs_kafka,
+    get_kafka_config,
+    TestExecutionContext,
+    XMLUtils,
+    TestUserContext,
+)
 
 PROJECT_NAME = "kafka_consumer_project"
 PRODUCER_DATASET_NAME = "sample-test"

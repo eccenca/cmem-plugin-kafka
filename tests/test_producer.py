@@ -116,4 +116,3 @@ def test_validate_bootstrap_server():
             sasl_password=None,
             kafka_topic=DEFAULT_TOPIC,
         )
-
