@@ -1,6 +1,8 @@
 """Plugin tests."""
 import zipfile
 import io
+from contextlib import suppress
+
 import pytest
 import requests
 from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
@@ -15,7 +17,6 @@ PROJECT_NAME = "kafka_test_project"
 DATASET_NAME = "sample-test"
 DATASET_TYPE = "xml"
 RESOURCE_NAME = f"{DATASET_NAME}.{DATASET_TYPE}"
-# DATASET_ID = f'{PROJECT_NAME}:{DATASET_NAME}'
 DATASET_ID = f"{DATASET_NAME}"
 
 KAFKA_CONFIG = get_kafka_config()
@@ -25,6 +26,8 @@ DEFAULT_TOPIC = "eccenca_kafka"
 @pytest.fixture
 def project(request):
     """Provides the DI build project incl. assets."""
+    with suppress(Exception):
+        delete_project(PROJECT_NAME)
     make_new_project(PROJECT_NAME)
     make_new_dataset(
         project_name=PROJECT_NAME,
@@ -40,30 +43,6 @@ def project(request):
             file_resource=response_file,
             replace=True,
         )
-    yield request
-    request.addfinalizer(lambda: delete_project(PROJECT_NAME))
-
-
-@pytest.fixture
-def perf_project(request):
-    """Provides the DI build project incl. assets."""
-    make_new_project(PROJECT_NAME)
-    make_new_dataset(
-        project_name=PROJECT_NAME,
-        dataset_name=DATASET_NAME,
-        dataset_type=DATASET_TYPE,
-        parameters={"file": RESOURCE_NAME},
-        autoconfigure=False,
-    )
-    with zipfile.ZipFile("tests/286K_Message.zip", "r") as unzipped_file:
-        with unzipped_file.open("286K_Message.xml") as response_file:
-            create_resource(
-                project_name=PROJECT_NAME,
-                resource_name=RESOURCE_NAME,
-                file_resource=response_file,
-                replace=True,
-            )
-
     request.addfinalizer(lambda: delete_project(PROJECT_NAME))
 
 
@@ -138,17 +117,3 @@ def test_validate_bootstrap_server():
             kafka_topic=DEFAULT_TOPIC,
         )
 
-
-@needs_cmem
-@needs_kafka
-def test_perf_execution_plain_kafka(perf_project):
-    """Test plugin execution for Plain Kafka"""
-    KafkaProducerPlugin(
-        message_dataset=DATASET_ID,
-        bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
-        security_protocol=KAFKA_CONFIG["security_protocol"],
-        sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
-        sasl_username=KAFKA_CONFIG["sasl_username"],
-        sasl_password=KAFKA_CONFIG["sasl_password"],
-        kafka_topic=DEFAULT_TOPIC,
-    ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))

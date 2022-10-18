@@ -21,7 +21,7 @@ from ..utils import (
     KafkaMessageHandler,
     validate_kafka_config,
     get_resource_from_dataset,
-    get_kafka_statistics
+    get_kafka_statistics,
 )
 
 
@@ -29,7 +29,7 @@ from ..utils import (
     label="Send messages to Apache Kafka",
     plugin_id="cmem_plugin_kafka-SendMessages",
     description="Reads a prepared messages dataset and sends multiple messages to a"
-                " Kafka server.",
+    " Kafka server.",
     documentation="""This workflow operator uses the Kafka Producer API to send
 messages to a [Apache Kafka](https://kafka.apache.org/).
 
@@ -63,34 +63,34 @@ to the configured topic. Each message is created as a proper XML document.
             name="message_dataset",
             label="Messages Dataset",
             description="Where do you want to retrieve the messages from?"
-                        " The dropdown lists usable datasets from the current"
-                        " project only. In case you miss your dataset, check for"
-                        " the correct type (XML) and build project).",
+            " The dropdown lists usable datasets from the current"
+            " project only. In case you miss your dataset, check for"
+            " the correct type (XML) and build project).",
             param_type=DatasetParameterType(dataset_type="xml"),
         ),
         PluginParameter(
             name="bootstrap_servers",
             label="Bootstrap Server",
             description="This is URL of one of the Kafka brokers. The task"
-                        " fetches the initial metadata about your Kafka cluster from"
-                        " this URL.",
+            " fetches the initial metadata about your Kafka cluster from"
+            " this URL.",
         ),
         PluginParameter(
             name="security_protocol",
             label="Security Protocol",
             description="Which security mechanisms need to be applied to connect?"
-                        " Use SASL in case you connect to a Confluent platform."
-                        " Use PLAINTEXT in case you connect to a plain Kafka, which"
-                        " is available inside your VPN."
-                        " In case you use SASL, you also need to specify your SASL"
-                        " account and password in the advanced section.",
+            " Use SASL in case you connect to a Confluent platform."
+            " Use PLAINTEXT in case you connect to a plain Kafka, which"
+            " is available inside your VPN."
+            " In case you use SASL, you also need to specify your SASL"
+            " account and password in the advanced section.",
             param_type=ChoiceParameterType(SECURITY_PROTOCOLS),
         ),
         PluginParameter(
             name="kafka_topic",
             label="Topic",
             description="The topic is a category/feed name to which the messages are"
-                        " published.",
+            " published.",
         ),
         PluginParameter(
             name="sasl_mechanisms",
@@ -112,14 +112,14 @@ class KafkaProducerPlugin(WorkflowPlugin):
     """Kafka Producer Plugin"""
 
     def __init__(
-            self,
-            message_dataset: str,
-            bootstrap_servers: str,
-            security_protocol: str,
-            sasl_mechanisms: str,
-            sasl_username: str,
-            sasl_password: str,
-            kafka_topic: str,
+        self,
+        message_dataset: str,
+        bootstrap_servers: str,
+        security_protocol: str,
+        sasl_mechanisms: str,
+        sasl_username: str,
+        sasl_password: str,
+        kafka_topic: str,
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError("Specified server id is invalid")
@@ -137,7 +137,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
         """sends producer metrics to server"""
         self._kafka_stats = get_kafka_statistics(json_data=json)
         for key, value in self._kafka_stats.items():
-            self.log.info(f'kafka-stats: {key:10} - {value:10}')
+            self.log.info(f"kafka-stats: {key:10} - {value:10}")
 
     def get_config(self) -> Dict[str, Any]:
         """construct and return kafka connection configuration"""
@@ -180,8 +180,8 @@ class KafkaProducerPlugin(WorkflowPlugin):
         )
 
         with get_resource_from_dataset(
-                dataset_id=self.message_dataset,
-                context=context.user) as response:
+            dataset_id=self.message_dataset, context=context.user
+        ) as response:
             response.raw.decode_content = True
             parser.parse(response.raw)
 
@@ -190,6 +190,6 @@ class KafkaProducerPlugin(WorkflowPlugin):
                 entity_count=handler.get_success_messages_count(),
                 operation="write",
                 operation_desc="messages sent to kafka server",
-                summary=list(self._kafka_stats.items())
+                summary=list(self._kafka_stats.items()),
             )
         )

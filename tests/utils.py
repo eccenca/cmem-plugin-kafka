@@ -85,17 +85,19 @@ class TestExecutionContext(ExecutionContext):
         self.task = TestTaskContext(project_id=project_id)
         self.user = TestUserContext()
 
+
 class XMLUtils:
-    """ Standard xml utils class for testing"""
+    """Standard xml utils class for testing"""
+
     @staticmethod
     def get_elements_len_fromstring(content: str) -> int:
         """Return elements len from xml string data"""
         tree = ElementTree.fromstring(content)
         # returns the elements from depth level 1
-        return len(tree.findall('./'))
+        return len(tree.findall("./"))
 
     @staticmethod
     def get_elements_len_from_file(path: str) -> int:
         """Return elements len of xml file"""
         tree = ElementTree.parse(path).getroot()
-        return len(tree.findall('./'))
+        return len(tree.findall("./"))

@@ -1,5 +1,4 @@
 """Kafka consumer plugin module"""
-import io
 from typing import Sequence, Dict, Any
 
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
@@ -21,7 +20,6 @@ from ..utils import (
     KafkaConsumer,
     validate_kafka_config,
     get_kafka_statistics,
-    get_message_with_wrapper
 )
 
 
@@ -145,7 +143,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         """sends producer metrics to server"""
         self._kafka_stats = get_kafka_statistics(json_data=json)
         for key, value in self._kafka_stats.items():
-            self.log.info(f'kafka-stats: {key:10} - {value:10}')
+            self.log.info(f"kafka-stats: {key:10} - {value:10}")
 
     def get_config(self) -> Dict[str, Any]:
         """construct and return kafka connection configuration"""
@@ -174,32 +172,24 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         # Prefix project id to dataset name
         self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
 
-        _kafka_consumer = KafkaConsumer(
-            config=self.get_config(), topic=self.kafka_topic, _log=self.log
+        kafka_consumer = KafkaConsumer(
+            config=self.get_config(),
+            topic=self.kafka_topic,
+            log=self.log,
+            context=context,
         )
-        _kafka_consumer.subscribe()
-        count = 0
-        file_resource = io.StringIO()
-        file_resource.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-        file_resource.write("<KafkaMessages>")
-        for message in _kafka_consumer.poll():
-            count += 1
-            file_resource.write(get_message_with_wrapper(message))
 
-        file_resource.write("</KafkaMessages>")
-
-        _kafka_consumer.close()
-        context.report.update(
-            ExecutionReport(
-                entity_count=count,
-                operation="read",
-                operation_desc="messages received from kafka server",
-                summary=list(self._kafka_stats.items())
-            )
-        )
-        file_resource.seek(0)
         write_to_dataset(
             dataset_id=self.message_dataset,
-            file_resource=file_resource,
+            file_resource=kafka_consumer,
             context=context.user,
+        )
+
+        context.report.update(
+            ExecutionReport(
+                entity_count=kafka_consumer.get_success_messages_count(),
+                operation="read",
+                operation_desc="messages received from kafka server",
+                summary=list(self._kafka_stats.items()),
+            )
         )

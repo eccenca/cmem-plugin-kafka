@@ -10,12 +10,13 @@ from cmem.cmempy.workspace.tasks import get_task
 from cmem_plugin_base.dataintegration.context import (
     ExecutionContext,
     ExecutionReport,
-    UserContext
+    UserContext,
 )
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
 from cmem_plugin_base.dataintegration.utils import (
     setup_cmempy_user_access,
-    split_task_id)
+    split_task_id,
+)
 from confluent_kafka import Producer, Consumer, KafkaError
 from confluent_kafka.admin import AdminClient, TopicMetadata, ClusterMetadata
 
@@ -66,14 +67,46 @@ class KafkaProducer:
 class KafkaConsumer:
     """Kafka consumer wrapper over confluent consumer"""
 
-    def __init__(self, config: dict, topic: str, _log: PluginLogger):
+    def __init__(
+        self, config: dict, topic: str, log: PluginLogger, context: ExecutionContext
+    ):
         """Create consumer instance"""
-        try:
-            self._consumer = Consumer(config)
-        except IndexError:
-            _log.info("config settings failed to initialise consumer")
+        self._consumer = Consumer(config)
+        self._context = context
+
         self._topic = topic
-        self._log = _log
+        self._log = log
+        self._no_of_success_messages = 0
+
+    def __enter__(self):
+        self.subscribe()
+        return self.get_xml_payload()
+
+    def get_xml_payload(self) -> Iterator[bytes]:
+        """generate xml file with kafka messages"""
+        yield '<?xml version="1.0" encoding="UTF-8"?>\n'.encode()
+        yield "<KafkaMessages>".encode()
+        for message in self.poll():
+            self._no_of_success_messages += 1
+            yield get_message_with_wrapper(message).encode()
+            if not self._no_of_success_messages % 10:
+                self._context.report.update(
+                    ExecutionReport(
+                        entity_count=self._no_of_success_messages,
+                        operation="read",
+                        operation_desc="messages received from kafka server",
+                    )
+                )
+
+        yield "</KafkaMessages>".encode()
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        # Exception handling here
+        self._consumer.close()
+
+    def get_success_messages_count(self) -> int:
+        """Return count of the successful messages"""
+        return self._no_of_success_messages
 
     def subscribe(self):
         """Subscribes to a topic to consume messages"""
@@ -85,11 +118,11 @@ class KafkaConsumer:
             while True:
                 msg = self._consumer.poll(timeout=KAFKA_TIMEOUT)
                 if msg is None:
-                    self._log.info('Messages are empty')
+                    self._log.info("Messages are empty")
                     break
                 if msg.error():
                     if msg.error().code() == KafkaError.BROKER_NOT_AVAILABLE:
-                        self._log.error('kafka broker is not available')
+                        self._log.error("kafka broker is not available")
                     else:
                         self._log.error(f"KAFKA ERROR: {msg.error()}")
                 yield KafkaMessage(
@@ -115,10 +148,7 @@ class KafkaMessageHandler(ContentHandler):
     _no_of_success_messages: int = 0
 
     def __init__(
-            self,
-            kafka_producer: KafkaProducer,
-            context: ExecutionContext,
-            plugin_logger
+        self, kafka_producer: KafkaProducer, context: ExecutionContext, plugin_logger
     ):
         super().__init__()
 
@@ -256,16 +286,22 @@ def get_message_with_wrapper(message: KafkaMessage) -> str:
 def get_kafka_statistics(json_data: str) -> dict:
     """Return kafka statistics from json"""
     extract_content = [
-        'name', 'client_id', 'type', 'time', 'msg_cnt', 'msg_size', 'topics'
+        "name",
+        "client_id",
+        "type",
+        "time",
+        "msg_cnt",
+        "msg_size",
+        "topics",
     ]
     stats_dict: dict = {}
     stats = json.loads(json_data)
     for item in extract_content:
-        if item == 'topics':
-            topics = stats['topics']
+        if item == "topics":
+            topics = stats["topics"]
             for topic in topics:
-                stats_dict.setdefault('topics:', topic)
+                stats_dict.setdefault("topics:", topic)
         else:
-            stats_dict.setdefault(item, f'{stats[item]}')
+            stats_dict.setdefault(item, f"{stats[item]}")
 
     return stats_dict
