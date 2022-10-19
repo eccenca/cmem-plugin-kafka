@@ -61,7 +61,9 @@ def perf_project(request):
         parameters={"file": PRODUCER_RESOURCE_NAME},
         autoconfigure=False,
     )
-    request.addfinalizer(lambda: delete_project(PROJECT_NAME))
+    yield request
+    with suppress(Exception):
+        delete_project(PROJECT_NAME)
 
 
 @needs_cmem
@@ -77,7 +79,7 @@ def test_performance_execution_kafka_producer_consumer(perf_project):
         sasl_username=KAFKA_CONFIG["sasl_username"],
         sasl_password=KAFKA_CONFIG["sasl_password"],
         kafka_topic=DEFAULT_TOPIC,
-    ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
+    ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
 
     # Consumer
     KafkaConsumerPlugin(
@@ -90,13 +92,16 @@ def test_performance_execution_kafka_producer_consumer(perf_project):
         kafka_topic=DEFAULT_TOPIC,
         group_id=DEFAULT_GROUP,
         auto_offset_reset="earliest",
-    ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
+    ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
 
     # Ensure producer and consumer are working properly
-    assert XMLUtils.get_elements_len_from_file(path="tests/sample-test.xml") == 286918
     with get_resource_from_dataset(
-        dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}", context=TestUserContext()
-    ) as response:
-        assert XMLUtils.get_elements_len_fromstring(
-            response.text
-        ) == XMLUtils.get_elements_len_from_file(path="tests/sample-test.xml")
+        dataset_id=f"{PROJECT_NAME}:{PRODUCER_DATASET_NAME}", context=TestUserContext()
+    ) as producer_file:
+        with get_resource_from_dataset(
+            dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}",
+            context=TestUserContext(),
+        ) as consumer_file:
+            assert XMLUtils.get_elements_len_fromstring(
+                consumer_file.text
+            ) == XMLUtils.get_elements_len_fromstring(producer_file.text)

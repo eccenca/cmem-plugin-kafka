@@ -296,6 +296,6 @@ def get_kafka_statistics(json_data: str) -> dict:
     ]
     stats = json.loads(json_data)
     return {
-        key: f"{stats[key]}" if isinstance(stats[key], str) else ",".join(stats[key])
+        key: ",".join(stats[key]) if isinstance(stats[key], list) else f"{stats[key]}"
         for key in interested_keys
     }
