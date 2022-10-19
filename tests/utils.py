@@ -1,6 +1,8 @@
 """Testing utilities."""
 import os
 from typing import Optional
+
+from cmem.cmempy.config import get_oauth_default_credentials
 from defusedxml import ElementTree
 import pytest
 
@@ -41,12 +43,13 @@ class TestUserContext(UserContext):
     """dummy user context that can be used in tests"""
 
     __test__ = False
+    default_credential: dict = {}
 
     def __init__(self):
         # get access token from default service account
-        access_token = os.environ.get("OAUTH_ACCESS_TOKEN", "")
-        if not access_token:
-            access_token = get_token()["access_token"]
+        if not TestUserContext.default_credential:
+            TestUserContext.default_credential = get_oauth_default_credentials()
+        access_token = get_token(_oauth_credentials=TestUserContext.default_credential)["access_token"]
         self.token = lambda: access_token
 
 

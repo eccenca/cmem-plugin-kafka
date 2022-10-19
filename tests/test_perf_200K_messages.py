@@ -96,12 +96,9 @@ def test_performance_execution_kafka_producer_consumer(perf_project):
 
     # Ensure producer and consumer are working properly
     with get_resource_from_dataset(
-        dataset_id=f"{PROJECT_NAME}:{PRODUCER_DATASET_NAME}", context=TestUserContext()
-    ) as producer_file:
-        with get_resource_from_dataset(
             dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}",
             context=TestUserContext(),
-        ) as consumer_file:
-            assert XMLUtils.get_elements_len_fromstring(
-                consumer_file.text
-            ) == XMLUtils.get_elements_len_fromstring(producer_file.text)
+    ) as consumer_file:
+        assert XMLUtils.get_elements_len_fromstring(
+            consumer_file.text
+        ) == 286918
