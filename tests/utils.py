@@ -49,7 +49,9 @@ class TestUserContext(UserContext):
         # get access token from default service account
         if not TestUserContext.default_credential:
             TestUserContext.default_credential = get_oauth_default_credentials()
-        access_token = get_token(_oauth_credentials=TestUserContext.default_credential)["access_token"]
+        access_token = get_token(_oauth_credentials=TestUserContext.default_credential)[
+            "access_token"
+        ]
         self.token = lambda: access_token
 
 

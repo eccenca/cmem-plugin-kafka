@@ -33,12 +33,20 @@ If all the consumer of a topic are labeled different consumer groups, then each
 record will be broadcast to all the consumers.
 """
 
+AUTO_OFFSET_RESET_DESCRIPTION = """
+What to do when there is no initial offset in Kafka or if the current offset does
+not exist any more on the server (e.g. because that data has been deleted).
+
+- `earliest` will fetch the whole topic beginning from the oldest record.
+- `latest` will receive nothing but will get any new records on the next run.
+"""
+
 
 @Plugin(
     label="Receive messages from Apache Kafka",
     plugin_id="cmem_plugin_kafka-ReceiveMessages",
     description="Reads messages from a Kafka topic and saves it to a "
-                "messages dataset (Consumer).",
+    "messages dataset (Consumer).",
     documentation="""This workflow operator uses the Kafka Consumer API to receive
 messages from a [Apache Kafka](https://kafka.apache.org/).
 
@@ -81,7 +89,7 @@ look this.
         PluginParameter(
             name="group_id",
             label="Consumer Group Name",
-            description=CONSUMER_GROUP_DESCRIPTION
+            description=CONSUMER_GROUP_DESCRIPTION,
         ),
         PluginParameter(
             name="kafka_topic",
@@ -101,14 +109,14 @@ look this.
             label="SASL Account",
             advanced=True,
             default_value="",
-            description=SASL_ACCOUNT_DESCRIPTION
+            description=SASL_ACCOUNT_DESCRIPTION,
         ),
         PluginParameter(
             name="sasl_password",
             label="SASL Password",
             advanced=True,
             default_value="",
-            description=SASL_PASSWORD_DESCRIPTION
+            description=SASL_PASSWORD_DESCRIPTION,
         ),
         PluginParameter(
             name="auto_offset_reset",
@@ -116,6 +124,7 @@ look this.
             param_type=ChoiceParameterType(AUTO_OFFSET_RESET),
             advanced=True,
             default_value="latest",
+            description=AUTO_OFFSET_RESET_DESCRIPTION,
         ),
         PluginParameter(
             name="message_dataset",

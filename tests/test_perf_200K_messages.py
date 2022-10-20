@@ -34,6 +34,7 @@ DEFAULT_RESET = "latest"
 RESOURCE_LINK = "https://download.eccenca.com/cmem-plugin-kafka/286K_Message.zip"
 RESOURCE_FILE = "tests/200K-Messages.xml"
 
+
 @pytest.fixture
 def perf_project(request):
     """Provides the DI build project incl. assets."""

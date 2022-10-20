@@ -93,9 +93,7 @@ to the configured topic. Each message is created as a proper XML document.
             default_value="PLAINTEXT",
         ),
         PluginParameter(
-            name="kafka_topic",
-            label="Topic",
-            description=TOPIC_DESCRIPTION
+            name="kafka_topic", label="Topic", description=TOPIC_DESCRIPTION
         ),
         PluginParameter(
             name="sasl_mechanisms",
@@ -109,14 +107,14 @@ to the configured topic. Each message is created as a proper XML document.
             label="SASL Account",
             advanced=True,
             default_value="",
-            description=SASL_ACCOUNT_DESCRIPTION
+            description=SASL_ACCOUNT_DESCRIPTION,
         ),
         PluginParameter(
             name="sasl_password",
             label="SASL Password",
             advanced=True,
             default_value="",
-            description=SASL_PASSWORD_DESCRIPTION
+            description=SASL_PASSWORD_DESCRIPTION,
         ),
     ],
 )
