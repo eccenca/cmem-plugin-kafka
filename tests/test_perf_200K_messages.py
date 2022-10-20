@@ -18,7 +18,7 @@ from .utils import (
     TestUserContext,
 )
 
-PROJECT_NAME = "kafka_consumer_project"
+PROJECT_NAME = "kafka_performance_project"
 PRODUCER_DATASET_NAME = "sample-test"
 CONSUMER_DATASET_NAME = "sample-test-result"
 DATASET_TYPE = "xml"
