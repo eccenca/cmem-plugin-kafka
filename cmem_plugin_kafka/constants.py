@@ -12,7 +12,9 @@ SECURITY_PROTOCOLS = collections.OrderedDict(
 )
 # SASL Mechanisms
 SASL_MECHANISMS = collections.OrderedDict(
-    {"PLAIN": "Authentication based on username and passwords (PLAIN)"}
+    {
+        "PLAIN": "Authentication based on username and passwords (PLAIN)"
+    }
 )
 
 # Auto Offset Resets

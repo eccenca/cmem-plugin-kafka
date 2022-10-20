@@ -12,9 +12,11 @@ from cmem_plugin_base.dataintegration.parameter.dataset import DatasetParameterT
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from defusedxml import sax
 
-from ..constants import (
+from cmem_plugin_kafka.constants import (
     SECURITY_PROTOCOLS,
     SASL_MECHANISMS,
+    BOOTSTRAP_SERVERS_DESCRIPTION,
+    SECURITY_PROTOCOL_DESCRIPTION,
 )
 from ..utils import (
     KafkaProducer,
@@ -71,19 +73,12 @@ to the configured topic. Each message is created as a proper XML document.
         PluginParameter(
             name="bootstrap_servers",
             label="Bootstrap Server",
-            description="This is URL of one of the Kafka brokers. The task"
-            " fetches the initial metadata about your Kafka cluster from"
-            " this URL.",
+            description=BOOTSTRAP_SERVERS_DESCRIPTION,
         ),
         PluginParameter(
             name="security_protocol",
             label="Security Protocol",
-            description="Which security mechanisms need to be applied to connect?"
-            " Use SASL in case you connect to a Confluent platform."
-            " Use PLAINTEXT in case you connect to a plain Kafka, which"
-            " is available inside your VPN."
-            " In case you use SASL, you also need to specify your SASL"
-            " account and password in the advanced section.",
+            description=SECURITY_PROTOCOL_DESCRIPTION,
             param_type=ChoiceParameterType(SECURITY_PROTOCOLS),
         ),
         PluginParameter(
