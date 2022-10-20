@@ -2,6 +2,8 @@
 import os
 from typing import Optional
 
+from cmem.cmempy.config import get_oauth_default_credentials
+from defusedxml import ElementTree
 import pytest
 
 # check for cmem environment and skip if not present
@@ -41,12 +43,15 @@ class TestUserContext(UserContext):
     """dummy user context that can be used in tests"""
 
     __test__ = False
+    default_credential: dict = {}
 
     def __init__(self):
         # get access token from default service account
-        access_token = os.environ.get("OAUTH_ACCESS_TOKEN", "")
-        if not access_token:
-            access_token = get_token()["access_token"]
+        if not TestUserContext.default_credential:
+            TestUserContext.default_credential = get_oauth_default_credentials()
+        access_token = get_token(_oauth_credentials=TestUserContext.default_credential)[
+            "access_token"
+        ]
         self.token = lambda: access_token
 
 
@@ -84,3 +89,20 @@ class TestExecutionContext(ExecutionContext):
         self.report = ReportContext()
         self.task = TestTaskContext(project_id=project_id)
         self.user = TestUserContext()
+
+
+class XMLUtils:
+    """Standard xml utils class for testing"""
+
+    @staticmethod
+    def get_elements_len_fromstring(content: str) -> int:
+        """Return elements len from xml string data"""
+        tree = ElementTree.fromstring(content)
+        # returns the elements from depth level 1
+        return len(tree.findall("./"))
+
+    @staticmethod
+    def get_elements_len_from_file(path: str) -> int:
+        """Return elements len of xml file"""
+        tree = ElementTree.parse(path).getroot()
+        return len(tree.findall("./"))

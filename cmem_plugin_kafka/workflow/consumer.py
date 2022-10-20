@@ -1,55 +1,58 @@
-"""Kafka producer plugin module"""
+"""Kafka consumer plugin module"""
 from typing import Sequence, Dict, Any
 
-from cmem_plugin_base.dataintegration.context import (
-    ExecutionContext,
-    ExecutionReport,
-)
+from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.parameter.dataset import DatasetParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
-from defusedxml import sax
+from cmem_plugin_base.dataintegration.utils import write_to_dataset
 
 from cmem_plugin_kafka.constants import (
     SECURITY_PROTOCOLS,
     SASL_MECHANISMS,
+    AUTO_OFFSET_RESET,
     BOOTSTRAP_SERVERS_DESCRIPTION,
     SECURITY_PROTOCOL_DESCRIPTION,
     SASL_ACCOUNT_DESCRIPTION,
     SASL_PASSWORD_DESCRIPTION,
 )
 from cmem_plugin_kafka.utils import (
-    KafkaProducer,
-    KafkaMessageHandler,
+    KafkaConsumer,
     validate_kafka_config,
-    get_resource_from_dataset,
     get_kafka_statistics,
 )
 
-TOPIC_DESCRIPTION = """
-The name of the category/feed to which the messages will be published.
+CONSUMER_GROUP_DESCRIPTION = """
+When a topic is consumed by consumers in the same group, every record will be delivered
+to only one consumer of that group.
+If all the consumers of a topic are labeled the same consumer group, then the
+records will effectively be load-balanced over these consumers.
+If all the consumer of a topic are labeled different consumer groups, then each
+record will be broadcast to all the consumers.
+"""
 
-Note that you may create this topic in advance before publishing messages to it.
-This is especially true for a kafka cluster hosted at
-[confluent.cloud](https://confluent.cloud).
+AUTO_OFFSET_RESET_DESCRIPTION = """
+What to do when there is no initial offset in Kafka or if the current offset does
+not exist any more on the server (e.g. because that data has been deleted).
+
+- `earliest` will fetch the whole topic beginning from the oldest record.
+- `latest` will receive nothing but will get any new records on the next run.
 """
 
 
 @Plugin(
-    label="Kafka Producer (Send Messages)",
-    plugin_id="cmem_plugin_kafka-SendMessages",
-    description="Reads a messages dataset and sends records to a"
-    " Kafka topic (Producer).",
-    documentation="""This workflow operator uses the Kafka Producer API to send
-messages to a [Apache Kafka](https://kafka.apache.org/).
+    label="Kafka Consumer (Receive Messages)",
+    plugin_id="cmem_plugin_kafka-ReceiveMessages",
+    description="Reads messages from a Kafka topic and saves it to a "
+    "messages dataset (Consumer).",
+    documentation="""This workflow operator uses the Kafka Consumer API to receive
+messages from a [Apache Kafka](https://kafka.apache.org/).
 
-The need-to-send data has to be prepared upfront in an XML dataset. The dataset is
-parsed into messages and send to a Kafka topic according to the configuration.
-
-An example XML document is shown below. This document will be sent as two messages
-to the configured topic. Each message is created as a proper XML document.
+Need to specify a group id to receive messages from a Kafka topic. All messages received
+from a topic will be stored into a xml dataset. Sample response from the consumer will
+look this.
 ```
 <?xml version="1.0" encoding="utf-8"?>
 <KafkaMessages>
@@ -72,15 +75,6 @@ to the configured topic. Each message is created as a proper XML document.
 """,
     parameters=[
         PluginParameter(
-            name="message_dataset",
-            label="Messages Dataset",
-            description="Where do you want to retrieve the messages from?"
-            " The dropdown lists usable datasets from the current"
-            " project only. In case you miss your dataset, check for"
-            " the correct type (XML) and build project).",
-            param_type=DatasetParameterType(dataset_type="xml"),
-        ),
-        PluginParameter(
             name="bootstrap_servers",
             label="Bootstrap Server",
             description=BOOTSTRAP_SERVERS_DESCRIPTION,
@@ -93,7 +87,15 @@ to the configured topic. Each message is created as a proper XML document.
             default_value="PLAINTEXT",
         ),
         PluginParameter(
-            name="kafka_topic", label="Topic", description=TOPIC_DESCRIPTION
+            name="group_id",
+            label="Consumer Group Name",
+            description=CONSUMER_GROUP_DESCRIPTION,
+        ),
+        PluginParameter(
+            name="kafka_topic",
+            label="Topic",
+            description="The name of the category/feed where messages were"
+            " published.",
         ),
         PluginParameter(
             name="sasl_mechanisms",
@@ -116,12 +118,30 @@ to the configured topic. Each message is created as a proper XML document.
             default_value="",
             description=SASL_PASSWORD_DESCRIPTION,
         ),
+        PluginParameter(
+            name="auto_offset_reset",
+            label="Auto Offset Reset",
+            param_type=ChoiceParameterType(AUTO_OFFSET_RESET),
+            advanced=True,
+            default_value="latest",
+            description=AUTO_OFFSET_RESET_DESCRIPTION,
+        ),
+        PluginParameter(
+            name="message_dataset",
+            label="Messages Dataset",
+            description="Where do you want to save the messages?"
+            " The dropdown lists usable datasets from the current"
+            " project only. In case you miss your dataset, check for"
+            " the correct type (XML) and build project.",
+            param_type=DatasetParameterType(dataset_type="xml"),
+            advanced=True,
+        ),
     ],
 )
-# pylint: disable-msg=too-many-instance-attributes
-class KafkaProducerPlugin(WorkflowPlugin):
-    """Kafka Producer Plugin"""
+class KafkaConsumerPlugin(WorkflowPlugin):
+    """Kafka Consumer Plugin"""
 
+    # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         message_dataset: str,
@@ -131,6 +151,8 @@ class KafkaProducerPlugin(WorkflowPlugin):
         sasl_username: str,
         sasl_password: str,
         kafka_topic: str,
+        group_id: str,
+        auto_offset_reset: str,
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError("Specified server id is invalid")
@@ -141,6 +163,8 @@ class KafkaProducerPlugin(WorkflowPlugin):
         self.sasl_username = sasl_username
         self.sasl_password = sasl_password
         self.kafka_topic = kafka_topic
+        self.group_id = group_id
+        self.auto_offset_reset = auto_offset_reset
         validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
         self._kafka_stats: dict = {}
 
@@ -155,6 +179,9 @@ class KafkaProducerPlugin(WorkflowPlugin):
         config = {
             "bootstrap.servers": self.bootstrap_servers,
             "security.protocol": self.security_protocol,
+            "group.id": self.group_id,
+            "enable.auto.commit": True,
+            "auto.offset.reset": self.auto_offset_reset,
             "client.id": "cmem-plugin-kafka",
             "statistics.interval.ms": "250",
             "stats_cb": self.metrics_callback,
@@ -170,37 +197,28 @@ class KafkaProducerPlugin(WorkflowPlugin):
         return config
 
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
-        self.log.info("Start Kafka Plugin")
+        self.log.info("Kafka Consumer Started")
         # Prefix project id to dataset name
         self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
 
-        parser = sax.make_parser()
-
-        # override the default ContextHandler
-        handler = KafkaMessageHandler(
-            KafkaProducer(self.get_config(), self.kafka_topic),
-            context,
-            plugin_logger=self.log,
+        kafka_consumer = KafkaConsumer(
+            config=self.get_config(),
+            topic=self.kafka_topic,
+            log=self.log,
+            context=context,
         )
-        parser.setContentHandler(handler)
+
+        write_to_dataset(
+            dataset_id=self.message_dataset,
+            file_resource=kafka_consumer,
+            context=context.user,
+        )
 
         context.report.update(
             ExecutionReport(
-                entity_count=0, operation="wait", operation_desc="messages sent"
-            )
-        )
-
-        with get_resource_from_dataset(
-            dataset_id=self.message_dataset, context=context.user
-        ) as response:
-            response.raw.decode_content = True
-            parser.parse(response.raw)
-
-        context.report.update(
-            ExecutionReport(
-                entity_count=handler.get_success_messages_count(),
-                operation="write",
-                operation_desc="messages sent",
+                entity_count=kafka_consumer.get_success_messages_count(),
+                operation="read",
+                operation_desc="messages received",
                 summary=list(self._kafka_stats.items()),
             )
         )
