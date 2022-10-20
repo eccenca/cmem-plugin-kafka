@@ -94,7 +94,7 @@ class KafkaConsumer:
                     ExecutionReport(
                         entity_count=self._no_of_success_messages,
                         operation="read",
-                        operation_desc="messages received from kafka server",
+                        operation_desc="messages received",
                     )
                 )
 
@@ -242,7 +242,7 @@ class KafkaMessageHandler(ContentHandler):
             ExecutionReport(
                 entity_count=self.get_success_messages_count(),
                 operation="wait",
-                operation_desc="messages sent to kafka server",
+                operation_desc="messages sent",
             )
         )
 
