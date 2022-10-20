@@ -31,8 +31,8 @@ KAFKA_CONFIG = get_kafka_config()
 DEFAULT_GROUP = "workflow"
 DEFAULT_TOPIC = "eccenca_kafka_workflow"
 DEFAULT_RESET = "latest"
-RESOURCE_LINK = 'https://download.eccenca.com/cmem-plugin-kafka/286K_Message.zip'
-
+RESOURCE_LINK = "https://download.eccenca.com/cmem-plugin-kafka/286K_Message.zip"
+RESOURCE_FILE = "tests/200K-Messages.xml"
 
 @pytest.fixture
 def perf_project(request):
@@ -47,7 +47,10 @@ def perf_project(request):
         parameters={"file": PRODUCER_RESOURCE_NAME},
         autoconfigure=False,
     )
-    with requests.get(url=RESOURCE_LINK, timeout=None) as response_file:
+    response = requests.get(url=RESOURCE_LINK, verify=False, timeout=10)
+    with open(RESOURCE_FILE, "wb") as file:
+        file.write(response.content)
+    with open(RESOURCE_FILE, "rb") as response_file:
         create_resource(
             project_name=PROJECT_NAME,
             resource_name=PRODUCER_RESOURCE_NAME,
