@@ -1,5 +1,5 @@
-import zipfile
 from contextlib import suppress
+import requests
 
 import pytest
 from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
@@ -31,6 +31,7 @@ KAFKA_CONFIG = get_kafka_config()
 DEFAULT_GROUP = "workflow"
 DEFAULT_TOPIC = "eccenca_kafka_workflow"
 DEFAULT_RESET = "latest"
+RESOURCE_LINK = 'https://download.eccenca.com/cmem-plugin-kafka/'
 
 
 @pytest.fixture
@@ -46,14 +47,13 @@ def perf_project(request):
         parameters={"file": PRODUCER_RESOURCE_NAME},
         autoconfigure=False,
     )
-    with zipfile.ZipFile("tests/286K_Message.zip", "r") as unzipped_file:
-        with unzipped_file.open("286K_Message.xml") as response_file:
-            create_resource(
-                project_name=PROJECT_NAME,
-                resource_name=PRODUCER_RESOURCE_NAME,
-                file_resource=response_file,
-                replace=True,
-            )
+    with requests.get(url=RESOURCE_LINK, timeout=20.0) as response_file:
+        create_resource(
+            project_name=PROJECT_NAME,
+            resource_name=PRODUCER_RESOURCE_NAME,
+            file_resource=response_file,
+            replace=True,
+        )
     make_new_dataset(
         project_name=PROJECT_NAME,
         dataset_name=CONSUMER_DATASET_NAME,
@@ -96,9 +96,12 @@ def test_performance_execution_kafka_producer_consumer(perf_project):
 
     # Ensure producer and consumer are working properly
     with get_resource_from_dataset(
+        dataset_id=f"{PROJECT_NAME}:{PRODUCER_DATASET_NAME}", context=TestUserContext()
+    ) as producer_file:
+        with get_resource_from_dataset(
             dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}",
             context=TestUserContext(),
-    ) as consumer_file:
-        assert XMLUtils.get_elements_len_fromstring(
-            consumer_file.text
-        ) == 286918
+        ) as consumer_file:
+            assert XMLUtils.get_elements_len_fromstring(
+                consumer_file.text
+            ) == XMLUtils.get_elements_len_fromstring(producer_file.text)
