@@ -147,6 +147,3 @@ co
 artifacts
 .DS_Store
 .task
-
-# ignore testfile
-tests/200K-Messages.xml
