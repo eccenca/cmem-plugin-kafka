@@ -20,7 +20,7 @@ from cmem_plugin_kafka.constants import (
     SASL_ACCOUNT_DESCRIPTION,
     SASL_PASSWORD_DESCRIPTION,
 )
-from ..utils import (
+from cmem_plugin_kafka.utils import (
     KafkaProducer,
     KafkaMessageHandler,
     validate_kafka_config,
@@ -38,7 +38,7 @@ This is especially true for a kafka cluster hosted at
 
 
 @Plugin(
-    label="Send messages to Apache Kafka",
+    label="Kafka Producer (Send Messages)",
     plugin_id="cmem_plugin_kafka-SendMessages",
     description="Reads a messages dataset and sends records to a"
     " Kafka topic (Producer).",

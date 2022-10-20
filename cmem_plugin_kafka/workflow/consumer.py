@@ -43,7 +43,7 @@ not exist any more on the server (e.g. because that data has been deleted).
 
 
 @Plugin(
-    label="Receive messages from Apache Kafka",
+    label="Kafka Consumer (Receive Messages)",
     plugin_id="cmem_plugin_kafka-ReceiveMessages",
     description="Reads messages from a Kafka topic and saves it to a "
     "messages dataset (Consumer).",

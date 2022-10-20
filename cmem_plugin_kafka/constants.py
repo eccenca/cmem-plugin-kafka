@@ -40,16 +40,17 @@ Use SASL in case you connect to a [confluent.cloud](https://confluent.cloud) clu
 (then you also need to specify your SASL credentials in the advanced options section).
 """
 
-SASL_ACCOUNT_DESCRIPTION = """
-The account identifier for the SASL authentication.
+SASL_ACCOUNT_DESCRIPTION = (
+    "The account identifier for the SASL authentication. "
+    "\n\n"
+    "In case you are using a [confluent.cloud](https://confluent.cloud) cluster, "
+    "this is the API key."
+)
 
-In case you are using a [confluent.cloud](https://confluent.cloud) cluster,
-this is the API key.
-"""
 
-SASL_PASSWORD_DESCRIPTION = """
-The credentials for the SASL Account.
-
-In case you are using a [confluent.cloud](https://confluent.cloud) cluster,
-this is the API secret.
-"""
+SASL_PASSWORD_DESCRIPTION = (
+    "The credentials for the SASL Account. "  # nosec
+    "\n\n"
+    "In case you are using a [confluent.cloud](https://confluent.cloud) cluster, "
+    "this is the API secret."
+)
