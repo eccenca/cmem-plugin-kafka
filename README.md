@@ -1,10 +1,10 @@
 # cmem-plugin-kafka
 
-This eccenca Corporate Memory plugin allows for sending messages to Apache Kafka.
+This eccenca Corporate Memory plugin allows for sending and receiving messages from Apache Kafka.
 
 ## Installation
 
-`cmemc -c YOUR-CMEM admin workspace python install cmem-plugin-kafka`
+`cmemc -c my-cmem admin workspace python install cmem-plugin-kafka`
 
 ## Development
 

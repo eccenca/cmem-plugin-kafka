@@ -1,6 +1,6 @@
 # cmem-plugin-kafka
 
-Send messages to Apache Kafka.
+Send and receive messages from Apache Kafka.
 
 This is a plugin for [eccenca](https://eccenca.com) [Corporate Memory](https://documentation.eccenca.com).
 
