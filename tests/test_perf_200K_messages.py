@@ -31,7 +31,7 @@ KAFKA_CONFIG = get_kafka_config()
 DEFAULT_GROUP = "workflow"
 DEFAULT_TOPIC = "eccenca_kafka_workflow"
 DEFAULT_RESET = "latest"
-RESOURCE_LINK = 'https://download.eccenca.com/cmem-plugin-kafka/'
+RESOURCE_LINK = 'https://download.eccenca.com/cmem-plugin-kafka/286K_Message.zip'
 
 
 @pytest.fixture
