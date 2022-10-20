@@ -9,24 +9,36 @@ from cmem_plugin_base.dataintegration.parameter.dataset import DatasetParameterT
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.utils import write_to_dataset
 
-from ..constants import (
+from cmem_plugin_kafka.constants import (
     SECURITY_PROTOCOLS,
     SASL_MECHANISMS,
     AUTO_OFFSET_RESET,
     BOOTSTRAP_SERVERS_DESCRIPTION,
     SECURITY_PROTOCOL_DESCRIPTION,
+    SASL_ACCOUNT_DESCRIPTION,
+    SASL_PASSWORD_DESCRIPTION,
 )
-from ..utils import (
+from cmem_plugin_kafka.utils import (
     KafkaConsumer,
     validate_kafka_config,
     get_kafka_statistics,
 )
 
+CONSUMER_GROUP_DESCRIPTION = """
+When a topic is consumed by consumers in the same group, every record will be delivered
+to only one consumer of that group.
+If all the consumers of a topic are labeled the same consumer group, then the
+records will effectively be load-balanced over these consumers.
+If all the consumer of a topic are labeled different consumer groups, then each
+record will be broadcast to all the consumers.
+"""
+
 
 @Plugin(
     label="Receive messages from Apache Kafka",
     plugin_id="cmem_plugin_kafka-ReceiveMessages",
-    description="Receives multiple messages from a Apache Kafka server.",
+    description="Reads messages from a Kafka topic and saves it to a "
+                "messages dataset (Consumer).",
     documentation="""This workflow operator uses the Kafka Consumer API to receive
 messages from a [Apache Kafka](https://kafka.apache.org/).
 
@@ -64,17 +76,17 @@ look this.
             label="Security Protocol",
             description=SECURITY_PROTOCOL_DESCRIPTION,
             param_type=ChoiceParameterType(SECURITY_PROTOCOLS),
+            default_value="PLAINTEXT",
         ),
         PluginParameter(
             name="group_id",
-            label="Group",
-            description="The id is to specify the name of the consumer group of a "
-            "[Kafka consumer](https://docs.confluent.io/kafka-clients/python/current/overview.html#ak-consumer) belongs to",  # noqa: E501 # pylint: disable=line-too-long
+            label="Consumer Group Name",
+            description=CONSUMER_GROUP_DESCRIPTION
         ),
         PluginParameter(
             name="kafka_topic",
             label="Topic",
-            description="The topic is a category/feed name to which the messages are"
+            description="The name of the category/feed where messages were"
             " published.",
         ),
         PluginParameter(
@@ -85,10 +97,18 @@ look this.
             default_value="PLAIN",
         ),
         PluginParameter(
-            name="sasl_username", label="SASL Account", advanced=True, default_value=""
+            name="sasl_username",
+            label="SASL Account",
+            advanced=True,
+            default_value="",
+            description=SASL_ACCOUNT_DESCRIPTION
         ),
         PluginParameter(
-            name="sasl_password", label="SASL Password", advanced=True, default_value=""
+            name="sasl_password",
+            label="SASL Password",
+            advanced=True,
+            default_value="",
+            description=SASL_PASSWORD_DESCRIPTION
         ),
         PluginParameter(
             name="auto_offset_reset",
@@ -103,7 +123,7 @@ look this.
             description="Where do you want to save the messages?"
             " The dropdown lists usable datasets from the current"
             " project only. In case you miss your dataset, check for"
-            " the correct type (XML) and build project).",
+            " the correct type (XML) and build project.",
             param_type=DatasetParameterType(dataset_type="xml"),
             advanced=True,
         ),
@@ -189,7 +209,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             ExecutionReport(
                 entity_count=kafka_consumer.get_success_messages_count(),
                 operation="read",
-                operation_desc="messages received from kafka server",
+                operation_desc="messages received",
                 summary=list(self._kafka_stats.items()),
             )
         )

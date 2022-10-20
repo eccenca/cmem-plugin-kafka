@@ -27,14 +27,31 @@ AUTO_OFFSET_RESET = collections.OrderedDict(
     }
 )
 
-BOOTSTRAP_SERVERS_DESCRIPTION = (
-    "This is URL of one of the Kafka brokers. The task fetches the initial metadata "
-    "about your Kafka cluster from this URL. "
-)
+BOOTSTRAP_SERVERS_DESCRIPTION = """
+This is URL of one of the Kafka brokers.
 
-SECURITY_PROTOCOL_DESCRIPTION = (
-    "Which security mechanisms need to be applied to connect? Use SASL in case you "
-    "connect to a Confluent platform. Use PLAINTEXT in case you connect to a plain "
-    "Kafka, which is available inside your VPN. In case you use SASL, you also need to "
-    "specify your SASL account and password in the advanced section. "
-)
+The task fetches the initial metadata about your Kafka cluster from this URL.
+"""
+
+SECURITY_PROTOCOL_DESCRIPTION = """
+Which security mechanisms need to be applied to connect?
+
+Use PLAINTEXT in case you connect to a plain Kafka, which is available inside your VPN.
+
+Use SASL in case you connect to a [confluent.cloud](https://confluent.cloud) cluster
+(then you also need to specify your SASL credentials in the advanced options section).
+"""
+
+SASL_ACCOUNT_DESCRIPTION = """
+The account identifier for the SASL authentication.
+
+In case you are using a [confluent.cloud](https://confluent.cloud) cluster,
+this is the API key.
+"""
+
+SASL_PASSWORD_DESCRIPTION = """
+The credentials for the SASL Account.
+
+In case you are using a [confluent.cloud](https://confluent.cloud) cluster,
+this is the API secret.
+"""

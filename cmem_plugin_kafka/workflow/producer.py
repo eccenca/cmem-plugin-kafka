@@ -17,6 +17,8 @@ from cmem_plugin_kafka.constants import (
     SASL_MECHANISMS,
     BOOTSTRAP_SERVERS_DESCRIPTION,
     SECURITY_PROTOCOL_DESCRIPTION,
+    SASL_ACCOUNT_DESCRIPTION,
+    SASL_PASSWORD_DESCRIPTION,
 )
 from ..utils import (
     KafkaProducer,
@@ -26,12 +28,20 @@ from ..utils import (
     get_kafka_statistics,
 )
 
+TOPIC_DESCRIPTION = """
+The name of the category/feed to which the messages will be published.
+
+Note that you may create this topic in advance before publishing messages to it.
+This is especially true for a kafka cluster hosted at
+[confluent.cloud](https://confluent.cloud).
+"""
+
 
 @Plugin(
     label="Send messages to Apache Kafka",
     plugin_id="cmem_plugin_kafka-SendMessages",
-    description="Reads a prepared messages dataset and sends multiple messages to a"
-    " Kafka server.",
+    description="Reads a messages dataset and sends records to a"
+    " Kafka topic (Producer).",
     documentation="""This workflow operator uses the Kafka Producer API to send
 messages to a [Apache Kafka](https://kafka.apache.org/).
 
@@ -80,12 +90,12 @@ to the configured topic. Each message is created as a proper XML document.
             label="Security Protocol",
             description=SECURITY_PROTOCOL_DESCRIPTION,
             param_type=ChoiceParameterType(SECURITY_PROTOCOLS),
+            default_value="PLAINTEXT",
         ),
         PluginParameter(
             name="kafka_topic",
             label="Topic",
-            description="The topic is a category/feed name to which the messages are"
-            " published.",
+            description=TOPIC_DESCRIPTION
         ),
         PluginParameter(
             name="sasl_mechanisms",
@@ -95,10 +105,18 @@ to the configured topic. Each message is created as a proper XML document.
             default_value="PLAIN",
         ),
         PluginParameter(
-            name="sasl_username", label="SASL Account", advanced=True, default_value=""
+            name="sasl_username",
+            label="SASL Account",
+            advanced=True,
+            default_value="",
+            description=SASL_ACCOUNT_DESCRIPTION
         ),
         PluginParameter(
-            name="sasl_password", label="SASL Password", advanced=True, default_value=""
+            name="sasl_password",
+            label="SASL Password",
+            advanced=True,
+            default_value="",
+            description=SASL_PASSWORD_DESCRIPTION
         ),
     ],
 )
@@ -184,7 +202,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
             ExecutionReport(
                 entity_count=handler.get_success_messages_count(),
                 operation="write",
-                operation_desc="messages sent to kafka server",
+                operation_desc="messages sent",
                 summary=list(self._kafka_stats.items()),
             )
         )
