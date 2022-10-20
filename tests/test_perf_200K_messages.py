@@ -47,7 +47,7 @@ def perf_project(request):
         parameters={"file": PRODUCER_RESOURCE_NAME},
         autoconfigure=False,
     )
-    with requests.get(url=RESOURCE_LINK, timeout=20.0) as response_file:
+    with requests.get(url=RESOURCE_LINK, timeout=None) as response_file:
         create_resource(
             project_name=PROJECT_NAME,
             resource_name=PRODUCER_RESOURCE_NAME,
