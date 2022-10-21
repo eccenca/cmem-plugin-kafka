@@ -20,8 +20,6 @@ AUTO_OFFSET_RESET = collections.OrderedDict(
     {
         "earliest": "automatically reset the offset to the earliest offset (earliest)",
         "latest": "automatically reset the offset to the latest offset (latest)",
-        "none": "throw exception to the consumer if no previous offset "
-        "is found for the consumer's group (none)",
     }
 )
 
