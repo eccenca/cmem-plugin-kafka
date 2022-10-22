@@ -4,6 +4,8 @@ import re
 from typing import Dict, Any, Iterator
 from xml.sax.handler import ContentHandler  # nosec B406
 from xml.sax.saxutils import escape  # nosec B406
+from urllib.parse import urlparse
+import os
 
 from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
 from cmem.cmempy.workspace.tasks import get_task
@@ -20,7 +22,7 @@ from cmem_plugin_base.dataintegration.utils import (
 from confluent_kafka import Producer, Consumer, KafkaError
 from confluent_kafka.admin import AdminClient, TopicMetadata, ClusterMetadata
 
-from .constants import KAFKA_TIMEOUT
+from .constants import KAFKA_TIMEOUT, BASE_URI
 
 
 # pylint: disable-msg=too-few-public-methods
@@ -245,6 +247,15 @@ class KafkaMessageHandler(ContentHandler):
                 operation_desc="messages sent",
             )
         )
+
+
+def get_client_id(client_id: str, task_id: str):
+    """return dns:taskid when client id is empty"""
+    base_url = os.environ[BASE_URI]
+    if len(client_id) == 0 < len(task_id) <= len(base_url):
+        dns = urlparse(base_url).netloc
+        return f'{dns}:{task_id}'
+    return client_id
 
 
 def validate_kafka_config(config: Dict[str, Any], topic: str, log: PluginLogger):
