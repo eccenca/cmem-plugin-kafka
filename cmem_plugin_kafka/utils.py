@@ -249,7 +249,7 @@ class KafkaMessageHandler(ContentHandler):
         )
 
 
-def get_client_id(client_id: str, task_id: str):
+def get_client_id(client_id: str = "", task_id: str = ""):
     """return dns:taskid when client id is empty"""
     base_url = os.environ[BASE_URI]
     if len(client_id) == 0 < len(task_id) <= len(base_url):
