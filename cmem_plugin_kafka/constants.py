@@ -2,6 +2,7 @@
 import collections
 
 KAFKA_TIMEOUT = 5
+BASE_URI = 'CMEM_BASE_URI'
 
 # Security Protocols
 SECURITY_PROTOCOLS = collections.OrderedDict(

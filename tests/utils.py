@@ -9,6 +9,7 @@ import pytest
 # check for cmem environment and skip if not present
 from _pytest.mark import MarkDecorator
 from cmem.cmempy.api import get_token
+from cmem_plugin_kafka.constants import BASE_URI
 from cmem_plugin_base.dataintegration.context import (
     ExecutionContext,
     ReportContext,
@@ -18,7 +19,7 @@ from cmem_plugin_base.dataintegration.context import (
 )
 
 needs_cmem: MarkDecorator = pytest.mark.skipif(
-    "CMEM_BASE_URI" not in os.environ, reason="Needs CMEM configuration"
+    BASE_URI not in os.environ, reason="Needs CMEM configuration"
 )
 
 needs_kafka: MarkDecorator = pytest.mark.skipif(
