@@ -98,6 +98,7 @@ def test_performance_execution_kafka_producer_consumer(perf_project):
         kafka_topic=DEFAULT_TOPIC,
         group_id=DEFAULT_GROUP,
         auto_offset_reset="earliest",
+        client_id=''
     ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
 
     # Ensure producer and consumer are working properly

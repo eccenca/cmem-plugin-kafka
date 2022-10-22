@@ -93,6 +93,7 @@ def test_execution_kafka_producer_consumer(project):
         kafka_topic=DEFAULT_TOPIC,
         group_id=DEFAULT_GROUP,
         auto_offset_reset="earliest",
+        client_id=''
     ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
     # Ensure producer and consumer are working properly
@@ -121,6 +122,7 @@ def test_validate_invalid_inputs(project):
             kafka_topic=DEFAULT_TOPIC,
             group_id=DEFAULT_GROUP,
             auto_offset_reset=DEFAULT_RESET,
+            client_id=''
         ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
     # Invalid SECURITY PROTOCOL
@@ -135,6 +137,7 @@ def test_validate_invalid_inputs(project):
             kafka_topic=DEFAULT_TOPIC,
             group_id=DEFAULT_GROUP,
             auto_offset_reset=DEFAULT_RESET,
+            client_id=''
         ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
 
@@ -151,6 +154,7 @@ def test_validate_bootstrap_server():
             kafka_topic=DEFAULT_TOPIC,
             group_id=DEFAULT_GROUP,
             auto_offset_reset=DEFAULT_RESET,
+            client_id=''
         )
 
     with pytest.raises(
@@ -168,4 +172,5 @@ def test_validate_bootstrap_server():
             kafka_topic=DEFAULT_TOPIC,
             group_id=DEFAULT_GROUP,
             auto_offset_reset=DEFAULT_RESET,
+            client_id=''
         )
