@@ -22,6 +22,7 @@ from cmem_plugin_kafka.utils import (
     KafkaConsumer,
     validate_kafka_config,
     get_kafka_statistics,
+    get_client_id,
 )
 
 CONSUMER_GROUP_DESCRIPTION = """
@@ -194,7 +195,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         for key, value in self._kafka_stats.items():
             self.log.info(f"kafka-stats: {key:10} - {value:10}")
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self, task_id: str = '') -> Dict[str, Any]:
         """construct and return kafka connection configuration"""
         config = {
             "bootstrap.servers": self.bootstrap_servers,
@@ -202,7 +203,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             "group.id": self.group_id,
             "enable.auto.commit": True,
             "auto.offset.reset": self.auto_offset_reset,
-            "client.id": "cmem-plugin-kafka",
+            "client.id": get_client_id(client_id=self.client_id, task_id=task_id),
             "statistics.interval.ms": "250",
             "stats_cb": self.metrics_callback,
         }
@@ -222,7 +223,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
 
         kafka_consumer = KafkaConsumer(
-            config=self.get_config(),
+            config=self.get_config(task_id=context.task.task_id()),
             topic=self.kafka_topic,
             log=self.log,
             context=context,
