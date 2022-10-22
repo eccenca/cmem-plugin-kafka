@@ -50,7 +50,7 @@ The sole purpose of this is to be able to track the source of requests beyond ju
 ip and port by allowing a logical application name to be included in Kafka logs
 and monitoring aggregates.
 
-On empty Client Id, Plugin uses DNS:TASK_ID as Client Id as default.
+When the Client Id field is empty, the plugin defaults to DNS:TASK ID.
 """
 
 
