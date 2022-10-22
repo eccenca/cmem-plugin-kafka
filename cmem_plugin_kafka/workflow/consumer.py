@@ -41,6 +41,17 @@ not exist any more on the server (e.g. because that data has been deleted).
 - `latest` will receive nothing but will get any new records on the next run.
 """
 
+CLIENT_ID_DESCRIPTION = """
+An optional identifier of a Kafka consumer (in a consumer group) that is passed
+to a Kafka broker with every request.
+
+The sole purpose of this is to be able to track the source of requests beyond just
+ip and port by allowing a logical application name to be included in Kafka logs
+and monitoring aggregates.
+
+On empty Client Id, Plugin uses DNS:TASK_ID as Client Id as default.
+"""
+
 
 @Plugin(
     label="Kafka Consumer (Receive Messages)",
@@ -127,6 +138,13 @@ look this.
             description=AUTO_OFFSET_RESET_DESCRIPTION,
         ),
         PluginParameter(
+            name="client_id",
+            label="Client Id",
+            advanced=True,
+            default_value="",
+            description=CLIENT_ID_DESCRIPTION,
+        ),
+        PluginParameter(
             name="message_dataset",
             label="Messages Dataset",
             description="Where do you want to save the messages?"
@@ -143,16 +161,17 @@ class KafkaConsumerPlugin(WorkflowPlugin):
 
     # pylint: disable=too-many-instance-attributes
     def __init__(
-        self,
-        message_dataset: str,
-        bootstrap_servers: str,
-        security_protocol: str,
-        sasl_mechanisms: str,
-        sasl_username: str,
-        sasl_password: str,
-        kafka_topic: str,
-        group_id: str,
-        auto_offset_reset: str,
+            self,
+            message_dataset: str,
+            bootstrap_servers: str,
+            security_protocol: str,
+            sasl_mechanisms: str,
+            sasl_username: str,
+            sasl_password: str,
+            kafka_topic: str,
+            group_id: str,
+            auto_offset_reset: str,
+            client_id: str,
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError("Specified server id is invalid")
@@ -165,6 +184,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.kafka_topic = kafka_topic
         self.group_id = group_id
         self.auto_offset_reset = auto_offset_reset
+        self.client_id = client_id
         validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
         self._kafka_stats: dict = {}
 
