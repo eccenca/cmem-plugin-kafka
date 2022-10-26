@@ -249,13 +249,13 @@ class KafkaMessageHandler(ContentHandler):
         )
 
 
-def get_client_id(client_id: str = "", task_id: str = ""):
-    """return dns:taskid when client id is empty"""
+def get_client_id(client_id: str = "", project_id: str = "", task_id: str = ""):
+    """return dns:projectId:taskId when client id is empty"""
     base_url = os.environ[BASE_URI]
-    if None not in (client_id, task_id, base_url):
-        if len(client_id) == 0 < len(task_id) <= len(base_url):
+    if None not in (client_id, project_id, task_id, base_url):
+        if len(client_id) == 0 < len(project_id) <= len(task_id) <= len(base_url):
             dns = urlparse(base_url).netloc
-            return f'{dns}:{task_id}'
+            return f'{dns}:{project_id}:{task_id}'
     return client_id
 
 
