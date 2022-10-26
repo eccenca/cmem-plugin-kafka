@@ -31,7 +31,6 @@ PRODUCER_DATASET_ID = f"{PRODUCER_DATASET_NAME}"
 CONSUMER_DATASET_ID = f"{CONSUMER_DATASET_NAME}"
 
 KAFKA_CONFIG = get_kafka_config()
-DEFAULT_GROUP = "workflow"
 DEFAULT_TOPIC = "eccenca_kafka_workflow"
 DEFAULT_RESET = "latest"
 RESOURCE_LINK = "https://download.eccenca.com/cmem-plugin-kafka/286K_Message.zip"
@@ -97,7 +96,7 @@ def test_performance_execution_kafka_producer_consumer(perf_project):
         sasl_username=KAFKA_CONFIG["sasl_username"],
         sasl_password=KAFKA_CONFIG["sasl_password"],
         kafka_topic=DEFAULT_TOPIC,
-        group_id=DEFAULT_GROUP,
+        group_id="",
         auto_offset_reset="earliest",
         client_id="",
     ).execute([], TestExecutionContext(project_id=PROJECT_NAME))

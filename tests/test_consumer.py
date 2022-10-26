@@ -32,7 +32,6 @@ PRODUCER_DATASET_ID = f"{PRODUCER_DATASET_NAME}"
 CONSUMER_DATASET_ID = f"{CONSUMER_DATASET_NAME}"
 
 KAFKA_CONFIG = get_kafka_config()
-DEFAULT_GROUP = "workflow"
 DEFAULT_TOPIC = "eccenca_kafka_workflow"
 DEFAULT_RESET = "latest"
 
@@ -92,7 +91,7 @@ def test_execution_kafka_producer_consumer(project):
         sasl_username=KAFKA_CONFIG["sasl_username"],
         sasl_password=KAFKA_CONFIG["sasl_password"],
         kafka_topic=DEFAULT_TOPIC,
-        group_id=DEFAULT_GROUP,
+        group_id="",
         auto_offset_reset="earliest",
         client_id="",
     ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
@@ -121,7 +120,7 @@ def test_validate_invalid_inputs(project):
             sasl_username=KAFKA_CONFIG["sasl_username"],
             sasl_password=KAFKA_CONFIG["sasl_password"],
             kafka_topic=DEFAULT_TOPIC,
-            group_id=DEFAULT_GROUP,
+            group_id="",
             auto_offset_reset=DEFAULT_RESET,
             client_id="",
         ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
@@ -136,7 +135,7 @@ def test_validate_invalid_inputs(project):
             sasl_username=KAFKA_CONFIG["sasl_username"],
             sasl_password=KAFKA_CONFIG["sasl_password"],
             kafka_topic=DEFAULT_TOPIC,
-            group_id=DEFAULT_GROUP,
+            group_id="",
             auto_offset_reset=DEFAULT_RESET,
             client_id="",
         ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
@@ -153,7 +152,7 @@ def test_validate_bootstrap_server():
             sasl_username=KAFKA_CONFIG["sasl_username"],
             sasl_password=KAFKA_CONFIG["sasl_password"],
             kafka_topic=DEFAULT_TOPIC,
-            group_id=DEFAULT_GROUP,
+            group_id="",
             auto_offset_reset=DEFAULT_RESET,
             client_id="",
         )
@@ -171,7 +170,7 @@ def test_validate_bootstrap_server():
             sasl_username=None,
             sasl_password=None,
             kafka_topic=DEFAULT_TOPIC,
-            group_id=DEFAULT_GROUP,
+            group_id="",
             auto_offset_reset=DEFAULT_RESET,
             client_id="",
         )
