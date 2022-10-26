@@ -17,6 +17,7 @@ from cmem_plugin_kafka.constants import (
     SECURITY_PROTOCOL_DESCRIPTION,
     SASL_ACCOUNT_DESCRIPTION,
     SASL_PASSWORD_DESCRIPTION,
+    CLIENT_ID_DESCRIPTION,
 )
 from cmem_plugin_kafka.utils import (
     KafkaConsumer,
@@ -40,17 +41,6 @@ not exist any more on the server (e.g. because that data has been deleted).
 
 - `earliest` will fetch the whole topic beginning from the oldest record.
 - `latest` will receive nothing but will get any new records on the next run.
-"""
-
-CLIENT_ID_DESCRIPTION = """
-An optional identifier of a Kafka consumer (in a consumer group) that is passed
-to a Kafka broker with every request.
-
-The sole purpose of this is to be able to track the source of requests beyond just
-ip and port by allowing a logical application name to be included in Kafka logs
-and monitoring aggregates.
-
-When the Client Id field is empty, the plugin defaults to DNS:TASK ID.
 """
 
 
@@ -195,7 +185,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         for key, value in self._kafka_stats.items():
             self.log.info(f"kafka-stats: {key:10} - {value:10}")
 
-    def get_config(self, task_id: str = '') -> Dict[str, Any]:
+    def get_config(self, project_id: str = "", task_id: str = "") -> Dict[str, Any]:
         """construct and return kafka connection configuration"""
         config = {
             "bootstrap.servers": self.bootstrap_servers,
@@ -203,7 +193,9 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             "group.id": self.group_id,
             "enable.auto.commit": True,
             "auto.offset.reset": self.auto_offset_reset,
-            "client.id": get_client_id(client_id=self.client_id, task_id=task_id),
+            "client.id": get_client_id(client_id=self.client_id,
+                                       project_id=project_id,
+                                       task_id=task_id),
             "statistics.interval.ms": "250",
             "stats_cb": self.metrics_callback,
         }
@@ -223,7 +215,8 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
 
         kafka_consumer = KafkaConsumer(
-            config=self.get_config(task_id=context.task.task_id()),
+            config=self.get_config(project_id=context.task.project_id(),
+                                   task_id=context.task.task_id()),
             topic=self.kafka_topic,
             log=self.log,
             context=context,
