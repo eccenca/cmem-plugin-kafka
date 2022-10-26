@@ -80,6 +80,7 @@ def test_execution_kafka_producer_consumer(project):
         sasl_username=KAFKA_CONFIG["sasl_username"],
         sasl_password=KAFKA_CONFIG["sasl_password"],
         kafka_topic=DEFAULT_TOPIC,
+        client_id="",
     ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
     # Consumer

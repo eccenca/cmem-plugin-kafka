@@ -58,6 +58,7 @@ def test_execution_plain_kafka(project):
         sasl_username=KAFKA_CONFIG["sasl_username"],
         sasl_password=KAFKA_CONFIG["sasl_password"],
         kafka_topic=DEFAULT_TOPIC,
+        client_id="",
     ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
 
@@ -74,6 +75,7 @@ def test_validate_invalid_inputs(project):
             sasl_username=KAFKA_CONFIG["sasl_username"],
             sasl_password=KAFKA_CONFIG["sasl_password"],
             kafka_topic=DEFAULT_TOPIC,
+            client_id="",
         ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
     # Invalid SECURITY PROTOCOL
@@ -86,6 +88,7 @@ def test_validate_invalid_inputs(project):
             sasl_username=KAFKA_CONFIG["sasl_username"],
             sasl_password=KAFKA_CONFIG["sasl_password"],
             kafka_topic=DEFAULT_TOPIC,
+            client_id="",
         ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
 
@@ -100,6 +103,7 @@ def test_validate_bootstrap_server():
             sasl_username=KAFKA_CONFIG["sasl_username"],
             sasl_password=KAFKA_CONFIG["sasl_password"],
             kafka_topic=DEFAULT_TOPIC,
+            client_id="",
         )
 
     with pytest.raises(
@@ -115,4 +119,5 @@ def test_validate_bootstrap_server():
             sasl_username=None,
             sasl_password=None,
             kafka_topic=DEFAULT_TOPIC,
+            client_id="",
         )

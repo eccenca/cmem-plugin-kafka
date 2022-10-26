@@ -85,6 +85,7 @@ def test_performance_execution_kafka_producer_consumer(perf_project):
         sasl_username=KAFKA_CONFIG["sasl_username"],
         sasl_password=KAFKA_CONFIG["sasl_password"],
         kafka_topic=DEFAULT_TOPIC,
+        client_id="",
     ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
 
     # Consumer
