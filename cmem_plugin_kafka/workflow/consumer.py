@@ -33,6 +33,8 @@ If all the consumers of a topic are labeled the same consumer group, then the
 records will effectively be load-balanced over these consumers.
 If all the consumer of a topic are labeled different consumer groups, then each
 record will be broadcast to all the consumers.
+
+When the Group Id field is empty, the plugin defaults to Client Id.
 """
 
 AUTO_OFFSET_RESET_DESCRIPTION = """
@@ -89,11 +91,6 @@ look this.
             default_value="PLAINTEXT",
         ),
         PluginParameter(
-            name="group_id",
-            label="Consumer Group Name",
-            description=CONSUMER_GROUP_DESCRIPTION,
-        ),
-        PluginParameter(
             name="kafka_topic",
             label="Topic",
             description="The name of the category/feed where messages were"
@@ -127,6 +124,13 @@ look this.
             advanced=True,
             default_value="latest",
             description=AUTO_OFFSET_RESET_DESCRIPTION,
+        ),
+        PluginParameter(
+            name="group_id",
+            label="Consumer Group Name",
+            description=CONSUMER_GROUP_DESCRIPTION,
+            advanced=True,
+            default_value="",
         ),
         PluginParameter(
             name="client_id",
@@ -190,7 +194,9 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         config = {
             "bootstrap.servers": self.bootstrap_servers,
             "security.protocol": self.security_protocol,
-            "group.id": self.group_id,
+            "group.id": get_client_id(client_id=self.group_id,
+                                      project_id=project_id,
+                                      task_id=task_id),
             "enable.auto.commit": True,
             "auto.offset.reset": self.auto_offset_reset,
             "client.id": get_client_id(client_id=self.client_id,
