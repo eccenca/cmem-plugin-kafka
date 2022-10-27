@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/)
 
+## [Unreleased]
+
+### Added
+
+- Kafka exception handler to handle exceptions as follows:
+  - On `auto.offset.reset` is none.
+  - On failure connection or credentials.
+- Specific error messages to constants.
+
+### Changed
+
+- Validate connection with exception handler.
+
 ## [1.1.0] 2022-10-21
 
 ### Added
