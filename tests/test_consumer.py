@@ -8,11 +8,14 @@ from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
 from cmem.cmempy.workspace.projects.project import make_new_project, delete_project
 from cmem.cmempy.workspace.projects.resources.resource import create_resource
 from confluent_kafka import cimpl
-
+from cmem_plugin_kafka.constants import (
+    NONE_OFFSET_ERROR,
+    TRANSPORT_ERROR,
+)
 from cmem_plugin_kafka.workflow.consumer import KafkaConsumerPlugin
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
 from cmem_plugin_kafka.utils import get_resource_from_dataset
-from .utils import (
+from tests.utils import (
     needs_cmem,
     needs_kafka,
     get_kafka_config,
@@ -20,6 +23,7 @@ from .utils import (
     TestExecutionContext,
     TestUserContext,
 )
+
 
 PROJECT_NAME = "kafka_consumer_project"
 PRODUCER_DATASET_NAME = "sample-test"
@@ -154,8 +158,7 @@ def test_validate_bootstrap_server():
 
     with pytest.raises(
         cimpl.KafkaException,
-        match="KafkaError{code=_TRANSPORT,val=-195,"
-        'str="Failed to get metadata: Local: Broker transport failure"}',
+        match=TRANSPORT_ERROR,
     ):
         KafkaConsumerPlugin(
             bootstrap_servers="invalid_bootstrap_server:9092",
