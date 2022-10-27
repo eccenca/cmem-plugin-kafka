@@ -5,7 +5,7 @@ from cmem_plugin_kafka.utils import get_kafka_statistics
 
 
 def test_get_kafka_statistics():
-    """ test kafka statistics """
+    """test kafka statistics"""
     json_input = {
         "name": "producer",
         "client_id": "producer-kafka-testing",

@@ -111,7 +111,7 @@ def test_execution_kafka_producer_consumer(consumer_project):
 @needs_cmem
 @needs_kafka
 def test_validate_invalid_inputs(consumer_project):
-    """ test validate invalid inputs """
+    """test validate invalid inputs"""
     # Invalid Dataset
     with pytest.raises(requests.exceptions.HTTPError):
         KafkaConsumerPlugin(
