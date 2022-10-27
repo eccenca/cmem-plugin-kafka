@@ -140,6 +140,22 @@ def test_validate_invalid_inputs(project):
             auto_offset_reset=DEFAULT_RESET,
         ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
+    with pytest.raises(
+        cimpl.KafkaException,
+        match=NONE_OFFSET_ERROR,
+    ):
+        KafkaConsumerPlugin(
+            bootstrap_servers="invalid_bootstrap_server:9092",
+            message_dataset=CONSUMER_DATASET_ID,
+            security_protocol="PLAINTEXT",
+            sasl_mechanisms="PLAIN",
+            sasl_username=None,
+            sasl_password=None,
+            kafka_topic=DEFAULT_TOPIC,
+            group_id=DEFAULT_GROUP,
+            auto_offset_reset="none",
+        )
+
 
 def test_validate_bootstrap_server():
     """Validate bootstrap service value"""
