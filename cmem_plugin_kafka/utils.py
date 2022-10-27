@@ -18,9 +18,14 @@ from cmem_plugin_base.dataintegration.utils import (
     split_task_id,
 )
 from confluent_kafka import Producer, Consumer, KafkaError
+from confluent_kafka import cimpl
 from confluent_kafka.admin import AdminClient, TopicMetadata, ClusterMetadata
 
-from .constants import KAFKA_TIMEOUT
+from cmem_plugin_kafka.constants import (
+    KAFKA_TIMEOUT,
+    NONE_OFFSET_ERROR,
+    TRANSPORT_ERROR,
+)
 
 
 # pylint: disable-msg=too-few-public-methods
@@ -249,16 +254,24 @@ class KafkaMessageHandler(ContentHandler):
 
 def validate_kafka_config(config: Dict[str, Any], topic: str, log: PluginLogger):
     """Validate kafka configuration"""
-    admin_client = AdminClient(config)
-    cluster_metadata: ClusterMetadata = admin_client.list_topics(
-        topic=topic, timeout=KAFKA_TIMEOUT
-    )
+    try:
+        admin_client = AdminClient(config)
+        cluster_metadata: ClusterMetadata = admin_client.list_topics(
+            topic=topic, timeout=KAFKA_TIMEOUT
+        )
 
-    topic_meta: TopicMetadata = cluster_metadata.topics[topic]
-    kafka_error = topic_meta.error
+        topic_meta: TopicMetadata = cluster_metadata.topics[topic]
+        kafka_error = topic_meta.error
 
-    if kafka_error is not None:
-        raise kafka_error
+        if kafka_error is not None:
+            raise kafka_error
+    except cimpl.KafkaException as error:
+        kafka_error = error.args[0]
+        error_message = kafka_exception_handler(error=kafka_error)
+        if error_message is not None and len(error_message) > 0:
+            log.error(error_message)
+            raise cimpl.KafkaException(error_message)
+        raise cimpl.KafkaException(error)
     log.info("Connection details are valid")
 
 
@@ -299,3 +312,19 @@ def get_kafka_statistics(json_data: str) -> dict:
         key: ",".join(stats[key]) if isinstance(stats[key], list) else f"{stats[key]}"
         for key in interested_keys
     }
+
+
+def kafka_exception_handler(error: KafkaError):
+    """handle kafka exceptions"""
+    if (
+        error.name() == "_INVALID_ARG"
+        and error.str() == 'Invalid value "none" for configuration property'
+        ' "auto.offset.reset"'
+    ):
+        return NONE_OFFSET_ERROR
+    if (
+        error.name() == "_TRANSPORT"
+        and error.str() == "Failed to get metadata: Local: Broker transport failure"
+    ):
+        return TRANSPORT_ERROR
+    return None
