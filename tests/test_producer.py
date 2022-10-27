@@ -1,6 +1,4 @@
 """Plugin tests."""
-import zipfile
-import io
 from contextlib import suppress
 
 import pytest
@@ -11,10 +9,7 @@ from cmem.cmempy.workspace.projects.resources.resource import create_resource
 from confluent_kafka import cimpl
 
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
-from cmem_plugin_kafka.constants import (
-    NONE_OFFSET_ERROR,
-    TRANSPORT_ERROR,
-)
+from cmem_plugin_kafka.constants import TRANSPORT_ERROR
 from tests.utils import needs_cmem, needs_kafka, get_kafka_config, TestExecutionContext
 
 PROJECT_NAME = "kafka_test_project"

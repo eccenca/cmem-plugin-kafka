@@ -1,6 +1,5 @@
 """Testing utilities."""
 import os
-from typing import Optional
 
 from cmem.cmempy.config import get_oauth_default_credentials
 from defusedxml import ElementTree

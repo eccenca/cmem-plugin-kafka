@@ -1,5 +1,4 @@
 """Plugin tests."""
-import zipfile
 from contextlib import suppress
 
 import pytest
