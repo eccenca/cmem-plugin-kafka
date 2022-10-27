@@ -1,10 +1,12 @@
+""" Test utils """
 import json
 
 from cmem_plugin_kafka.utils import get_kafka_statistics
 
 
 def test_get_kafka_statistics():
-    input = {
+    """ test kafka statistics """
+    json_input = {
         "name": "producer",
         "client_id": "producer-kafka-testing",
         "type": "C",
@@ -14,12 +16,12 @@ def test_get_kafka_statistics():
         "topics": ["eccenca"],
         "extra_key": "no_interested",
     }
-    filtered_output = get_kafka_statistics(json.dumps(input))
+    filtered_output = get_kafka_statistics(json.dumps(json_input))
     assert filtered_output.get("extra_key") is None
-    assert input["topics"][0] == filtered_output["topics"]
+    assert json_input["topics"][0] == filtered_output["topics"]
 
-    del input["extra_key"]
-    del input["topics"]
+    del json_input["extra_key"]
+    del json_input["topics"]
     del filtered_output["topics"]
 
-    assert filtered_output == input
+    assert filtered_output == json_input

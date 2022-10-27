@@ -1,3 +1,4 @@
+""" Performance tests for producer and consumer """
 import zipfile
 from contextlib import suppress
 import io
@@ -37,7 +38,7 @@ DEFAULT_RESET = "latest"
 RESOURCE_LINK = "https://download.eccenca.com/cmem-plugin-kafka/286K_Message.zip"
 
 
-@pytest.fixture
+@pytest.fixture(name="performance_project")
 def perf_project(request):
     """Provides the DI build project incl. assets."""
     with suppress(Exception):
@@ -74,7 +75,7 @@ def perf_project(request):
 
 @needs_cmem
 @needs_kafka
-def test_performance_execution_kafka_producer_consumer(perf_project):
+def test_performance_execution_kafka_producer_consumer(performance_project):
     """Test plugin execution for Plain Kafka"""
     # Producer
     KafkaProducerPlugin(

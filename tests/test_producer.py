@@ -22,7 +22,7 @@ KAFKA_CONFIG = get_kafka_config()
 DEFAULT_TOPIC = "eccenca_kafka"
 
 
-@pytest.fixture
+@pytest.fixture(name="producer_project")
 def project(request):
     """Provides the DI build project incl. assets."""
     with suppress(Exception):
@@ -47,7 +47,7 @@ def project(request):
 
 @needs_cmem
 @needs_kafka
-def test_execution_plain_kafka(project):
+def test_execution_plain_kafka(producer_project):
     """Test plugin execution for Plain Kafka"""
     KafkaProducerPlugin(
         message_dataset=DATASET_ID,
@@ -62,7 +62,7 @@ def test_execution_plain_kafka(project):
 
 @needs_cmem
 @needs_kafka
-def test_validate_invalid_inputs(project):
+def test_validate_invalid_inputs(producer_project):
     # Invalid Dataset
     with pytest.raises(requests.exceptions.HTTPError):
         KafkaProducerPlugin(

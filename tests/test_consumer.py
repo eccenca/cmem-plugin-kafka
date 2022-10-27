@@ -40,7 +40,7 @@ DEFAULT_TOPIC = "eccenca_kafka_workflow"
 DEFAULT_RESET = "latest"
 
 
-@pytest.fixture
+@pytest.fixture(name="consumer_project")
 def project(request):
     """Provides the DI build project incl. assets."""
     with suppress(Exception):
@@ -72,7 +72,7 @@ def project(request):
 
 @needs_cmem
 @needs_kafka
-def test_execution_kafka_producer_consumer(project):
+def test_execution_kafka_producer_consumer(consumer_project):
     """Test plugin execution for Plain Kafka"""
     # Producer
     KafkaProducerPlugin(
@@ -110,7 +110,8 @@ def test_execution_kafka_producer_consumer(project):
 
 @needs_cmem
 @needs_kafka
-def test_validate_invalid_inputs(project):
+def test_validate_invalid_inputs(consumer_project):
+    """ test validate invalid inputs """
     # Invalid Dataset
     with pytest.raises(requests.exceptions.HTTPError):
         KafkaConsumerPlugin(
