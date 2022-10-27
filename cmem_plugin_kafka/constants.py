@@ -47,10 +47,20 @@ SASL_ACCOUNT_DESCRIPTION = (
     "this is the API key."
 )
 
-
 SASL_PASSWORD_DESCRIPTION = (
     "The credentials for the SASL Account. "  # nosec
     "\n\n"
     "In case you are using a [confluent.cloud](https://confluent.cloud) cluster, "
     "this is the API secret."
 )
+
+
+# Kafka Error Messages
+
+NONE_OFFSET_ERROR = (
+    "Since no previous offset has been detected for the selected"
+    " customer group. Choose the earliest or latest option based"
+    " on your preferences."
+)
+
+TRANSPORT_ERROR = "Failed to connect or authenticate using SASL credentials."
