@@ -132,15 +132,15 @@ class KafkaProducerPlugin(WorkflowPlugin):
     """Kafka Producer Plugin"""
 
     def __init__(
-            self,
-            message_dataset: str,
-            bootstrap_servers: str,
-            security_protocol: str,
-            sasl_mechanisms: str,
-            sasl_username: str,
-            sasl_password: str,
-            kafka_topic: str,
-            client_id: str,
+        self,
+        message_dataset: str,
+        bootstrap_servers: str,
+        security_protocol: str,
+        sasl_mechanisms: str,
+        sasl_username: str,
+        sasl_password: str,
+        kafka_topic: str,
+        client_id: str,
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError("Specified server id is invalid")
@@ -166,9 +166,9 @@ class KafkaProducerPlugin(WorkflowPlugin):
         config = {
             "bootstrap.servers": self.bootstrap_servers,
             "security.protocol": self.security_protocol,
-            "client.id": get_client_id(client_id=self.client_id,
-                                       project_id=project_id,
-                                       task_id=task_id),
+            "client.id": get_client_id(
+                client_id=self.client_id, project_id=project_id, task_id=task_id
+            ),
             "statistics.interval.ms": "250",
             "stats_cb": self.metrics_callback,
         }
@@ -193,9 +193,10 @@ class KafkaProducerPlugin(WorkflowPlugin):
         handler = KafkaMessageHandler(
             KafkaProducer(
                 config=self.get_config(
-                    project_id=context.task.project_id(),
-                    task_id=context.task.task_id()),
-                topic=self.kafka_topic),
+                    project_id=context.task.project_id(), task_id=context.task.task_id()
+                ),
+                topic=self.kafka_topic,
+            ),
             context,
             plugin_logger=self.log,
         )
@@ -208,7 +209,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
         )
 
         with get_resource_from_dataset(
-                dataset_id=self.message_dataset, context=context.user
+            dataset_id=self.message_dataset, context=context.user
         ) as response:
             response.raw.decode_content = True
             parser.parse(response.raw)

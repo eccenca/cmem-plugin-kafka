@@ -100,9 +100,9 @@ look this.
             name="message_dataset",
             label="Messages Dataset",
             description="Where do you want to save the messages?"
-                        " The dropdown lists usable datasets from the current"
-                        " project only. In case you miss your dataset, check for"
-                        " the correct type (XML) and build project.",
+            " The dropdown lists usable datasets from the current"
+            " project only. In case you miss your dataset, check for"
+            " the correct type (XML) and build project.",
             param_type=DatasetParameterType(dataset_type="xml"),
         ),
         PluginParameter(
@@ -165,17 +165,17 @@ class KafkaConsumerPlugin(WorkflowPlugin):
 
     # pylint: disable=too-many-instance-attributes
     def __init__(
-            self,
-            message_dataset: str,
-            bootstrap_servers: str,
-            security_protocol: str,
-            sasl_mechanisms: str,
-            sasl_username: str,
-            sasl_password: str,
-            kafka_topic: str,
-            group_id: str,
-            auto_offset_reset: str,
-            client_id: str,
+        self,
+        message_dataset: str,
+        bootstrap_servers: str,
+        security_protocol: str,
+        sasl_mechanisms: str,
+        sasl_username: str,
+        sasl_password: str,
+        kafka_topic: str,
+        group_id: str,
+        auto_offset_reset: str,
+        client_id: str,
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError("Specified server id is invalid")
@@ -203,14 +203,14 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         config = {
             "bootstrap.servers": self.bootstrap_servers,
             "security.protocol": self.security_protocol,
-            "group.id": get_client_id(client_id=self.group_id,
-                                      project_id=project_id,
-                                      task_id=task_id),
+            "group.id": get_client_id(
+                client_id=self.group_id, project_id=project_id, task_id=task_id
+            ),
             "enable.auto.commit": True,
             "auto.offset.reset": self.auto_offset_reset,
-            "client.id": get_client_id(client_id=self.client_id,
-                                       project_id=project_id,
-                                       task_id=task_id),
+            "client.id": get_client_id(
+                client_id=self.client_id, project_id=project_id, task_id=task_id
+            ),
             "statistics.interval.ms": "250",
             "stats_cb": self.metrics_callback,
         }
@@ -230,8 +230,9 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
 
         kafka_consumer = KafkaConsumer(
-            config=self.get_config(project_id=context.task.project_id(),
-                                   task_id=context.task.task_id()),
+            config=self.get_config(
+                project_id=context.task.project_id(), task_id=context.task.task_id()
+            ),
             topic=self.kafka_topic,
             log=self.log,
             context=context,
