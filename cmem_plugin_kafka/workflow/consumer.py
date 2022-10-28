@@ -97,6 +97,15 @@ look this.
             " published.",
         ),
         PluginParameter(
+            name="message_dataset",
+            label="Messages Dataset",
+            description="Where do you want to save the messages?"
+                        " The dropdown lists usable datasets from the current"
+                        " project only. In case you miss your dataset, check for"
+                        " the correct type (XML) and build project.",
+            param_type=DatasetParameterType(dataset_type="xml"),
+        ),
+        PluginParameter(
             name="sasl_mechanisms",
             label="SASL Mechanisms",
             param_type=ChoiceParameterType(SASL_MECHANISMS),

@@ -73,6 +73,7 @@ def perf_project(request):
 
 @needs_cmem
 @needs_kafka
+@pytest.mark.skip("")
 def test_performance_execution_kafka_producer_consumer(perf_project):
     """Test plugin execution for Plain Kafka"""
     # Producer
