@@ -1,4 +1,5 @@
 """Plugin tests."""
+# pylint: disable-msg=c-extension-no-member
 from contextlib import suppress
 
 import pytest

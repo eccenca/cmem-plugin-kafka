@@ -1,4 +1,5 @@
 """Plugin tests."""
+# pylint: disable-msg=c-extension-no-member
 from contextlib import suppress
 
 import pytest
@@ -63,6 +64,7 @@ def test_execution_plain_kafka(producer_project):
 @needs_cmem
 @needs_kafka
 def test_validate_invalid_inputs(producer_project):
+    """ Test invalid inputs """
     # Invalid Dataset
     with pytest.raises(requests.exceptions.HTTPError):
         KafkaProducerPlugin(

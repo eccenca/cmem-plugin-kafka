@@ -252,6 +252,7 @@ class KafkaMessageHandler(ContentHandler):
         )
 
 
+# pylint: disable-msg=c-extension-no-member
 def validate_kafka_config(config: Dict[str, Any], topic: str, log: PluginLogger):
     """Validate kafka configuration"""
     try:
