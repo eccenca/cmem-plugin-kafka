@@ -5,8 +5,7 @@ from typing import Dict, Any, Iterator
 from xml.sax.handler import ContentHandler  # nosec B406
 from xml.sax.saxutils import escape  # nosec B406
 from urllib.parse import urlparse
-import os
-
+from cmem.cmempy.config import get_cmem_base_uri
 from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
 from cmem.cmempy.workspace.tasks import get_task
 from cmem_plugin_base.dataintegration.context import (
@@ -22,7 +21,7 @@ from cmem_plugin_base.dataintegration.utils import (
 from confluent_kafka import Producer, Consumer, KafkaError
 from confluent_kafka.admin import AdminClient, TopicMetadata, ClusterMetadata
 
-from .constants import KAFKA_TIMEOUT, BASE_URI
+from cmem_plugin_kafka.constants import KAFKA_TIMEOUT
 
 
 # pylint: disable-msg=too-few-public-methods
@@ -249,13 +248,12 @@ class KafkaMessageHandler(ContentHandler):
         )
 
 
-def get_client_id(client_id: str = "", project_id: str = "", task_id: str = ""):
+def get_client_id(client_id: str, project_id: str, task_id: str):
     """return dns:projectId:taskId when client id is empty"""
-    base_url = os.environ[BASE_URI]
-    if None not in (client_id, project_id, task_id, base_url):
-        if len(client_id) == 0 < len(project_id) <= len(task_id) <= len(base_url):
-            dns = urlparse(base_url).netloc
-            return f'{dns}:{project_id}:{task_id}'
+    base_url = get_cmem_base_uri()
+    if len(client_id) == 0 < min(len(x) for x in (project_id, task_id, base_url)):
+        dns = urlparse(base_url).netloc
+        return f"{dns}:{project_id}:{task_id}"
     return client_id
 
 
