@@ -73,8 +73,9 @@ class TestTaskContext(TaskContext):
 
     __test__ = False
 
-    def __init__(self, project_id: str = "dummyProject"):
+    def __init__(self, project_id: str = "dummyProject", task_id: str = "dummyTask"):
         self.project_id = lambda: project_id
+        self.task_id = lambda: task_id
 
 
 class TestExecutionContext(ExecutionContext):
@@ -82,12 +83,9 @@ class TestExecutionContext(ExecutionContext):
 
     __test__ = False
 
-    def __init__(
-        self,
-        project_id: str = "dummyProject",
-    ):
+    def __init__(self, project_id: str = "dummyProject", task_id: str = "dummyTask"):
         self.report = ReportContext()
-        self.task = TestTaskContext(project_id=project_id)
+        self.task = TestTaskContext(project_id=project_id, task_id=task_id)
         self.user = TestUserContext()
 
 
