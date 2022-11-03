@@ -18,7 +18,7 @@ from cmem_plugin_base.dataintegration.utils import (
     split_task_id,
 )
 from confluent_kafka import Producer, Consumer, KafkaError
-from confluent_kafka import cimpl
+from confluent_kafka.error import KafkaException
 from confluent_kafka.admin import AdminClient, TopicMetadata, ClusterMetadata
 
 from cmem_plugin_kafka.constants import (
@@ -252,7 +252,6 @@ class KafkaMessageHandler(ContentHandler):
         )
 
 
-# pylint: disable-msg=c-extension-no-member
 def validate_kafka_config(config: Dict[str, Any], topic: str, log: PluginLogger):
     """Validate kafka configuration"""
     try:
@@ -266,13 +265,13 @@ def validate_kafka_config(config: Dict[str, Any], topic: str, log: PluginLogger)
 
         if kafka_error is not None:
             raise kafka_error
-    except cimpl.KafkaException as error:
+    except KafkaException as error:
         kafka_error = error.args[0]
         error_message = kafka_exception_handler(error=kafka_error)
         if error_message is not None and len(error_message) > 0:
             log.error(error_message)
-            raise cimpl.KafkaException(error_message)
-        raise cimpl.KafkaException(error)
+            raise KafkaException(error_message) from error
+        raise KafkaException(error) from error
     log.info("Connection details are valid")
 
 
