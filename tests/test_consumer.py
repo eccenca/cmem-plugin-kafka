@@ -1,5 +1,4 @@
 """Plugin tests."""
-# pylint: disable-msg=c-extension-no-member
 from contextlib import suppress
 
 import pytest
@@ -7,7 +6,7 @@ import requests
 from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
 from cmem.cmempy.workspace.projects.project import make_new_project, delete_project
 from cmem.cmempy.workspace.projects.resources.resource import create_resource
-from confluent_kafka import cimpl
+from confluent_kafka.error import KafkaException
 from cmem_plugin_kafka.constants import (
     NONE_OFFSET_ERROR,
     TRANSPORT_ERROR,
@@ -128,7 +127,7 @@ def test_validate_invalid_inputs(consumer_project):
         ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
     # Invalid SECURITY PROTOCOL
-    with pytest.raises(cimpl.KafkaException):
+    with pytest.raises(KafkaException):
         KafkaConsumerPlugin(
             message_dataset=CONSUMER_DATASET_ID,
             bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
@@ -142,7 +141,7 @@ def test_validate_invalid_inputs(consumer_project):
         ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
     with pytest.raises(
-        cimpl.KafkaException,
+        KafkaException,
         match=NONE_OFFSET_ERROR,
     ):
         KafkaConsumerPlugin(
@@ -174,7 +173,7 @@ def test_validate_bootstrap_server():
         )
 
     with pytest.raises(
-        cimpl.KafkaException,
+        KafkaException,
         match=TRANSPORT_ERROR,
     ):
         KafkaConsumerPlugin(
