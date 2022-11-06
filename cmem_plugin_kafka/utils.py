@@ -17,7 +17,7 @@ from cmem_plugin_base.dataintegration.utils import (
     setup_cmempy_user_access,
     split_task_id,
 )
-from confluent_kafka import Producer, Consumer
+from confluent_kafka import Producer, Consumer, KafkaException
 from confluent_kafka.admin import AdminClient, TopicMetadata, ClusterMetadata
 
 from .constants import KAFKA_TIMEOUT
@@ -121,7 +121,7 @@ class KafkaConsumer:
                 break
             if msg.error():
                 self._log.error(f"Consumer poll Error:{msg.error()}")
-                raise msg.error()
+                raise KafkaException(msg.error())
 
             yield KafkaMessage(
                 key=msg.key().decode("utf-8") if msg.key() else "",
