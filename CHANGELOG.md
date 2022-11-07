@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### Changed
 
 - `Messages Dataset` Parameter moved from the advanced section to Main section (will change again in future)
+- Replace `none` with `error` in Auto Offset Reset parameter choice list
 
 ## [1.1.0] 2022-10-21
 

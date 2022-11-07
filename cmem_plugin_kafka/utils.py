@@ -17,7 +17,7 @@ from cmem_plugin_base.dataintegration.utils import (
     setup_cmempy_user_access,
     split_task_id,
 )
-from confluent_kafka import Producer, Consumer, KafkaError
+from confluent_kafka import Producer, Consumer, KafkaException
 from confluent_kafka.admin import AdminClient, TopicMetadata, ClusterMetadata
 
 from .constants import KAFKA_TIMEOUT
@@ -114,23 +114,19 @@ class KafkaConsumer:
 
     def poll(self) -> Iterator[KafkaMessage]:
         """Polls the consumer for events and calls the corresponding callbacks"""
-        try:
-            while True:
-                msg = self._consumer.poll(timeout=KAFKA_TIMEOUT)
-                if msg is None:
-                    self._log.info("Messages are empty")
-                    break
-                if msg.error():
-                    if msg.error().code() == KafkaError.BROKER_NOT_AVAILABLE:
-                        self._log.error("kafka broker is not available")
-                    else:
-                        self._log.error(f"KAFKA ERROR: {msg.error()}")
-                yield KafkaMessage(
-                    key=msg.key().decode("utf-8") if msg.key() else "",
-                    value=msg.value().decode("utf-8"),
-                )
-        except KafkaError as kafka_error:
-            self._log.info(f"Kafka Error{kafka_error.code()}")
+        while True:
+            msg = self._consumer.poll(timeout=KAFKA_TIMEOUT)
+            if msg is None:
+                self._log.info("Messages are empty")
+                break
+            if msg.error():
+                self._log.error(f"Consumer poll Error:{msg.error()}")
+                raise KafkaException(msg.error())
+
+            yield KafkaMessage(
+                key=msg.key().decode("utf-8") if msg.key() else "",
+                value=msg.value().decode("utf-8"),
+            )
 
     def close(self):
         """Closes the consumer once all messages were received."""
