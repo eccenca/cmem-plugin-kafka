@@ -244,13 +244,11 @@ class KafkaMessageHandler(ContentHandler):
         )
 
 
-def get_client_id(client_id: str, project_id: str, task_id: str):
+def get_default_client_id(project_id: str, task_id: str):
     """return dns:projectId:taskId when client id is empty"""
     base_url = get_cmem_base_uri()
-    if len(client_id) == 0 < min(len(x) for x in (project_id, task_id, base_url)):
-        dns = urlparse(base_url).netloc
-        return f"{dns}:{project_id}:{task_id}"
-    return client_id
+    dns = urlparse(base_url).netloc
+    return f"{dns}:{project_id}:{task_id}"
 
 
 def validate_kafka_config(config: Dict[str, Any], topic: str, log: PluginLogger):

@@ -23,7 +23,7 @@ from cmem_plugin_kafka.utils import (
     KafkaConsumer,
     validate_kafka_config,
     get_kafka_statistics,
-    get_client_id,
+    get_default_client_id,
 )
 
 CONSUMER_GROUP_DESCRIPTION = """
@@ -34,7 +34,7 @@ records will effectively be load-balanced over these consumers.
 If all the consumer of a topic are labeled different consumer groups, then each
 record will be broadcast to all the consumers.
 
-When the Group Id field is empty, the plugin defaults to Client Id.
+When the Group Id field is empty, the plugin defaults to DNS:PROJECT ID:TASK ID.
 """
 
 AUTO_OFFSET_RESET_DESCRIPTION = """
@@ -163,9 +163,9 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         sasl_username: str,
         sasl_password: str,
         kafka_topic: str,
-        group_id: str,
         auto_offset_reset: str,
-        client_id: str,
+        group_id: str = "",
+        client_id: str = "",
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError("Specified server id is invalid")
@@ -190,17 +190,16 @@ class KafkaConsumerPlugin(WorkflowPlugin):
 
     def get_config(self, project_id: str = "", task_id: str = "") -> Dict[str, Any]:
         """construct and return kafka connection configuration"""
+        default_client_id = get_default_client_id(
+            project_id=project_id, task_id=task_id
+        )
         config = {
             "bootstrap.servers": self.bootstrap_servers,
             "security.protocol": self.security_protocol,
-            "group.id": get_client_id(
-                client_id=self.group_id, project_id=project_id, task_id=task_id
-            ),
             "enable.auto.commit": True,
             "auto.offset.reset": self.auto_offset_reset,
-            "client.id": get_client_id(
-                client_id=self.client_id, project_id=project_id, task_id=task_id
-            ),
+            "group.id": self.group_id if self.group_id else default_client_id,
+            "client.id": self.client_id if self.client_id else default_client_id,
             "statistics.interval.ms": "250",
             "stats_cb": self.metrics_callback,
         }

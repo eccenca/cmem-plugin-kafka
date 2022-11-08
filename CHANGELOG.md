@@ -13,7 +13,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Changed
 
-- The string `CMEM_BASE_URI` has been made constant. As a result, updated `@needs-cmem`.
 - `Messages Dataset` Parameter moved from the advanced section to Main section (will change again in future)
 - Replace `none` with `error` in Auto Offset Reset parameter choice list
 

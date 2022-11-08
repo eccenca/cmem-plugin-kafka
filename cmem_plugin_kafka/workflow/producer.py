@@ -27,7 +27,7 @@ from cmem_plugin_kafka.utils import (
     validate_kafka_config,
     get_resource_from_dataset,
     get_kafka_statistics,
-    get_client_id,
+    get_default_client_id,
 )
 
 TOPIC_DESCRIPTION = """
@@ -140,7 +140,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
         sasl_username: str,
         sasl_password: str,
         kafka_topic: str,
-        client_id: str,
+        client_id: str = "",
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError("Specified server id is invalid")
@@ -166,9 +166,9 @@ class KafkaProducerPlugin(WorkflowPlugin):
         config = {
             "bootstrap.servers": self.bootstrap_servers,
             "security.protocol": self.security_protocol,
-            "client.id": get_client_id(
-                client_id=self.client_id, project_id=project_id, task_id=task_id
-            ),
+            "client.id": self.client_id
+            if self.client_id
+            else get_default_client_id(project_id=project_id, task_id=task_id),
             "statistics.interval.ms": "250",
             "stats_cb": self.metrics_callback,
         }
