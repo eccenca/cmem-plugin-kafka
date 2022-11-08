@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [Unreleased]
 
+### Added
+
+- `Client_Id` parameter has been added to the advanced section of Kafka Consumer.
+- When the `Client_Id` field is empty, the plugin defaults to `DNS:TASK ID`.
+
 ### Changed
 
 - `Messages Dataset` Parameter moved from the advanced section to Main section (will change again in future)

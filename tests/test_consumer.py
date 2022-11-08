@@ -1,4 +1,5 @@
 """Plugin tests."""
+import zipfile
 import random
 import string
 from contextlib import suppress
@@ -14,6 +15,7 @@ from confluent_kafka import cimpl, KafkaException
 from cmem_plugin_kafka.utils import get_resource_from_dataset
 from cmem_plugin_kafka.workflow.consumer import KafkaConsumerPlugin
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
+from cmem_plugin_kafka.utils import get_resource_from_dataset
 from .utils import (
     needs_cmem,
     needs_kafka,
@@ -110,6 +112,7 @@ def test_execution_kafka_producer_consumer(project):
 @needs_cmem
 @needs_kafka
 def test_validate_invalid_inputs(project):
+    """Validate Invalid Inputs"""
     # Invalid Dataset
     with pytest.raises(requests.exceptions.HTTPError):
         KafkaConsumerPlugin(

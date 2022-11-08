@@ -19,6 +19,7 @@ from cmem_plugin_kafka.constants import (
     SECURITY_PROTOCOL_DESCRIPTION,
     SASL_ACCOUNT_DESCRIPTION,
     SASL_PASSWORD_DESCRIPTION,
+    CLIENT_ID_DESCRIPTION,
 )
 from cmem_plugin_kafka.utils import (
     KafkaProducer,
@@ -26,6 +27,7 @@ from cmem_plugin_kafka.utils import (
     validate_kafka_config,
     get_resource_from_dataset,
     get_kafka_statistics,
+    get_default_client_id,
 )
 
 TOPIC_DESCRIPTION = """
@@ -116,6 +118,13 @@ to the configured topic. Each message is created as a proper XML document.
             default_value="",
             description=SASL_PASSWORD_DESCRIPTION,
         ),
+        PluginParameter(
+            name="client_id",
+            label="Client Id",
+            advanced=True,
+            default_value="",
+            description=CLIENT_ID_DESCRIPTION,
+        ),
     ],
 )
 # pylint: disable-msg=too-many-instance-attributes
@@ -131,6 +140,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
         sasl_username: str,
         sasl_password: str,
         kafka_topic: str,
+        client_id: str = "",
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError("Specified server id is invalid")
@@ -141,6 +151,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
         self.sasl_username = sasl_username
         self.sasl_password = sasl_password
         self.kafka_topic = kafka_topic
+        self.client_id = client_id
         validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
         self._kafka_stats: dict = {}
 
@@ -150,12 +161,14 @@ class KafkaProducerPlugin(WorkflowPlugin):
         for key, value in self._kafka_stats.items():
             self.log.info(f"kafka-stats: {key:10} - {value:10}")
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self, project_id: str = "", task_id: str = "") -> Dict[str, Any]:
         """construct and return kafka connection configuration"""
         config = {
             "bootstrap.servers": self.bootstrap_servers,
             "security.protocol": self.security_protocol,
-            "client.id": "cmem-plugin-kafka",
+            "client.id": self.client_id
+            if self.client_id
+            else get_default_client_id(project_id=project_id, task_id=task_id),
             "statistics.interval.ms": "250",
             "stats_cb": self.metrics_callback,
         }
@@ -178,7 +191,12 @@ class KafkaProducerPlugin(WorkflowPlugin):
 
         # override the default ContextHandler
         handler = KafkaMessageHandler(
-            KafkaProducer(self.get_config(), self.kafka_topic),
+            KafkaProducer(
+                config=self.get_config(
+                    project_id=context.task.project_id(), task_id=context.task.task_id()
+                ),
+                topic=self.kafka_topic,
+            ),
             context,
             plugin_logger=self.log,
         )

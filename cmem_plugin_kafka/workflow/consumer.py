@@ -17,11 +17,13 @@ from cmem_plugin_kafka.constants import (
     SECURITY_PROTOCOL_DESCRIPTION,
     SASL_ACCOUNT_DESCRIPTION,
     SASL_PASSWORD_DESCRIPTION,
+    CLIENT_ID_DESCRIPTION,
 )
 from cmem_plugin_kafka.utils import (
     KafkaConsumer,
     validate_kafka_config,
     get_kafka_statistics,
+    get_default_client_id,
 )
 
 CONSUMER_GROUP_DESCRIPTION = """
@@ -31,6 +33,8 @@ If all the consumers of a topic are labeled the same consumer group, then the
 records will effectively be load-balanced over these consumers.
 If all the consumer of a topic are labeled different consumer groups, then each
 record will be broadcast to all the consumers.
+
+When the Group Id field is empty, the plugin defaults to DNS:PROJECT ID:TASK ID.
 """
 
 AUTO_OFFSET_RESET_DESCRIPTION = """
@@ -87,11 +91,6 @@ look this.
             default_value="PLAINTEXT",
         ),
         PluginParameter(
-            name="group_id",
-            label="Consumer Group Name",
-            description=CONSUMER_GROUP_DESCRIPTION,
-        ),
-        PluginParameter(
             name="kafka_topic",
             label="Topic",
             description="The name of the category/feed where messages were"
@@ -135,6 +134,20 @@ look this.
             default_value="latest",
             description=AUTO_OFFSET_RESET_DESCRIPTION,
         ),
+        PluginParameter(
+            name="group_id",
+            label="Consumer Group Name",
+            description=CONSUMER_GROUP_DESCRIPTION,
+            advanced=True,
+            default_value="",
+        ),
+        PluginParameter(
+            name="client_id",
+            label="Client Id",
+            advanced=True,
+            default_value="",
+            description=CLIENT_ID_DESCRIPTION,
+        ),
     ],
 )
 class KafkaConsumerPlugin(WorkflowPlugin):
@@ -150,8 +163,9 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         sasl_username: str,
         sasl_password: str,
         kafka_topic: str,
-        group_id: str,
         auto_offset_reset: str,
+        group_id: str = "",
+        client_id: str = "",
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError("Specified server id is invalid")
@@ -164,6 +178,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.kafka_topic = kafka_topic
         self.group_id = group_id
         self.auto_offset_reset = auto_offset_reset
+        self.client_id = client_id
         validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
         self._kafka_stats: dict = {}
 
@@ -173,15 +188,18 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         for key, value in self._kafka_stats.items():
             self.log.info(f"kafka-stats: {key:10} - {value:10}")
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self, project_id: str = "", task_id: str = "") -> Dict[str, Any]:
         """construct and return kafka connection configuration"""
+        default_client_id = get_default_client_id(
+            project_id=project_id, task_id=task_id
+        )
         config = {
             "bootstrap.servers": self.bootstrap_servers,
             "security.protocol": self.security_protocol,
-            "group.id": self.group_id,
             "enable.auto.commit": True,
             "auto.offset.reset": self.auto_offset_reset,
-            "client.id": "cmem-plugin-kafka",
+            "group.id": self.group_id if self.group_id else default_client_id,
+            "client.id": self.client_id if self.client_id else default_client_id,
             "statistics.interval.ms": "250",
             "stats_cb": self.metrics_callback,
         }
@@ -201,7 +219,9 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
 
         kafka_consumer = KafkaConsumer(
-            config=self.get_config(),
+            config=self.get_config(
+                project_id=context.task.project_id(), task_id=context.task.task_id()
+            ),
             topic=self.kafka_topic,
             log=self.log,
             context=context,

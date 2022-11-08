@@ -54,3 +54,14 @@ SASL_PASSWORD_DESCRIPTION = (
     "In case you are using a [confluent.cloud](https://confluent.cloud) cluster, "
     "this is the API secret."
 )
+
+CLIENT_ID_DESCRIPTION = """
+An optional identifier of a Kafka client (producer/consumer) that is passed
+to a Kafka broker with every request.
+
+The sole purpose of this is to be able to track the source of requests beyond just
+ip and port by allowing a logical application name to be included in Kafka logs
+and monitoring aggregates.
+
+When the Client Id field is empty, the plugin defaults to DNS:PROJECT ID:TASK ID.
+"""
