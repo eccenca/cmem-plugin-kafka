@@ -11,12 +11,12 @@ def test_get_kafka_statistics():
         "time": "10212",
         "msg_cnt": "10",
         "msg_size": "1000",
-        "topics": ["eccenca"],
+        "topics": {"eccenca": {}},
         "extra_key": "no_interested",
     }
     filtered_output = get_kafka_statistics(json.dumps(input))
     assert filtered_output.get("extra_key") is None
-    assert input["topics"][0] == filtered_output["topics"]
+    assert ",".join(input["topics"].keys()) == filtered_output["topics"]
 
     del input["extra_key"]
     del input["topics"]

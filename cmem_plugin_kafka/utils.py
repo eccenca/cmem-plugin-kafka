@@ -2,9 +2,10 @@
 import json
 import re
 from typing import Dict, Any, Iterator
+from urllib.parse import urlparse
 from xml.sax.handler import ContentHandler  # nosec B406
 from xml.sax.saxutils import escape  # nosec B406
-from urllib.parse import urlparse
+
 from cmem.cmempy.config import get_cmem_base_uri
 from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
 from cmem.cmempy.workspace.tasks import get_task
@@ -18,7 +19,7 @@ from cmem_plugin_base.dataintegration.utils import (
     setup_cmempy_user_access,
     split_task_id,
 )
-from confluent_kafka import Producer, Consumer, KafkaException
+from confluent_kafka import Producer, Consumer, KafkaException, KafkaError
 from confluent_kafka.admin import AdminClient, TopicMetadata, ClusterMetadata
 
 from cmem_plugin_kafka.constants import KAFKA_TIMEOUT
@@ -51,18 +52,29 @@ class KafkaProducer:
         """Create Producer instance"""
         self._producer = Producer(config)
         self._topic = topic
+        self._no_of_success_messages: int = 0
 
     def process(self, message: KafkaMessage):
         """Produce message to topic."""
+        self._no_of_success_messages += 1
         self._producer.produce(self._topic, value=message.value, key=message.key)
 
     def poll(self, timeout):
         """Polls the producer for events and calls the corresponding callbacks"""
         self._producer.poll(timeout)
 
-    def flush(self):
+    def flush(self, timeout=KAFKA_TIMEOUT):
         """Wait for all messages in the Producer queue to be delivered."""
-        self._producer.flush()
+        prev = 0
+        while True:
+            messages_in_queue = self._producer.flush(timeout=timeout)
+            if prev == messages_in_queue:
+                break
+            prev = messages_in_queue
+
+    def get_success_messages_count(self) -> int:
+        """Return count of the successful messages"""
+        return self._no_of_success_messages
 
 
 class KafkaConsumer:
@@ -74,7 +86,6 @@ class KafkaConsumer:
         """Create consumer instance"""
         self._consumer = Consumer(config)
         self._context = context
-
         self._topic = topic
         self._log = log
         self._no_of_success_messages = 0
@@ -137,22 +148,16 @@ class KafkaConsumer:
 class KafkaMessageHandler(ContentHandler):
     """Custom Callback Kafka XML content handler"""
 
-    _message: KafkaMessage
-    _log: PluginLogger
-    _context: ExecutionContext
-    _level: int = 0
-    _no_of_children: int = 0
-    _no_of_success_messages: int = 0
-
     def __init__(
         self, kafka_producer: KafkaProducer, context: ExecutionContext, plugin_logger
     ):
         super().__init__()
-
+        self._level: int = 0
+        self._no_of_children: int = 0
         self._kafka_producer = kafka_producer
-        self._context = context
-        self._log = plugin_logger
-        self._message = KafkaMessage()
+        self._context: ExecutionContext = context
+        self._log: PluginLogger = plugin_logger
+        self._message: KafkaMessage = KafkaMessage()
 
     @staticmethod
     def attrs_s(attrs):
@@ -193,14 +198,13 @@ class KafkaMessageHandler(ContentHandler):
             # We can not construct proper kafka xml message.
             # So, log the error message
             if self._no_of_children == 1:
-                self._no_of_success_messages += 1
                 # Remove newline and white space between open and close tag
                 final_message = re.sub(r">[ \n]+<", "><", self._message.value)
                 # Remove new and white space at the end of the xml
                 self._message.value = re.sub(r"[\n ]+$", "", final_message)
 
                 self._kafka_producer.process(self._message)
-                if self._no_of_success_messages % 10 == 0:
+                if self._kafka_producer.get_success_messages_count() % 10 == 0:
                     self._kafka_producer.poll(0)
                     self.update_report()
             else:
@@ -229,15 +233,11 @@ class KafkaMessageHandler(ContentHandler):
         self._message = KafkaMessage(key, value)
         self._no_of_children = 0
 
-    def get_success_messages_count(self) -> int:
-        """Return count of the successful messages"""
-        return self._no_of_success_messages
-
     def update_report(self):
         """Update the plugin report with current status"""
         self._context.report.update(
             ExecutionReport(
-                entity_count=self.get_success_messages_count(),
+                entity_count=self._kafka_producer.get_success_messages_count(),
                 operation="wait",
                 operation_desc="messages sent",
             )
@@ -259,9 +259,14 @@ def validate_kafka_config(config: Dict[str, Any], topic: str, log: PluginLogger)
     )
 
     topic_meta: TopicMetadata = cluster_metadata.topics[topic]
-    kafka_error = topic_meta.error
+    kafka_error: KafkaError = topic_meta.error
 
-    if kafka_error is not None:
+    if kafka_error and kafka_error.code() == KafkaError.LEADER_NOT_AVAILABLE:
+        raise ValueError(
+            "The topic you configured, was just created. Save again if this ok for you."
+            " Otherwise, change the topic name."
+        )
+    if kafka_error:
         raise kafka_error
     log.info("Connection details are valid")
 
@@ -300,6 +305,8 @@ def get_kafka_statistics(json_data: str) -> dict:
     ]
     stats = json.loads(json_data)
     return {
-        key: ",".join(stats[key]) if isinstance(stats[key], list) else f"{stats[key]}"
+        key: ",".join(stats[key].keys())
+        if isinstance(stats[key], dict)
+        else f"{stats[key]}"
         for key in interested_keys
     }
