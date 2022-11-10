@@ -8,6 +8,7 @@ from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterTyp
 from cmem_plugin_base.dataintegration.parameter.dataset import DatasetParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.utils import write_to_dataset
+from confluent_kafka import KafkaError
 
 from cmem_plugin_kafka.constants import (
     SECURITY_PROTOCOLS,
@@ -188,6 +189,12 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         for key, value in self._kafka_stats.items():
             self.log.info(f"kafka-stats: {key:10} - {value:10}")
 
+    def error_callback(self, err: KafkaError):
+        """Error callback"""
+        self.log.info(f"kafka-error:{err}")
+        if err.code() == -193:  # -193 -> _RESOLVE
+            raise err
+
     def get_config(self, project_id: str = "", task_id: str = "") -> Dict[str, Any]:
         """construct and return kafka connection configuration"""
         default_client_id = get_default_client_id(
@@ -202,6 +209,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             "client.id": self.client_id if self.client_id else default_client_id,
             "statistics.interval.ms": "250",
             "stats_cb": self.metrics_callback,
+            "error_cb": self.error_callback,
         }
         if self.security_protocol.startswith("SASL"):
             config.update(
