@@ -106,4 +106,5 @@ def test_performance_execution_kafka_producer_consumer(perf_project):
         dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}",
         context=TestUserContext(),
     ) as consumer_file:
-        assert XMLUtils.get_elements_len_fromstring(consumer_file.text) == 286918
+        consumer_file.raw.decode_content = True
+        assert XMLUtils.get_elements_len_from_stream(consumer_file.raw) == 286918
