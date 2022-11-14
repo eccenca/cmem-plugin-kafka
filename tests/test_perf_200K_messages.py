@@ -1,3 +1,4 @@
+import shutil
 import zipfile
 from contextlib import suppress
 import io
@@ -6,6 +7,7 @@ import requests
 
 import pytest
 from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
+from cmem.cmempy.workspace.projects.import_ import upload_project, import_from_upload_start, import_from_upload_status
 from cmem.cmempy.workspace.projects.project import make_new_project, delete_project
 from cmem.cmempy.workspace.projects.resources.resource import create_resource
 
@@ -34,7 +36,7 @@ KAFKA_CONFIG = get_kafka_config()
 DEFAULT_GROUP = "workflow"
 DEFAULT_TOPIC = "eccenca_kafka_workflow"
 DEFAULT_RESET = "earliest"
-RESOURCE_LINK = "https://download.eccenca.com/cmem-plugin-kafka/286K_Message.zip"
+RESOURCE_LINK = "https://download.eccenca.com/cmem-plugin-kafka/kafka_performance_project.zip"
 
 
 @pytest.fixture
@@ -42,31 +44,24 @@ def perf_project(request):
     """Provides the DI build project incl. assets."""
     with suppress(Exception):
         delete_project(PROJECT_NAME)
-    make_new_project(PROJECT_NAME)
-    make_new_dataset(
-        project_name=PROJECT_NAME,
-        dataset_name=PRODUCER_DATASET_NAME,
-        dataset_type=DATASET_TYPE,
-        parameters={"file": PRODUCER_RESOURCE_NAME},
-        autoconfigure=False,
-    )
-    with requests.get(url=RESOURCE_LINK, timeout=10, stream=True) as response:
-        with zipfile.ZipFile(io.BytesIO(response.content)) as unzipped_file:
-            with unzipped_file.open("286K_Message.xml") as response_file:
-                create_resource(
-                    project_name=PROJECT_NAME,
-                    resource_name=PRODUCER_RESOURCE_NAME,
-                    file_resource=response_file,
-                    replace=True,
-                )
 
-    make_new_dataset(
-        project_name=PROJECT_NAME,
-        dataset_name=CONSUMER_DATASET_NAME,
-        dataset_type=DATASET_TYPE,
-        parameters={"file": PRODUCER_RESOURCE_NAME},
-        autoconfigure=False,
+    with requests.get(url=RESOURCE_LINK, timeout=10, stream=True) as response:
+        with open("kafka_performance_project.zip", "wb") as project_file:
+            shutil.copyfileobj(response.raw, project_file)
+
+    validation_response = upload_project("kafka_performance_project.zip")
+    import_id = validation_response["projectImportId"]
+    project_id = validation_response["projectId"]
+
+    import_from_upload_start(
+        import_id=import_id,
+        project_id=project_id,
+        overwrite_existing=True
     )
+    # loop until "success" boolean is in status response
+    status = import_from_upload_status(import_id)
+    while "success" not in status.keys():
+        status = import_from_upload_status(import_id)
     yield request
     with suppress(Exception):
         delete_project(PROJECT_NAME)

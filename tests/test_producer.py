@@ -8,6 +8,7 @@ import requests
 from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
 from cmem.cmempy.workspace.projects.project import make_new_project, delete_project
 from cmem.cmempy.workspace.projects.resources.resource import create_resource
+from cmem_plugin_base.dataintegration.utils import setup_cmempy_super_user_access
 from confluent_kafka import cimpl
 
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
@@ -26,6 +27,7 @@ DEFAULT_TOPIC = "eccenca_kafka"
 @pytest.fixture
 def project(request):
     """Provides the DI build project incl. assets."""
+    setup_cmempy_super_user_access()
     with suppress(Exception):
         delete_project(PROJECT_NAME)
     make_new_project(PROJECT_NAME)
