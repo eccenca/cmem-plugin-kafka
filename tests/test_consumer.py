@@ -75,6 +75,18 @@ def project(request):
 @needs_kafka
 def test_execution_kafka_producer_consumer(project):
     """Test plugin execution for Plain Kafka"""
+    with pytest.raises(ValueError, match="The topic you configured, was just created. Save again if this ok for you. "
+                                         "Otherwise, change the topic name."):
+        KafkaProducerPlugin(
+            message_dataset=PRODUCER_DATASET_ID,
+            bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
+            security_protocol=KAFKA_CONFIG["security_protocol"],
+            sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
+            sasl_username=KAFKA_CONFIG["sasl_username"],
+            sasl_password=KAFKA_CONFIG["sasl_password"],
+            kafka_topic=DEFAULT_TOPIC,
+        ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
+
     # Producer
     KafkaProducerPlugin(
         message_dataset=PRODUCER_DATASET_ID,
