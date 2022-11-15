@@ -115,4 +115,4 @@ def test_validate_bootstrap_server():
             sasl_username=None,
             sasl_password=None,
             kafka_topic=DEFAULT_TOPIC,
-        )
+        ).execute(None, None)

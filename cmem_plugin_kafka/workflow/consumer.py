@@ -180,7 +180,6 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.group_id = group_id
         self.auto_offset_reset = auto_offset_reset
         self.client_id = client_id
-        validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
         self._kafka_stats: dict = {}
 
     def metrics_callback(self, json: str):
@@ -221,8 +220,13 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             )
         return config
 
+    def validate(self):
+        """Validate parameters"""
+        validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
+
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
         self.log.info("Kafka Consumer Started")
+        self.validate()
         # Prefix project id to dataset name
         self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
 

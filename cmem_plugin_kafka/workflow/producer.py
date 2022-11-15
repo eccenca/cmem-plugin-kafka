@@ -153,7 +153,6 @@ class KafkaProducerPlugin(WorkflowPlugin):
         self.sasl_password = sasl_password
         self.kafka_topic = kafka_topic
         self.client_id = client_id
-        validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
         self._kafka_stats: dict = {}
 
     def metrics_callback(self, json: str):
@@ -190,8 +189,13 @@ class KafkaProducerPlugin(WorkflowPlugin):
             )
         return config
 
+    def validate(self):
+        """Validate parameters"""
+        validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
+
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
         self.log.info("Start Kafka Plugin")
+        self.validate()
         # Prefix project id to dataset name
         self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
 
