@@ -207,6 +207,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             "group.id": self.group_id if self.group_id else default_client_id,
             "client.id": self.client_id if self.client_id else default_client_id,
             "statistics.interval.ms": "250",
+            "queued.max.messages.kbytes": 5000,
             "stats_cb": self.metrics_callback,
             "error_cb": self.error_callback,
         }
