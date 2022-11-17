@@ -100,6 +100,8 @@ def test_performance_execution_kafka_producer(perf_producer_project):
     ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
 
 
+@needs_cmem
+@needs_kafka
 def test_performance_execution_kafka_consumer(perf_consumer_project):
     # Consumer
     KafkaConsumerPlugin(

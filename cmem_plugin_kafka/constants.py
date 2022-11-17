@@ -65,3 +65,7 @@ and monitoring aggregates.
 
 When the Client Id field is empty, the plugin defaults to DNS:PROJECT ID:TASK ID.
 """
+
+LOCAL_CONSUMER_QUEUE_MAX_SIZE_DESCRIPTION = """
+Maximum number of kilobytes per topic+partition in the local consumer queue.
+"""
