@@ -20,7 +20,7 @@ RESOURCE_NAME = f"{DATASET_NAME}.{DATASET_TYPE}"
 DATASET_ID = f"{DATASET_NAME}"
 
 KAFKA_CONFIG = get_kafka_config()
-DEFAULT_TOPIC = "eccenca_kafka"
+DEFAULT_TOPIC = "eccenca_kafka_workflow"
 
 
 @pytest.fixture
@@ -115,4 +115,4 @@ def test_validate_bootstrap_server():
             sasl_username=None,
             sasl_password=None,
             kafka_topic=DEFAULT_TOPIC,
-        )
+        ).execute(None, None)

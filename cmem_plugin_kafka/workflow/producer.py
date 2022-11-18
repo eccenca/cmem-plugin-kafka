@@ -10,6 +10,7 @@ from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.parameter.dataset import DatasetParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
+from confluent_kafka import KafkaError
 from defusedxml import sax
 
 from cmem_plugin_kafka.constants import (
@@ -152,7 +153,6 @@ class KafkaProducerPlugin(WorkflowPlugin):
         self.sasl_password = sasl_password
         self.kafka_topic = kafka_topic
         self.client_id = client_id
-        validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
         self._kafka_stats: dict = {}
 
     def metrics_callback(self, json: str):
@@ -160,6 +160,12 @@ class KafkaProducerPlugin(WorkflowPlugin):
         self._kafka_stats = get_kafka_statistics(json_data=json)
         for key, value in self._kafka_stats.items():
             self.log.info(f"kafka-stats: {key:10} - {value:10}")
+
+    def error_callback(self, err: KafkaError):
+        """Error callback"""
+        self.log.info(f"kafka-error:{err}")
+        if err.code() == -193:  # -193 -> _RESOLVE
+            raise err
 
     def get_config(self, project_id: str = "", task_id: str = "") -> Dict[str, Any]:
         """construct and return kafka connection configuration"""
@@ -169,8 +175,9 @@ class KafkaProducerPlugin(WorkflowPlugin):
             "client.id": self.client_id
             if self.client_id
             else get_default_client_id(project_id=project_id, task_id=task_id),
-            "statistics.interval.ms": "250",
+            "statistics.interval.ms": "1000",
             "stats_cb": self.metrics_callback,
+            "error_cb": self.error_callback,
         }
         if self.security_protocol.startswith("SASL"):
             config.update(
@@ -182,21 +189,27 @@ class KafkaProducerPlugin(WorkflowPlugin):
             )
         return config
 
+    def validate(self):
+        """Validate parameters"""
+        validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
+
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
         self.log.info("Start Kafka Plugin")
+        self.validate()
         # Prefix project id to dataset name
         self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
 
         parser = sax.make_parser()
 
         # override the default ContextHandler
-        handler = KafkaMessageHandler(
-            KafkaProducer(
-                config=self.get_config(
-                    project_id=context.task.project_id(), task_id=context.task.task_id()
-                ),
-                topic=self.kafka_topic,
+        producer = KafkaProducer(
+            config=self.get_config(
+                project_id=context.task.project_id(), task_id=context.task.task_id()
             ),
+            topic=self.kafka_topic,
+        )
+        handler = KafkaMessageHandler(
+            producer,
             context,
             plugin_logger=self.log,
         )
@@ -216,7 +229,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
 
         context.report.update(
             ExecutionReport(
-                entity_count=handler.get_success_messages_count(),
+                entity_count=producer.get_success_messages_count(),
                 operation="write",
                 operation_desc="messages sent",
                 summary=list(self._kafka_stats.items()),

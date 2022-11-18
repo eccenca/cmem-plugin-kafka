@@ -7,7 +7,9 @@ from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.parameter.dataset import DatasetParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
+from cmem_plugin_base.dataintegration.types import IntParameterType
 from cmem_plugin_base.dataintegration.utils import write_to_dataset
+from confluent_kafka import KafkaError
 
 from cmem_plugin_kafka.constants import (
     SECURITY_PROTOCOLS,
@@ -17,7 +19,7 @@ from cmem_plugin_kafka.constants import (
     SECURITY_PROTOCOL_DESCRIPTION,
     SASL_ACCOUNT_DESCRIPTION,
     SASL_PASSWORD_DESCRIPTION,
-    CLIENT_ID_DESCRIPTION,
+    CLIENT_ID_DESCRIPTION, LOCAL_CONSUMER_QUEUE_MAX_SIZE_DESCRIPTION,
 )
 from cmem_plugin_kafka.utils import (
     KafkaConsumer,
@@ -148,6 +150,14 @@ look this.
             default_value="",
             description=CLIENT_ID_DESCRIPTION,
         ),
+        PluginParameter(
+            name="local_consumer_queue_size",
+            label="Local Consumer Queue Size",
+            advanced=True,
+            param_type=IntParameterType(),
+            default_value=5000,
+            description=LOCAL_CONSUMER_QUEUE_MAX_SIZE_DESCRIPTION,
+        ),
     ],
 )
 class KafkaConsumerPlugin(WorkflowPlugin):
@@ -166,6 +176,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         auto_offset_reset: str,
         group_id: str = "",
         client_id: str = "",
+        local_consumer_queue_size: int = 5000
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError("Specified server id is invalid")
@@ -179,7 +190,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.group_id = group_id
         self.auto_offset_reset = auto_offset_reset
         self.client_id = client_id
-        validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
+        self.local_consumer_queue_size = local_consumer_queue_size
         self._kafka_stats: dict = {}
 
     def metrics_callback(self, json: str):
@@ -187,6 +198,12 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self._kafka_stats = get_kafka_statistics(json_data=json)
         for key, value in self._kafka_stats.items():
             self.log.info(f"kafka-stats: {key:10} - {value:10}")
+
+    def error_callback(self, err: KafkaError):
+        """Error callback"""
+        self.log.info(f"kafka-error:{err}")
+        if err.code() == -193:  # -193 -> _RESOLVE
+            raise err
 
     def get_config(self, project_id: str = "", task_id: str = "") -> Dict[str, Any]:
         """construct and return kafka connection configuration"""
@@ -201,7 +218,9 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             "group.id": self.group_id if self.group_id else default_client_id,
             "client.id": self.client_id if self.client_id else default_client_id,
             "statistics.interval.ms": "250",
+            "queued.max.messages.kbytes": self.local_consumer_queue_size,
             "stats_cb": self.metrics_callback,
+            "error_cb": self.error_callback,
         }
         if self.security_protocol.startswith("SASL"):
             config.update(
@@ -213,8 +232,13 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             )
         return config
 
+    def validate(self):
+        """Validate parameters"""
+        validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
+
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
         self.log.info("Kafka Consumer Started")
+        self.validate()
         # Prefix project id to dataset name
         self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
 

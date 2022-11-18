@@ -1,9 +1,8 @@
 """Plugin tests."""
-import zipfile
 import random
 import string
+import time
 from contextlib import suppress
-from datetime import time
 
 import pytest
 import requests
@@ -15,7 +14,6 @@ from confluent_kafka import cimpl, KafkaException
 from cmem_plugin_kafka.utils import get_resource_from_dataset
 from cmem_plugin_kafka.workflow.consumer import KafkaConsumerPlugin
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
-from cmem_plugin_kafka.utils import get_resource_from_dataset
 from .utils import (
     needs_cmem,
     needs_kafka,
@@ -75,6 +73,19 @@ def project(request):
 @needs_kafka
 def test_execution_kafka_producer_consumer(project):
     """Test plugin execution for Plain Kafka"""
+    # By default, new topic will not available
+    with pytest.raises(ValueError, match="The topic you configured, was just created. Save again if this ok for you. "
+                                         "Otherwise, change the topic name."):
+        KafkaProducerPlugin(
+            message_dataset=PRODUCER_DATASET_ID,
+            bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
+            security_protocol=KAFKA_CONFIG["security_protocol"],
+            sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
+            sasl_username=KAFKA_CONFIG["sasl_username"],
+            sasl_password=KAFKA_CONFIG["sasl_password"],
+            kafka_topic=DEFAULT_TOPIC,
+        ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
+    time.sleep(10)
     # Producer
     KafkaProducerPlugin(
         message_dataset=PRODUCER_DATASET_ID,
@@ -172,7 +183,7 @@ def test_validate_bootstrap_server():
             kafka_topic=DEFAULT_TOPIC,
             group_id=DEFAULT_GROUP,
             auto_offset_reset=DEFAULT_RESET,
-        )
+        ).execute(None, None)
 
 
 @needs_cmem
