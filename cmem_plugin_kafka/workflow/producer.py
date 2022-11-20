@@ -28,7 +28,7 @@ from cmem_plugin_kafka.utils import (
     validate_kafka_config,
     get_resource_from_dataset,
     get_kafka_statistics,
-    get_default_client_id,
+    get_default_client_id, KafkaEntitiesHandler,
 )
 
 TOPIC_DESCRIPTION = """
@@ -199,8 +199,6 @@ class KafkaProducerPlugin(WorkflowPlugin):
         # Prefix project id to dataset name
         self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
 
-        parser = sax.make_parser()
-
         # override the default ContextHandler
         producer = KafkaProducer(
             config=self.get_config(
@@ -208,12 +206,6 @@ class KafkaProducerPlugin(WorkflowPlugin):
             ),
             topic=self.kafka_topic,
         )
-        handler = KafkaMessageHandler(
-            producer,
-            context,
-            plugin_logger=self.log,
-        )
-        parser.setContentHandler(handler)
 
         context.report.update(
             ExecutionReport(
@@ -221,11 +213,27 @@ class KafkaProducerPlugin(WorkflowPlugin):
             )
         )
 
-        with get_resource_from_dataset(
-            dataset_id=self.message_dataset, context=context.user
-        ) as response:
-            response.raw.decode_content = True
-            parser.parse(response.raw)
+        if self.message_dataset:
+            parser = sax.make_parser()
+            handler = KafkaMessageHandler(
+                producer,
+                context,
+                plugin_logger=self.log,
+            )
+            parser.setContentHandler(handler)
+            with get_resource_from_dataset(
+                    dataset_id=self.message_dataset, context=context.user
+            ) as response:
+                response.raw.decode_content = True
+                parser.parse(response.raw)
+        else:
+            entities_handler = KafkaEntitiesHandler(
+                producer,
+                context,
+                plugin_logger=self.log,
+            )
+            for entities in inputs:
+                entities_handler.process(entities)
 
         context.report.update(
             ExecutionReport(

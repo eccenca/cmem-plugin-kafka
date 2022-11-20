@@ -1,7 +1,7 @@
 """Kafka utils modules"""
 import json
 import re
-from typing import Dict, Any, Iterator
+from typing import Dict, Any, Iterator, Optional
 from urllib.parse import urlparse
 from xml.sax.handler import ContentHandler  # nosec B406
 from xml.sax.saxutils import escape  # nosec B406
@@ -14,6 +14,7 @@ from cmem_plugin_base.dataintegration.context import (
     ExecutionReport,
     UserContext,
 )
+from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
 from cmem_plugin_base.dataintegration.utils import (
     setup_cmempy_user_access,
@@ -40,9 +41,9 @@ class KafkaMessage:
         Kafka message payload
     """
 
-    def __init__(self, key: str = "", value: str = ""):
+    def __init__(self, key: Optional[str] = None, value: str = ""):
         self.value: str = value
-        self.key: str = key
+        self.key: Optional[str] = key
 
 
 class KafkaProducer:
@@ -242,6 +243,47 @@ class KafkaMessageHandler(ContentHandler):
                 operation_desc="messages sent",
             )
         )
+
+
+class KafkaEntitiesHandler:
+    """Custom Callback Kafka XML content handler"""
+
+    def __init__(
+        self, kafka_producer: KafkaProducer, context: ExecutionContext, plugin_logger
+    ):
+        self._kafka_producer = kafka_producer
+        self._context: ExecutionContext = context
+        self._log: PluginLogger = plugin_logger
+
+    def process(self, entities: Entities):
+        """Process entities"""
+        for message_dict in self.get_dict(entities):
+            kafka_payload = json.dumps(message_dict, indent=4)
+            self._kafka_producer.process(KafkaMessage(key=None, value=kafka_payload))
+            if self._kafka_producer.get_success_messages_count() % 10 == 0:
+                self._kafka_producer.poll(0)
+                self.update_report()
+        self._kafka_producer.flush()
+
+    def update_report(self):
+        """Update the plugin report with current status"""
+        self._context.report.update(
+            ExecutionReport(
+                entity_count=self._kafka_producer.get_success_messages_count(),
+                operation="wait",
+                operation_desc="messages sent",
+            )
+        )
+
+    def get_dict(self, entities: Entities) -> Iterator[Dict[str, str]]:
+        """get dict from entities"""
+        self._log("Generate dict from entities")
+        paths = entities.schema.paths
+        for entity in entities.entities:
+            result = {}
+            for i, path in enumerate(paths):
+                result[path.path] = entity.values[i][0] if entity.values[i] else ""
+            yield result
 
 
 def get_default_client_id(project_id: str, task_id: str):
