@@ -146,7 +146,7 @@ class KafkaConsumer:
         self._consumer.close()
 
 
-class KafkaMessageHandler(ContentHandler):
+class KafkaXMLHandler(ContentHandler):
     """Custom Callback Kafka XML content handler"""
 
     def __init__(

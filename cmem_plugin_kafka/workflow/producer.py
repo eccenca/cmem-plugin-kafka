@@ -24,7 +24,7 @@ from cmem_plugin_kafka.constants import (
 )
 from cmem_plugin_kafka.utils import (
     KafkaProducer,
-    KafkaMessageHandler,
+    KafkaXMLHandler,
     validate_kafka_config,
     get_resource_from_dataset,
     get_kafka_statistics,
@@ -216,7 +216,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
             # Prefix project id to dataset name
             self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
             parser = sax.make_parser()
-            handler = KafkaMessageHandler(
+            handler = KafkaXMLHandler(
                 producer,
                 context,
                 plugin_logger=self.log,
