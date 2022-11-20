@@ -82,6 +82,7 @@ to the configured topic. Each message is created as a proper XML document.
             " project only. In case you miss your dataset, check for"
             " the correct type (XML) and build project).",
             param_type=DatasetParameterType(dataset_type="xml"),
+            default_value=""
         ),
         PluginParameter(
             name="bootstrap_servers",
@@ -196,8 +197,6 @@ class KafkaProducerPlugin(WorkflowPlugin):
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
         self.log.info("Start Kafka Plugin")
         self.validate()
-        # Prefix project id to dataset name
-        self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
 
         # override the default ContextHandler
         producer = KafkaProducer(
@@ -214,6 +213,8 @@ class KafkaProducerPlugin(WorkflowPlugin):
         )
 
         if self.message_dataset:
+            # Prefix project id to dataset name
+            self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
             parser = sax.make_parser()
             handler = KafkaMessageHandler(
                 producer,

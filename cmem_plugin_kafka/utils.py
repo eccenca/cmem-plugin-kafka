@@ -277,7 +277,7 @@ class KafkaEntitiesHandler:
 
     def get_dict(self, entities: Entities) -> Iterator[Dict[str, str]]:
         """get dict from entities"""
-        self._log("Generate dict from entities")
+        self._log.info("Generate dict from entities")
         paths = entities.schema.paths
         for entity in entities.entities:
             result = {}
