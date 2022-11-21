@@ -1,6 +1,8 @@
 """Kafka utils modules"""
 import json
 import re
+import uuid
+from json import JSONDecodeError
 from typing import Dict, Any, Iterator, Optional
 from urllib.parse import urlparse
 from xml.sax.handler import ContentHandler  # nosec B406
@@ -14,7 +16,12 @@ from cmem_plugin_base.dataintegration.context import (
     ExecutionReport,
     UserContext,
 )
-from cmem_plugin_base.dataintegration.entity import Entities
+from cmem_plugin_base.dataintegration.entity import (
+    Entities,
+    Entity,
+    EntityPath,
+    EntitySchema,
+)
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
 from cmem_plugin_base.dataintegration.utils import (
     setup_cmempy_user_access,
@@ -90,26 +97,61 @@ class KafkaConsumer:
         self._topic = topic
         self._log = log
         self._no_of_success_messages = 0
+        self._current_message: Optional[KafkaMessage] = None
+        self._paths: list = []
 
     def __enter__(self):
         self.subscribe()
         return self.get_xml_payload()
+
+    def get_schema(self):
+        """Return kafka message schema paths"""
+        paths = self._get_paths()
+        if not paths:
+            return None
+        schema_paths = []
+        for path in paths:
+            path_uri = f"{path}"
+            schema_paths.append(EntityPath(path=path_uri))
+        schema = EntitySchema(
+            type_uri="https://github.com/eccenca/cmem-plugin-kafka",
+            paths=schema_paths,
+        )
+        return schema
+
+    def _get_paths(self):
+        if not self._paths and (not self._current_message or self.poll()):
+            try:
+                json_payload = json.loads(self._current_message.value)
+                self._paths.append(json_payload.keys())
+                self._log.info(f"{json_payload}")
+            except JSONDecodeError as exc:
+                raise ValueError("Messages are not in JSON format") from exc
+
+        return self._paths
+
+    def get_entities(self):
+        """Generate the entities from kafka messages"""
+        if self._current_message:
+            yield self._get_entity(self._current_message)
+
+        for message in self.poll():
+            yield self._get_entity(message)
+
+    def _get_entity(self, message: KafkaMessage):
+        json_payload = json.loads(message.value)
+        entity_uri = f"urn:uuid:{str(uuid.uuid4())}"
+        values = []
+        for _ in self._paths:
+            values.append([json_payload.get(_)])
+        return Entity(uri=entity_uri, values=values)
 
     def get_xml_payload(self) -> Iterator[bytes]:
         """generate xml file with kafka messages"""
         yield '<?xml version="1.0" encoding="UTF-8"?>\n'.encode()
         yield "<KafkaMessages>".encode()
         for message in self.poll():
-            self._no_of_success_messages += 1
             yield get_message_with_wrapper(message).encode()
-            if not self._no_of_success_messages % 10:
-                self._context.report.update(
-                    ExecutionReport(
-                        entity_count=self._no_of_success_messages,
-                        operation="read",
-                        operation_desc="messages received",
-                    )
-                )
 
         yield "</KafkaMessages>".encode()
 
@@ -136,10 +178,20 @@ class KafkaConsumer:
                 self._log.error(f"Consumer poll Error:{msg.error()}")
                 raise KafkaException(msg.error())
 
-            yield KafkaMessage(
+            self._no_of_success_messages += 1
+            self._current_message = KafkaMessage(
                 key=msg.key().decode("utf-8") if msg.key() else "",
                 value=msg.value().decode("utf-8"),
             )
+            if not self._no_of_success_messages % 10:
+                self._context.report.update(
+                    ExecutionReport(
+                        entity_count=self._no_of_success_messages,
+                        operation="read",
+                        operation_desc="messages received",
+                    )
+                )
+            yield self._current_message
 
     def close(self):
         """Closes the consumer once all messages were received."""

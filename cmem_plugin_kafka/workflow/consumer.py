@@ -1,5 +1,5 @@
 """Kafka consumer plugin module"""
-from typing import Sequence, Dict, Any
+from typing import Sequence, Dict, Any, Optional
 
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
@@ -19,7 +19,8 @@ from cmem_plugin_kafka.constants import (
     SECURITY_PROTOCOL_DESCRIPTION,
     SASL_ACCOUNT_DESCRIPTION,
     SASL_PASSWORD_DESCRIPTION,
-    CLIENT_ID_DESCRIPTION, LOCAL_CONSUMER_QUEUE_MAX_SIZE_DESCRIPTION,
+    CLIENT_ID_DESCRIPTION,
+    LOCAL_CONSUMER_QUEUE_MAX_SIZE_DESCRIPTION,
 )
 from cmem_plugin_kafka.utils import (
     KafkaConsumer,
@@ -177,7 +178,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         auto_offset_reset: str,
         group_id: str = "",
         client_id: str = "",
-        local_consumer_queue_size: int = 5000
+        local_consumer_queue_size: int = 5000,
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError("Specified server id is invalid")
@@ -237,11 +238,11 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         """Validate parameters"""
         validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
 
-    def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
+    def execute(
+        self, inputs: Sequence[Entities], context: ExecutionContext
+    ) -> Optional[Entities]:
         self.log.info("Kafka Consumer Started")
         self.validate()
-        # Prefix project id to dataset name
-        self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
 
         kafka_consumer = KafkaConsumer(
             config=self.get_config(
@@ -251,6 +252,16 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             log=self.log,
             context=context,
         )
+
+        if not self.message_dataset:
+            schema = kafka_consumer.get_schema()
+            if not schema:
+                return None
+            entities = kafka_consumer.get_entities()
+            return Entities(entities=entities, schema=schema)
+
+        # Prefix project id to dataset name
+        self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
 
         write_to_dataset(
             dataset_id=self.message_dataset,
@@ -266,3 +277,5 @@ class KafkaConsumerPlugin(WorkflowPlugin):
                 summary=list(self._kafka_stats.items()),
             )
         )
+
+        return None
