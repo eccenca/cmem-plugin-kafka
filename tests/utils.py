@@ -110,6 +110,7 @@ class XMLUtils:
     @staticmethod
     def get_elements_len_from_stream(content) -> int:
         """Return elements len of xml file"""
+
         class MessageHandler(ContentHandler):
             def __init__(self):
                 self.count = 0
@@ -117,6 +118,7 @@ class XMLUtils:
             def startElement(self, name, attrs):
                 if name == "Message":
                     self.count += 1
+
         handler = MessageHandler()
         parser = sax.make_parser()
         parser.setContentHandler(handler)

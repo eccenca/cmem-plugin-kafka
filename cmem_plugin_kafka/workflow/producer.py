@@ -28,7 +28,8 @@ from cmem_plugin_kafka.utils import (
     validate_kafka_config,
     get_resource_from_dataset,
     get_kafka_statistics,
-    get_default_client_id, KafkaEntitiesHandler,
+    get_default_client_id,
+    KafkaEntitiesHandler,
 )
 
 TOPIC_DESCRIPTION = """
@@ -82,7 +83,7 @@ to the configured topic. Each message is created as a proper XML document.
             " project only. In case you miss your dataset, check for"
             " the correct type (XML) and build project).",
             param_type=DatasetParameterType(dataset_type="xml"),
-            default_value=""
+            default_value="",
         ),
         PluginParameter(
             name="bootstrap_servers",
@@ -223,7 +224,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
             )
             parser.setContentHandler(handler)
             with get_resource_from_dataset(
-                    dataset_id=self.message_dataset, context=context.user
+                dataset_id=self.message_dataset, context=context.user
             ) as response:
                 response.raw.decode_content = True
                 parser.parse(response.raw)

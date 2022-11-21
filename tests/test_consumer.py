@@ -74,8 +74,11 @@ def project(request):
 def test_execution_kafka_producer_consumer(project):
     """Test plugin execution for Plain Kafka"""
     # By default, new topic will not available
-    with pytest.raises(ValueError, match="The topic you configured, was just created. Save again if this ok for you. "
-                                         "Otherwise, change the topic name."):
+    with pytest.raises(
+        ValueError,
+        match="The topic you configured, was just created. Save again if this ok for you. "
+        "Otherwise, change the topic name.",
+    ):
         KafkaProducerPlugin(
             message_dataset=PRODUCER_DATASET_ID,
             bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
