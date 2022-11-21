@@ -106,6 +106,7 @@ look this.
             " project only. In case you miss your dataset, check for"
             " the correct type (XML) and build project.",
             param_type=DatasetParameterType(dataset_type="xml"),
+            default_value="",
         ),
         PluginParameter(
             name="sasl_mechanisms",
