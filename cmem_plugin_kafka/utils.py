@@ -3,7 +3,7 @@ import json
 import re
 import uuid
 from json import JSONDecodeError
-from typing import Dict, Any, Iterator, Optional
+from typing import Dict, Any, Iterator, Optional, Sequence
 from urllib.parse import urlparse
 from xml.sax.handler import ContentHandler  # nosec B406
 from xml.sax.saxutils import escape  # nosec B406
@@ -330,11 +330,15 @@ class KafkaEntitiesHandler:
     def get_dict(self, entities: Entities) -> Iterator[Dict[str, str]]:
         """get dict from entities"""
         self._log.info("Generate dict from entities")
+
         paths = entities.schema.paths
+        type_uri = entities.schema.type_uri
+        result: dict[str, Any] = {"schema": {"type_uri": type_uri}}
         for entity in entities.entities:
-            result = {}
+            values: dict[str, Sequence[str]] = {}
             for i, path in enumerate(paths):
-                result[path.path] = entity.values[i][0] if entity.values[i] else ""
+                values[path.path] = [value for value in entity.values[i]]
+            result["entity"] = {"uri": entity.uri, "values": values}
             yield result
 
 
