@@ -219,9 +219,9 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             "auto.offset.reset": self.auto_offset_reset,
             "group.id": self.group_id if self.group_id else default_client_id,
             "client.id": self.client_id if self.client_id else default_client_id,
-            "statistics.interval.ms": "250",
+            "statistics.interval.ms": "1000",
             "queued.max.messages.kbytes": self.local_consumer_queue_size,
-            "stats_cb": self.metrics_callback,
+            # "stats_cb": self.metrics_callback,
             "error_cb": self.error_callback,
         }
         if self.security_protocol.startswith("SASL"):
@@ -252,7 +252,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             log=self.log,
             context=context,
         )
-
+        kafka_consumer.subscribe()
         if not self.message_dataset:
             schema = kafka_consumer.get_schema()
             if not schema:

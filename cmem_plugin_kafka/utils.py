@@ -1,8 +1,6 @@
 """Kafka utils modules"""
 import json
 import re
-import uuid
-from json import JSONDecodeError
 from typing import Dict, Any, Iterator, Optional, Sequence
 from urllib.parse import urlparse
 from xml.sax.handler import ContentHandler  # nosec B406
@@ -97,53 +95,47 @@ class KafkaConsumer:
         self._topic = topic
         self._log = log
         self._no_of_success_messages = 0
-        self._current_message: Optional[KafkaMessage] = None
-        self._paths: list = []
+        self._first_message: Optional[KafkaMessage] = None
+        self._schema: EntitySchema = None
 
     def __enter__(self):
-        self.subscribe()
         return self.get_xml_payload()
 
     def get_schema(self):
         """Return kafka message schema paths"""
-        paths = self._get_paths()
-        if not paths:
+        message = self.get_first_message()
+        if not message:
             return None
+        json_payload = json.loads(message.value)
         schema_paths = []
-        for path in paths:
+        self._log.info(f'values : {json_payload["entity"]["values"]}')
+        for path in self._get_paths(json_payload["entity"]["values"]):
             path_uri = f"{path}"
             schema_paths.append(EntityPath(path=path_uri))
-        schema = EntitySchema(
-            type_uri="https://github.com/eccenca/cmem-plugin-kafka",
+        self._schema = EntitySchema(
+            type_uri=json_payload["schema"]["type_uri"],
             paths=schema_paths,
         )
-        return schema
+        return self._schema
 
-    def _get_paths(self):
-        if not self._paths and (not self._current_message or self.poll()):
-            try:
-                json_payload = json.loads(self._current_message.value)
-                self._paths.append(json_payload.keys())
-                self._log.info(f"{json_payload}")
-            except JSONDecodeError as exc:
-                raise ValueError("Messages are not in JSON format") from exc
-
-        return self._paths
+    def _get_paths(self, values: dict):
+        self._log.info(f"_get_paths: Values dict {values}")
+        return list(values.keys())
 
     def get_entities(self):
         """Generate the entities from kafka messages"""
-        if self._current_message:
-            yield self._get_entity(self._current_message)
+        if self._first_message:
+            yield self._get_entity(self._first_message)
 
         for message in self.poll():
             yield self._get_entity(message)
 
     def _get_entity(self, message: KafkaMessage):
         json_payload = json.loads(message.value)
-        entity_uri = f"urn:uuid:{str(uuid.uuid4())}"
-        values = []
-        for _ in self._paths:
-            values.append([json_payload.get(_)])
+        entity_uri = json_payload["entity"]["uri"]
+        values = [
+            json_payload["entity"]["values"].get(_.path) for _ in self._schema.paths
+        ]
         return Entity(uri=entity_uri, values=values)
 
     def get_xml_payload(self) -> Iterator[bytes]:
@@ -167,6 +159,26 @@ class KafkaConsumer:
         """Subscribes to a topic to consume messages"""
         self._consumer.subscribe(topics=[self._topic])
 
+    def get_first_message(self):
+        """Get the first message from kafka subscribed topic"""
+        if self._first_message:
+            return self._first_message
+        count = 0
+        while True:
+            msg = self._consumer.poll(timeout=KAFKA_TIMEOUT)
+            count += 1
+            if msg or count > 3:
+                break
+
+        if msg is None:
+            self._log.info("get_first_message: Messages are empty")
+        else:
+            self._first_message = KafkaMessage(
+                key=msg.key().decode("utf-8") if msg.key() else "",
+                value=msg.value().decode("utf-8"),
+            )
+        return self._first_message
+
     def poll(self) -> Iterator[KafkaMessage]:
         """Polls the consumer for events and calls the corresponding callbacks"""
         while True:
@@ -179,10 +191,12 @@ class KafkaConsumer:
                 raise KafkaException(msg.error())
 
             self._no_of_success_messages += 1
-            self._current_message = KafkaMessage(
+            kafka_message = KafkaMessage(
                 key=msg.key().decode("utf-8") if msg.key() else "",
                 value=msg.value().decode("utf-8"),
             )
+            if not self._first_message:
+                self._first_message = kafka_message
             if not self._no_of_success_messages % 10:
                 self._context.report.update(
                     ExecutionReport(
@@ -191,7 +205,7 @@ class KafkaConsumer:
                         operation_desc="messages received",
                     )
                 )
-            yield self._current_message
+            yield kafka_message
 
     def close(self):
         """Closes the consumer once all messages were received."""
@@ -337,7 +351,7 @@ class KafkaEntitiesHandler:
         for entity in entities.entities:
             values: dict[str, Sequence[str]] = {}
             for i, path in enumerate(paths):
-                values[path.path] = [value for value in entity.values[i]]
+                values[path.path] = list(entity.values[i])
             result["entity"] = {"uri": entity.uri, "values": values}
             yield result
 

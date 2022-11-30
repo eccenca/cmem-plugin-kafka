@@ -9,6 +9,7 @@ import requests
 from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
 from cmem.cmempy.workspace.projects.project import make_new_project, delete_project
 from cmem.cmempy.workspace.projects.resources.resource import create_resource
+from cmem_plugin_examples.workflow.random_values import RandomValues
 from confluent_kafka import cimpl, KafkaException
 
 from cmem_plugin_kafka.utils import get_resource_from_dataset
@@ -121,6 +122,43 @@ def test_execution_kafka_producer_consumer(project):
         assert XMLUtils.get_elements_len_fromstring(
             response.text
         ) == XMLUtils.get_elements_len_from_file(path="tests/sample-test.xml")
+
+
+@needs_cmem
+@needs_kafka
+def test_execution_kafka_consumer_entities(project):
+    """Test plugin execution for Plain Kafka"""
+    entities = RandomValues(random_function="token_urlsafe").execute(
+        context=TestExecutionContext()
+    )
+    # Producer
+    KafkaProducerPlugin(
+        message_dataset=None,
+        bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
+        security_protocol=KAFKA_CONFIG["security_protocol"],
+        sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
+        sasl_username=KAFKA_CONFIG["sasl_username"],
+        sasl_password=KAFKA_CONFIG["sasl_password"],
+        kafka_topic=DEFAULT_TOPIC,
+    ).execute([entities], TestExecutionContext(project_id=PROJECT_NAME))
+
+    # Consumer
+    entities = KafkaConsumerPlugin(
+        message_dataset=None,
+        bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
+        security_protocol=KAFKA_CONFIG["security_protocol"],
+        sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
+        sasl_username=KAFKA_CONFIG["sasl_username"],
+        sasl_password=KAFKA_CONFIG["sasl_password"],
+        kafka_topic=DEFAULT_TOPIC,
+        group_id=DEFAULT_GROUP,
+        auto_offset_reset="earliest",
+    ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
+    count = 0
+    for _ in entities.entities:
+        count += 1
+
+    assert count == 10
 
 
 @needs_cmem
