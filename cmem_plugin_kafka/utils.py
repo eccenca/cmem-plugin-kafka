@@ -131,7 +131,11 @@ class KafkaConsumer:
             yield self._get_entity(message)
 
     def _get_entity(self, message: KafkaMessage):
-        json_payload = json.loads(message.value)
+        try:
+            json_payload = json.loads(message.value)
+        except json.decoder.JSONDecodeError as exc:
+            raise ValueError("Kafka message in not in valid JSON format") from exc
+
         entity_uri = json_payload["entity"]["uri"]
         values = [
             json_payload["entity"]["values"].get(_.path) for _ in self._schema.paths
