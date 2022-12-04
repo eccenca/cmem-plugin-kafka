@@ -27,6 +27,7 @@ from cmem_plugin_base.dataintegration.utils import (
 )
 from confluent_kafka import Producer, Consumer, KafkaException, KafkaError
 from confluent_kafka.admin import AdminClient, TopicMetadata, ClusterMetadata
+from defusedxml import ElementTree
 
 from cmem_plugin_kafka.constants import KAFKA_TIMEOUT
 
@@ -399,6 +400,7 @@ def get_resource_from_dataset(dataset_id: str, context: UserContext):
 
 def get_message_with_wrapper(message: KafkaMessage) -> str:
     """Wrap kafka message around Message tags"""
+    is_xml(message.value)
     # strip xml metadata
     regex_pattern = "<\\?xml.*\\?>"
     msg_with_wrapper = f'<Message key="{message.key}">'
@@ -426,3 +428,11 @@ def get_kafka_statistics(json_data: str) -> dict:
         else f"{stats[key]}"
         for key in interested_keys
     }
+
+
+def is_xml(value: str):
+    """Check value is xml string or not"""
+    try:
+        ElementTree.fromstring(value)
+    except ElementTree.ParseError as exc:
+        raise ValueError("Kafka message is not in Valid XML format") from exc
