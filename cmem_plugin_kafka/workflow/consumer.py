@@ -3,7 +3,7 @@ from typing import Sequence, Dict, Any, Optional
 
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
-from cmem_plugin_base.dataintegration.entity import Entities, EntitySchema
+from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.parameter.dataset import DatasetParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
@@ -256,7 +256,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         if not self.message_dataset:
             schema = kafka_consumer.get_schema()
             if not schema:
-                return Entities(entities=[], schema=EntitySchema(type_uri="", paths=[]))
+                return None
             entities = kafka_consumer.get_entities()
             return Entities(entities=entities, schema=schema)
 
