@@ -24,11 +24,12 @@ from cmem_plugin_kafka.constants import (
 )
 from cmem_plugin_kafka.utils import (
     KafkaProducer,
-    KafkaMessageHandler,
+    KafkaXMLHandler,
     validate_kafka_config,
     get_resource_from_dataset,
     get_kafka_statistics,
     get_default_client_id,
+    KafkaEntitiesHandler,
 )
 
 TOPIC_DESCRIPTION = """
@@ -82,6 +83,7 @@ to the configured topic. Each message is created as a proper XML document.
             " project only. In case you miss your dataset, check for"
             " the correct type (XML) and build project).",
             param_type=DatasetParameterType(dataset_type="xml"),
+            default_value="",
         ),
         PluginParameter(
             name="bootstrap_servers",
@@ -196,10 +198,6 @@ class KafkaProducerPlugin(WorkflowPlugin):
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
         self.log.info("Start Kafka Plugin")
         self.validate()
-        # Prefix project id to dataset name
-        self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
-
-        parser = sax.make_parser()
 
         # override the default ContextHandler
         producer = KafkaProducer(
@@ -208,12 +206,6 @@ class KafkaProducerPlugin(WorkflowPlugin):
             ),
             topic=self.kafka_topic,
         )
-        handler = KafkaMessageHandler(
-            producer,
-            context,
-            plugin_logger=self.log,
-        )
-        parser.setContentHandler(handler)
 
         context.report.update(
             ExecutionReport(
@@ -221,11 +213,29 @@ class KafkaProducerPlugin(WorkflowPlugin):
             )
         )
 
-        with get_resource_from_dataset(
-            dataset_id=self.message_dataset, context=context.user
-        ) as response:
-            response.raw.decode_content = True
-            parser.parse(response.raw)
+        if self.message_dataset:
+            # Prefix project id to dataset name
+            self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
+            parser = sax.make_parser()
+            handler = KafkaXMLHandler(
+                producer,
+                context,
+                plugin_logger=self.log,
+            )
+            parser.setContentHandler(handler)
+            with get_resource_from_dataset(
+                dataset_id=self.message_dataset, context=context.user
+            ) as response:
+                response.raw.decode_content = True
+                parser.parse(response.raw)
+        else:
+            entities_handler = KafkaEntitiesHandler(
+                producer,
+                context,
+                plugin_logger=self.log,
+            )
+            for entities in inputs:
+                entities_handler.process(entities)
 
         context.report.update(
             ExecutionReport(

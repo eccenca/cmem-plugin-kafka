@@ -1,7 +1,7 @@
 """Kafka utils modules"""
 import json
 import re
-from typing import Dict, Any, Iterator
+from typing import Dict, Any, Iterator, Optional, Sequence
 from urllib.parse import urlparse
 from xml.sax.handler import ContentHandler  # nosec B406
 from xml.sax.saxutils import escape  # nosec B406
@@ -14,6 +14,12 @@ from cmem_plugin_base.dataintegration.context import (
     ExecutionReport,
     UserContext,
 )
+from cmem_plugin_base.dataintegration.entity import (
+    Entities,
+    Entity,
+    EntityPath,
+    EntitySchema,
+)
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
 from cmem_plugin_base.dataintegration.utils import (
     setup_cmempy_user_access,
@@ -21,6 +27,7 @@ from cmem_plugin_base.dataintegration.utils import (
 )
 from confluent_kafka import Producer, Consumer, KafkaException, KafkaError
 from confluent_kafka.admin import AdminClient, TopicMetadata, ClusterMetadata
+from defusedxml import ElementTree
 
 from cmem_plugin_kafka.constants import KAFKA_TIMEOUT
 
@@ -40,9 +47,9 @@ class KafkaMessage:
         Kafka message payload
     """
 
-    def __init__(self, key: str = "", value: str = ""):
+    def __init__(self, key: Optional[str] = None, value: str = ""):
         self.value: str = value
-        self.key: str = key
+        self.key: Optional[str] = key
 
 
 class KafkaProducer:
@@ -89,26 +96,59 @@ class KafkaConsumer:
         self._topic = topic
         self._log = log
         self._no_of_success_messages = 0
+        self._first_message: Optional[KafkaMessage] = None
+        self._schema: EntitySchema = None
 
     def __enter__(self):
-        self.subscribe()
         return self.get_xml_payload()
+
+    def get_schema(self):
+        """Return kafka message schema paths"""
+        message = self.get_first_message()
+        if not message:
+            return None
+        json_payload = json.loads(message.value)
+        schema_paths = []
+        self._log.info(f'values : {json_payload["entity"]["values"]}')
+        for path in self._get_paths(json_payload["entity"]["values"]):
+            path_uri = f"{path}"
+            schema_paths.append(EntityPath(path=path_uri))
+        self._schema = EntitySchema(
+            type_uri=json_payload["schema"]["type_uri"],
+            paths=schema_paths,
+        )
+        return self._schema
+
+    def _get_paths(self, values: dict):
+        self._log.info(f"_get_paths: Values dict {values}")
+        return list(values.keys())
+
+    def get_entities(self):
+        """Generate the entities from kafka messages"""
+        if self._first_message:
+            yield self._get_entity(self._first_message)
+
+        for message in self.poll():
+            yield self._get_entity(message)
+
+    def _get_entity(self, message: KafkaMessage):
+        try:
+            json_payload = json.loads(message.value)
+        except json.decoder.JSONDecodeError as exc:
+            raise ValueError("Kafka message in not in valid JSON format") from exc
+
+        entity_uri = json_payload["entity"]["uri"]
+        values = [
+            json_payload["entity"]["values"].get(_.path) for _ in self._schema.paths
+        ]
+        return Entity(uri=entity_uri, values=values)
 
     def get_xml_payload(self) -> Iterator[bytes]:
         """generate xml file with kafka messages"""
         yield '<?xml version="1.0" encoding="UTF-8"?>\n'.encode()
         yield "<KafkaMessages>".encode()
         for message in self.poll():
-            self._no_of_success_messages += 1
             yield get_message_with_wrapper(message).encode()
-            if not self._no_of_success_messages % 10:
-                self._context.report.update(
-                    ExecutionReport(
-                        entity_count=self._no_of_success_messages,
-                        operation="read",
-                        operation_desc="messages received",
-                    )
-                )
 
         yield "</KafkaMessages>".encode()
 
@@ -124,6 +164,26 @@ class KafkaConsumer:
         """Subscribes to a topic to consume messages"""
         self._consumer.subscribe(topics=[self._topic])
 
+    def get_first_message(self):
+        """Get the first message from kafka subscribed topic"""
+        if self._first_message:
+            return self._first_message
+        count = 0
+        while True:
+            msg = self._consumer.poll(timeout=KAFKA_TIMEOUT)
+            count += 1
+            if msg or count > 3:
+                break
+
+        if msg is None:
+            self._log.info("get_first_message: Messages are empty")
+        else:
+            self._first_message = KafkaMessage(
+                key=msg.key().decode("utf-8") if msg.key() else "",
+                value=msg.value().decode("utf-8"),
+            )
+        return self._first_message
+
     def poll(self) -> Iterator[KafkaMessage]:
         """Polls the consumer for events and calls the corresponding callbacks"""
         while True:
@@ -135,17 +195,29 @@ class KafkaConsumer:
                 self._log.error(f"Consumer poll Error:{msg.error()}")
                 raise KafkaException(msg.error())
 
-            yield KafkaMessage(
+            self._no_of_success_messages += 1
+            kafka_message = KafkaMessage(
                 key=msg.key().decode("utf-8") if msg.key() else "",
                 value=msg.value().decode("utf-8"),
             )
+            if not self._first_message:
+                self._first_message = kafka_message
+            if not self._no_of_success_messages % 10:
+                self._context.report.update(
+                    ExecutionReport(
+                        entity_count=self._no_of_success_messages,
+                        operation="read",
+                        operation_desc="messages received",
+                    )
+                )
+            yield kafka_message
 
     def close(self):
         """Closes the consumer once all messages were received."""
         self._consumer.close()
 
 
-class KafkaMessageHandler(ContentHandler):
+class KafkaXMLHandler(ContentHandler):
     """Custom Callback Kafka XML content handler"""
 
     def __init__(
@@ -244,6 +316,51 @@ class KafkaMessageHandler(ContentHandler):
         )
 
 
+class KafkaEntitiesHandler:
+    """Custom Callback Kafka XML content handler"""
+
+    def __init__(
+        self, kafka_producer: KafkaProducer, context: ExecutionContext, plugin_logger
+    ):
+        self._kafka_producer = kafka_producer
+        self._context: ExecutionContext = context
+        self._log: PluginLogger = plugin_logger
+
+    def process(self, entities: Entities):
+        """Process entities"""
+        for message_dict in self.get_dict(entities):
+            kafka_payload = json.dumps(message_dict, indent=4)
+            self._kafka_producer.process(KafkaMessage(key=None, value=kafka_payload))
+            if self._kafka_producer.get_success_messages_count() % 10 == 0:
+                self._kafka_producer.poll(0)
+                self.update_report()
+        self._kafka_producer.flush()
+
+    def update_report(self):
+        """Update the plugin report with current status"""
+        self._context.report.update(
+            ExecutionReport(
+                entity_count=self._kafka_producer.get_success_messages_count(),
+                operation="wait",
+                operation_desc="messages sent",
+            )
+        )
+
+    def get_dict(self, entities: Entities) -> Iterator[Dict[str, str]]:
+        """get dict from entities"""
+        self._log.info("Generate dict from entities")
+
+        paths = entities.schema.paths
+        type_uri = entities.schema.type_uri
+        result: dict[str, Any] = {"schema": {"type_uri": type_uri}}
+        for entity in entities.entities:
+            values: dict[str, Sequence[str]] = {}
+            for i, path in enumerate(paths):
+                values[path.path] = list(entity.values[i])
+            result["entity"] = {"uri": entity.uri, "values": values}
+            yield result
+
+
 def get_default_client_id(project_id: str, task_id: str):
     """return dns:projectId:taskId when client id is empty"""
     base_url = get_cmem_base_uri()
@@ -283,6 +400,7 @@ def get_resource_from_dataset(dataset_id: str, context: UserContext):
 
 def get_message_with_wrapper(message: KafkaMessage) -> str:
     """Wrap kafka message around Message tags"""
+    is_xml(message.value)
     # strip xml metadata
     regex_pattern = "<\\?xml.*\\?>"
     msg_with_wrapper = f'<Message key="{message.key}">'
@@ -310,3 +428,11 @@ def get_kafka_statistics(json_data: str) -> dict:
         else f"{stats[key]}"
         for key in interested_keys
     }
+
+
+def is_xml(value: str):
+    """Check value is xml string or not"""
+    try:
+        ElementTree.fromstring(value)
+    except ElementTree.ParseError as exc:
+        raise ValueError("Kafka message is not in Valid XML format") from exc

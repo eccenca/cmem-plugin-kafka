@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - `Client_Id` parameter has been added to the advanced section of Kafka Consumer.
 - When the `Client_Id` field is empty, the plugin defaults to `DNS:TASK ID`.
 - `Local Consumer Queue Size` parameter to limit local consumer queue size
+- Consume input entities in KafkaProducerPlugin to generate messages
+- Generate output entities in KafkaConsumerPlugin from messages
+
 ### Changed
 
 - `Messages Dataset` Parameter moved from the advanced section to Main section (will change again in future)
