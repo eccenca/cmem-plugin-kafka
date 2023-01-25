@@ -5,7 +5,11 @@ from contextlib import suppress
 import pytest
 import requests
 from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
-from cmem.cmempy.workspace.projects.import_ import upload_project, import_from_upload_start, import_from_upload_status
+from cmem.cmempy.workspace.projects.import_ import (
+    upload_project,
+    import_from_upload_start,
+    import_from_upload_status,
+)
 from cmem.cmempy.workspace.projects.project import delete_project, make_new_project
 
 from cmem_plugin_kafka.utils import get_resource_from_dataset
@@ -33,7 +37,7 @@ KAFKA_CONFIG = get_kafka_config()
 DEFAULT_GROUP = "workflow"
 DEFAULT_TOPIC = "eccenca_kafka_workflow"
 DEFAULT_RESET = "earliest"
-RESOURCE_LINK = "https://download.eccenca.com/cmem-plugin-kafka/kafka_performance_project.zip"
+RESOURCE_LINK = "https://download.eccenca.com/cmem-plugin-kafka/kafka_performance_project.zip"  # noqa: E501
 
 
 @pytest.fixture
@@ -51,9 +55,7 @@ def perf_producer_project(request):
     project_id = validation_response["projectId"]
 
     import_from_upload_start(
-        import_id=import_id,
-        project_id=project_id,
-        overwrite_existing=True
+        import_id=import_id, project_id=project_id, overwrite_existing=True
     )
     # loop until "success" boolean is in status response
     status = import_from_upload_status(import_id)

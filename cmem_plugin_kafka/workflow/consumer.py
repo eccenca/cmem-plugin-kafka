@@ -19,7 +19,8 @@ from cmem_plugin_kafka.constants import (
     SECURITY_PROTOCOL_DESCRIPTION,
     SASL_ACCOUNT_DESCRIPTION,
     SASL_PASSWORD_DESCRIPTION,
-    CLIENT_ID_DESCRIPTION, LOCAL_CONSUMER_QUEUE_MAX_SIZE_DESCRIPTION,
+    CLIENT_ID_DESCRIPTION,
+    LOCAL_CONSUMER_QUEUE_MAX_SIZE_DESCRIPTION,
 )
 from cmem_plugin_kafka.utils import (
     KafkaConsumer,
@@ -176,7 +177,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         auto_offset_reset: str,
         group_id: str = "",
         client_id: str = "",
-        local_consumer_queue_size: int = 5000
+        local_consumer_queue_size: int = 5000,
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError("Specified server id is invalid")

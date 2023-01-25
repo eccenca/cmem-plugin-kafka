@@ -11,12 +11,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - `Client_Id` parameter has been added to the advanced section of Kafka Consumer.
 - When the `Client_Id` field is empty, the plugin defaults to `DNS:TASK ID`.
 - `Local Consumer Queue Size` parameter to limit local consumer queue size
+
 ### Changed
 
 - `Messages Dataset` Parameter moved from the advanced section to Main section (will change again in future)
 - Replace `none` with `error` in Auto Offset Reset parameter choice list
 - moved kakfa producer/consumer configuration check from __init__ to validate() and calling explictly from execute()
 - resolved endless loop caused by improper kafka server configuration
+
 ## [1.1.0] 2022-10-21
 
 ### Added
@@ -48,4 +50,3 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### Added
 
 - initial version of a kafka producer plugin
-
