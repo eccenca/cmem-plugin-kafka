@@ -111,7 +111,8 @@ class XMLUtils:
         """Return elements len of xml file"""
 
         class MessageHandler(ContentHandler):
-            """ Message Handler """
+            """Message Handler"""
+
             def __init__(self):
                 self.count = 0
 
