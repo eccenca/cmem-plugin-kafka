@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - Replace `none` with `error` in Auto Offset Reset parameter choice list
 - moved kakfa producer/consumer configuration check from __init__ to validate() and calling explictly from execute()
 - resolved endless loop caused by improper kafka server configuration
+
 ## [1.1.0] 2022-10-21
 
 ### Added
@@ -51,4 +52,3 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### Added
 
 - initial version of a kafka producer plugin
-

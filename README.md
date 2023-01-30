@@ -6,6 +6,8 @@ This eccenca Corporate Memory plugin allows for sending and receiving messages f
 
 `cmemc -c my-cmem admin workspace python install cmem-plugin-kafka`
 
+[![eccenca Corporate Memory](https://img.shields.io/badge/eccenca-Corporate%20Memory-orange)](https://documentation.eccenca.com)   
+
 ## Development
 
 - Run [task](https://taskfile.dev/) to see all major development tasks.

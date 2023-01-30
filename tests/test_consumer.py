@@ -1,9 +1,8 @@
 """Plugin tests."""
 import random
 import string
-import time
 from contextlib import suppress
-
+import time
 import pytest
 import requests
 from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
@@ -77,8 +76,11 @@ def test_execution_kafka_producer_consumer(project):
     # By default, new topic will not available
     with pytest.raises(
         ValueError,
-        match="The topic you configured, was just created. Save again if this ok for you. "
-        "Otherwise, change the topic name.",
+        match=(
+            "The topic you configured, was just created."
+            " Save again if this ok for you."
+            " Otherwise, change the topic name."
+        ),
     ):
         KafkaProducerPlugin(
             message_dataset=PRODUCER_DATASET_ID,
@@ -90,6 +92,7 @@ def test_execution_kafka_producer_consumer(project):
             kafka_topic=DEFAULT_TOPIC,
         ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
     time.sleep(10)
+
     # Producer
     KafkaProducerPlugin(
         message_dataset=PRODUCER_DATASET_ID,

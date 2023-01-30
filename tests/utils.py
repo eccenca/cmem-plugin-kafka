@@ -1,6 +1,5 @@
 """Testing utilities."""
 import os
-from typing import Optional
 from defusedxml import sax
 from xml.sax.handler import ContentHandler
 
@@ -112,6 +111,8 @@ class XMLUtils:
         """Return elements len of xml file"""
 
         class MessageHandler(ContentHandler):
+            """Message Handler"""
+
             def __init__(self):
                 self.count = 0
 
@@ -123,4 +124,4 @@ class XMLUtils:
         parser = sax.make_parser()
         parser.setContentHandler(handler)
         parser.parse(content)
-        return handler.count
+        return int(handler.count)
