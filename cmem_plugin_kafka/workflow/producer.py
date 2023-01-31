@@ -49,8 +49,9 @@ This is especially true for a kafka cluster hosted at
     documentation="""This workflow operator uses the Kafka Producer API to send
 messages to a [Apache Kafka](https://kafka.apache.org/).
 
-The need-to-send data has to be prepared upfront in an XML dataset. The dataset is
-parsed into messages and send to a Kafka topic according to the configuration.
+Accepts entities as input, and, if desired, accepts a pre-constructed XML dataset,
+which is transformed into messages and sent to a designated Kafka topic based
+on configuration.
 
 An example XML document is shown below. This document will be sent as two messages
 to the configured topic. Each message is created as a proper XML document.

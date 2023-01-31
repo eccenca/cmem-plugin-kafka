@@ -67,5 +67,7 @@ When the Client Id field is empty, the plugin defaults to DNS:PROJECT ID:TASK ID
 """
 
 LOCAL_CONSUMER_QUEUE_MAX_SIZE_DESCRIPTION = """
-Maximum number of kilobytes per topic+partition in the local consumer queue.
+Maximum total message size in kilobytes that the consumer can buffer for
+a specific partition. The consumer will stop fetching from the partition
+if it hits this limit. This helps prevent consumers from running out of memory.
 """

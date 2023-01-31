@@ -57,9 +57,10 @@ not exist any more on the server (e.g. because that data has been deleted).
     documentation="""This workflow operator uses the Kafka Consumer API to receive
 messages from a [Apache Kafka](https://kafka.apache.org/).
 
-Need to specify a group id to receive messages from a Kafka topic. All messages received
-from a topic will be stored into a xml dataset. Sample response from the consumer will
-look this.
+Need to specify a topic to receive messages from the desired Kafka topic.
+All messages received from the topic will be stored as entities and, if messages
+were in XML format, can be saved in an XML dataset. A sample response from the
+consumer will appear as follows.
 ```
 <?xml version="1.0" encoding="utf-8"?>
 <KafkaMessages>
