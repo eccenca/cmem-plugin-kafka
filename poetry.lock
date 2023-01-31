@@ -127,6 +127,17 @@ python-versions = ">=3.9,<4.0"
 cmem-cmempy = ">=22.1"
 
 [[package]]
+name = "cmem-plugin-examples"
+version = "0.1.0"
+description = "Example plugins for eccenca Corporate Memory."
+category = "dev"
+optional = false
+python-versions = ">=3.9,<4.0"
+
+[package.dependencies]
+cmem-plugin-base = ">=2.1.0,<3.0.0"
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -870,7 +881,7 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "70f64a11f23b125c5de0979e2c447bde78da6c904aaf11959cd8348ab8818e5f"
+content-hash = "17d16c90780146432dddab8e02782e74263dab75f0f7c8bd3b3ef2e3edcae4fe"
 
 [metadata.files]
 astroid = [
@@ -1004,6 +1015,10 @@ cmem-cmempy = [
 cmem-plugin-base = [
     {file = "cmem-plugin-base-2.1.0.tar.gz", hash = "sha256:ab27d0f8e4736511adb973fc29a8095d23dbd10a0b011ba5f2a3de7ad3e8e6ba"},
     {file = "cmem_plugin_base-2.1.0-py3-none-any.whl", hash = "sha256:d467ff17f1e12c331f2d9a5f67d0ad4b0678ecace727f680e5af34173e91d719"},
+]
+cmem-plugin-examples = [
+    {file = "cmem_plugin_examples-0.1.0-py3-none-any.whl", hash = "sha256:f5a9864e2502f18d817559bebc556c7ea7049c51de0e860a5f8acef480abede0"},
+    {file = "cmem_plugin_examples-0.1.0.tar.gz", hash = "sha256:e6c09c9243f3b85d38c0f7e7f5a9dc9928d6bcb42128b014c6fbb32d1d759ab0"},
 ]
 colorama = [
     {file = "colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"},
