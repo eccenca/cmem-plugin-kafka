@@ -2,11 +2,13 @@
 The `kafka_handlers` module provides a base class `KafkaDataHandler` for producing
 messages from data to/from a Kafka topic.
 """
+import json
 
+import ijson
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
 
-from cmem_plugin_kafka.utils import KafkaProducer
+from cmem_plugin_kafka.utils import KafkaProducer, KafkaMessage
 
 
 class KafkaDataHandler:
@@ -78,3 +80,33 @@ class KafkaDataHandler:
                 operation_desc="messages sent",
             )
         )
+
+
+class KafkaJSONDataHandler(KafkaDataHandler):
+    """
+    A class for producing messages from JSON Dataset to a Kafka topic.
+
+    :param context: Execution Context to use.
+    :type context: ExecutionContext
+    :param plugin_logger: Plugin logger instance to use.
+    :type plugin_logger: PluginLogger
+    :param kafka_producer: Optional Kafka producer instance to use.
+    :type kafka_producer: KafkaProducer
+    """
+    def __init__(
+            self, context: ExecutionContext,
+            plugin_logger: PluginLogger, kafka_producer: KafkaProducer,
+    ):
+        """
+        Initialize a new KafkaJSONDataHandler instance with the specified
+        execution context, logger, and producer instances.
+        """
+        plugin_logger.info("Initialize KafkaJSONDataHandler")
+        super().__init__(context, plugin_logger, kafka_producer)
+
+    def _split_data(self, data):
+        messages = ijson.items(data, "item.message")
+        for message in messages:
+            key = message["key"]
+            content = message["content"]
+            yield KafkaMessage(key=key, value=json.dumps(content))
