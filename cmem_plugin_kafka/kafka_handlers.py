@@ -107,6 +107,7 @@ class KafkaJSONDataHandler(KafkaDataHandler):
     def _split_data(self, data):
         messages = ijson.items(data, "item.message")
         for message in messages:
-            key = message["key"]
+            key = message["key"] if "key" in message else None
+            headers = message["headers"] if "headers" in message else {}
             content = message["content"]
-            yield KafkaMessage(key=key, value=json.dumps(content))
+            yield KafkaMessage(key=key, value=json.dumps(content), headers=headers)

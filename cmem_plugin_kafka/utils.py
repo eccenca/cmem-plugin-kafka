@@ -47,9 +47,15 @@ class KafkaMessage:
         Kafka message payload
     """
 
-    def __init__(self, key: Optional[str] = None, value: str = ""):
+    def __init__(
+            self,
+            key: Optional[str] = None,
+            headers: dict = {},
+            value: str = ""
+    ):
         self.value: str = value
         self.key: Optional[str] = key
+        self.headers: Optional[dict] = headers
 
 
 class KafkaProducer:
@@ -64,7 +70,12 @@ class KafkaProducer:
     def process(self, message: KafkaMessage):
         """Produce message to topic."""
         self._no_of_success_messages += 1
-        self._producer.produce(self._topic, value=message.value, key=message.key)
+        self._producer.produce(
+            self._topic,
+            value=message.value,
+            key=message.key,
+            headers=message.headers
+        )
 
     def poll(self, timeout):
         """Polls the producer for events and calls the corresponding callbacks"""
