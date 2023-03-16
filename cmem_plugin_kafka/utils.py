@@ -52,12 +52,12 @@ class KafkaMessage:
     def __init__(
             self,
             key: Optional[str] = None,
-            headers: dict = {},
+            headers: Optional[dict] = None,
             value: str = ""
     ):
         self.value: str = value
         self.key: Optional[str] = key
-        self.headers: dict = headers
+        self.headers: Optional[dict] = headers
 
 
 class KafkaProducer:
@@ -470,7 +470,9 @@ class DatasetParameterType(StringParameterType):
         """Dataset parameter type."""
         self.dataset_type = dataset_type
 
-    def label(self, value: str, context: PluginContext) -> Optional[str]:
+    def label(self, value: str,
+              depend_on_parameter_values: list[Any],
+              context: PluginContext) -> Optional[str]:
         """Returns the label for the given dataset."""
         setup_cmempy_user_access(context.user)
         task_label = str(
@@ -479,6 +481,7 @@ class DatasetParameterType(StringParameterType):
         return f"{task_label}"
 
     def autocomplete(self, query_terms: list[str],
+                     depend_on_parameter_values: list[Any],
                      context: PluginContext) -> list[Autocompletion]:
         setup_cmempy_user_access(context.user)
         datasets = list_items(item_type="dataset",
