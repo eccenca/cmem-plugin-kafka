@@ -57,7 +57,7 @@ class KafkaMessage:
     ):
         self.value: str = value
         self.key: Optional[str] = key
-        self.headers: Optional[dict] = headers
+        self.headers: dict = headers
 
 
 class KafkaProducer:
@@ -315,7 +315,7 @@ class KafkaXMLHandler(ContentHandler):
         """To reset _message"""
         value = '<?xml version="1.0" encoding="UTF-8"?>'
         key = self.get_key(attrs)
-        self._message = KafkaMessage(key, value)
+        self._message = KafkaMessage(key=key, value=value)
         self._no_of_children = 0
 
     def update_report(self):
@@ -403,12 +403,18 @@ def validate_kafka_config(config: Dict[str, Any], topic: str, log: PluginLogger)
 
 def get_resource_from_dataset(dataset_id: str, context: UserContext):
     """Get resource from dataset"""
-    setup_cmempy_user_access(context=context)
     project_id, task_id = split_task_id(dataset_id)
-    task_meta_data = get_task(project=project_id, task=task_id)
+    task_meta_data = get_task_metadata(project_id, task_id, context)
     resource_name = str(task_meta_data["data"]["parameters"]["file"]["value"])
 
-    return get_resource_response(project_id, resource_name)
+    return get_resource_response(project_id, resource_name), task_meta_data
+
+
+def get_task_metadata(project: str, task: str, context: UserContext):
+    """get metadata information of a task"""
+    setup_cmempy_user_access(context=context)
+    task_meta_data = get_task(project=project, task=task)
+    return task_meta_data
 
 
 def get_message_with_wrapper(message: KafkaMessage) -> str:

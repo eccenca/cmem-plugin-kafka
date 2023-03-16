@@ -30,6 +30,7 @@ from cmem_plugin_kafka.utils import (
     get_default_client_id,
     KafkaEntitiesHandler, DatasetParameterType,
 )
+from cmem_plugin_kafka.kafka_handlers import KafkaJSONDataHandler
 
 TOPIC_DESCRIPTION = """
 The name of the category/feed to which the messages will be published.
@@ -216,18 +217,28 @@ class KafkaProducerPlugin(WorkflowPlugin):
         if self.message_dataset:
             # Prefix project id to dataset name
             self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
-            parser = sax.make_parser()
-            handler = KafkaXMLHandler(
-                producer,
-                context,
-                plugin_logger=self.log,
-            )
-            parser.setContentHandler(handler)
-            with get_resource_from_dataset(
+
+            resource, _ = get_resource_from_dataset(
                 dataset_id=self.message_dataset, context=context.user
-            ) as response:
-                response.raw.decode_content = True
-                parser.parse(response.raw)
+            )
+            if _['data']['type'] == 'json':
+                json_handler = KafkaJSONDataHandler(
+                    context=context, plugin_logger=self.log, kafka_producer=producer
+                )
+                with resource as response:
+                    response.raw.decode_content = True
+                    json_handler.send_messages(response.raw)
+            else:
+                parser = sax.make_parser()
+                handler = KafkaXMLHandler(
+                    producer,
+                    context,
+                    plugin_logger=self.log,
+                )
+                parser.setContentHandler(handler)
+                with resource as response:
+                    response.raw.decode_content = True
+                    parser.parse(response.raw)
         else:
             entities_handler = KafkaEntitiesHandler(
                 producer,
