@@ -8,7 +8,6 @@ from cmem_plugin_base.dataintegration.context import (
 from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
-from cmem_plugin_base.dataintegration.parameter.dataset import DatasetParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from confluent_kafka import KafkaError
 from defusedxml import sax
@@ -29,7 +28,7 @@ from cmem_plugin_kafka.utils import (
     get_resource_from_dataset,
     get_kafka_statistics,
     get_default_client_id,
-    KafkaEntitiesHandler,
+    KafkaEntitiesHandler, DatasetParameterType,
 )
 
 TOPIC_DESCRIPTION = """
@@ -83,7 +82,7 @@ to the configured topic. Each message is created as a proper XML document.
             " The dropdown lists usable datasets from the current"
             " project only. In case you miss your dataset, check for"
             " the correct type (XML) and build project).",
-            param_type=DatasetParameterType(dataset_type="xml"),
+            param_type=DatasetParameterType(dataset_type="xml,json"),
             default_value="",
         ),
         PluginParameter(
