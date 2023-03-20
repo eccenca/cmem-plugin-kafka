@@ -119,9 +119,11 @@ def test_execution_kafka_producer_consumer(project):
 
     # Ensure producer and consumer are working properly
     assert XMLUtils.get_elements_len_from_file(path="tests/sample-test.xml") == 3
-    with get_resource_from_dataset(
-        dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}", context=TestUserContext()
-    ) as response:
+    resource, _ = get_resource_from_dataset(
+            dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}",
+            context=TestUserContext()
+    )
+    with resource as response:
         assert XMLUtils.get_elements_len_fromstring(
             response.text
         ) == XMLUtils.get_elements_len_from_file(path="tests/sample-test.xml")
