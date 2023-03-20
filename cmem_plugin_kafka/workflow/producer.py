@@ -28,9 +28,12 @@ from cmem_plugin_kafka.utils import (
     get_resource_from_dataset,
     get_kafka_statistics,
     get_default_client_id,
-    KafkaEntitiesHandler, DatasetParameterType,
+    DatasetParameterType,
 )
-from cmem_plugin_kafka.kafka_handlers import KafkaJSONDataHandler
+from cmem_plugin_kafka.kafka_handlers import (
+    KafkaJSONDataHandler,
+    KafkaEntitiesDataHandler,
+)
 
 TOPIC_DESCRIPTION = """
 The name of the category/feed to which the messages will be published.
@@ -240,13 +243,13 @@ class KafkaProducerPlugin(WorkflowPlugin):
                     response.raw.decode_content = True
                     parser.parse(response.raw)
         else:
-            entities_handler = KafkaEntitiesHandler(
-                producer,
-                context,
+            entities_handler = KafkaEntitiesDataHandler(
+                context=context,
                 plugin_logger=self.log,
+                kafka_producer=producer,
             )
             for entities in inputs:
-                entities_handler.process(entities)
+                entities_handler.send_messages(entities)
 
         context.report.update(
             ExecutionReport(

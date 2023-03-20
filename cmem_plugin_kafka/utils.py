@@ -1,7 +1,7 @@
 """Kafka utils modules"""
 import json
 import re
-from typing import Dict, Any, Iterator, Optional, Sequence
+from typing import Dict, Any, Iterator, Optional
 from urllib.parse import urlparse
 from xml.sax.handler import ContentHandler  # nosec B406
 from xml.sax.saxutils import escape  # nosec B406
@@ -16,7 +16,6 @@ from cmem_plugin_base.dataintegration.context import (
     UserContext, PluginContext,
 )
 from cmem_plugin_base.dataintegration.entity import (
-    Entities,
     Entity,
     EntityPath,
     EntitySchema,
@@ -327,51 +326,6 @@ class KafkaXMLHandler(ContentHandler):
                 operation_desc="messages sent",
             )
         )
-
-
-class KafkaEntitiesHandler:
-    """Custom Callback Kafka XML content handler"""
-
-    def __init__(
-        self, kafka_producer: KafkaProducer, context: ExecutionContext, plugin_logger
-    ):
-        self._kafka_producer = kafka_producer
-        self._context: ExecutionContext = context
-        self._log: PluginLogger = plugin_logger
-
-    def process(self, entities: Entities):
-        """Process entities"""
-        for message_dict in self.get_dict(entities):
-            kafka_payload = json.dumps(message_dict, indent=4)
-            self._kafka_producer.process(KafkaMessage(key=None, value=kafka_payload))
-            if self._kafka_producer.get_success_messages_count() % 10 == 0:
-                self._kafka_producer.poll(0)
-                self.update_report()
-        self._kafka_producer.flush()
-
-    def update_report(self):
-        """Update the plugin report with current status"""
-        self._context.report.update(
-            ExecutionReport(
-                entity_count=self._kafka_producer.get_success_messages_count(),
-                operation="wait",
-                operation_desc="messages sent",
-            )
-        )
-
-    def get_dict(self, entities: Entities) -> Iterator[Dict[str, str]]:
-        """get dict from entities"""
-        self._log.info("Generate dict from entities")
-
-        paths = entities.schema.paths
-        type_uri = entities.schema.type_uri
-        result: dict[str, Any] = {"schema": {"type_uri": type_uri}}
-        for entity in entities.entities:
-            values: dict[str, Sequence[str]] = {}
-            for i, path in enumerate(paths):
-                values[path.path] = list(entity.values[i])
-            result["entity"] = {"uri": entity.uri, "values": values}
-            yield result
 
 
 def get_default_client_id(project_id: str, task_id: str):
