@@ -212,6 +212,9 @@ class KafkaConsumer:
 
         if msg is None:
             self._log.info("get_first_message: Messages are empty")
+        elif msg.error():
+            self._log.error(f"Consumer poll Error:{msg.error()}")
+            raise KafkaException(msg.error())
         else:
             self._first_message = KafkaMessage(
                 key=msg.key().decode("utf-8") if msg.key() else "",
