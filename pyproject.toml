@@ -46,6 +46,7 @@ typed-ast = "^1.5.4"
 wheel = "^0.38.4"
 cmem-plugin-examples = "*"
 types-requests = "*"
+pytest-docker-compose = "*"
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
@@ -79,5 +80,4 @@ warn_return_any = true
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-addopts = ""
-
+addopts = "--docker-compose=./docker/docker-compose.yml --use-running-containers --docker-compose-no-build"
