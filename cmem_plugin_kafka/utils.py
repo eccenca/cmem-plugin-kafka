@@ -112,7 +112,7 @@ class KafkaConsumer:
         self._schema: EntitySchema = None
 
     def __enter__(self):
-        return self.get_xml_payload()
+        return self.get_payload()
 
     def get_schema(self):
         """Return kafka message schema paths"""
@@ -155,12 +155,35 @@ class KafkaConsumer:
         ]
         return Entity(uri=entity_uri, values=values)
 
+    def get_payload(self):
+        """generate file based on kafka message type"""
+        message = self.get_first_message()
+        if not message:
+            return None
+        if is_json(message.value):
+            return self.get_json_payload()
+        return self.get_xml_payload()
+
+    def get_json_payload(self) -> Iterator[bytes]:
+        """generate json file with kafka messages"""
+        yield '['.encode()
+        if self._first_message:
+            self._no_of_success_messages += 1
+            yield get_message_with_json_wrapper(self._first_message).encode()
+        for message in self.poll():
+            yield ",".encode()
+            yield get_message_with_json_wrapper(message).encode()
+        yield ']'.encode()
+
     def get_xml_payload(self) -> Iterator[bytes]:
         """generate xml file with kafka messages"""
         yield '<?xml version="1.0" encoding="UTF-8"?>\n'.encode()
         yield "<KafkaMessages>".encode()
+        if self._first_message:
+            self._no_of_success_messages += 1
+            yield get_message_with_xml_wrapper(self._first_message).encode()
         for message in self.poll():
-            yield get_message_with_wrapper(message).encode()
+            yield get_message_with_xml_wrapper(message).encode()
 
         yield "</KafkaMessages>".encode()
 
@@ -192,6 +215,7 @@ class KafkaConsumer:
         else:
             self._first_message = KafkaMessage(
                 key=msg.key().decode("utf-8") if msg.key() else "",
+                headers=msg.headers(),
                 value=msg.value().decode("utf-8"),
             )
         return self._first_message
@@ -210,6 +234,7 @@ class KafkaConsumer:
             self._no_of_success_messages += 1
             kafka_message = KafkaMessage(
                 key=msg.key().decode("utf-8") if msg.key() else "",
+                headers=msg.headers(),
                 value=msg.value().decode("utf-8"),
             )
             if not self._first_message:
@@ -371,7 +396,7 @@ def get_task_metadata(project: str, task: str, context: UserContext):
     return task_meta_data
 
 
-def get_message_with_wrapper(message: KafkaMessage) -> str:
+def get_message_with_xml_wrapper(message: KafkaMessage) -> str:
     """Wrap kafka message around Message tags"""
     is_xml(message.value)
     # strip xml metadata
@@ -381,6 +406,30 @@ def get_message_with_wrapper(message: KafkaMessage) -> str:
     msg_with_wrapper += re.sub(regex_pattern, "", message.value)
     msg_with_wrapper += "</Message>\n"
     return msg_with_wrapper
+
+
+class BytesEncoder(json.JSONEncoder):
+    """JSON Bytes Encoder"""
+    def default(self, o):
+        if isinstance(o, bytes):
+            return o.decode('utf-8')
+        return json.JSONEncoder.default(self, o)
+
+
+def get_message_with_json_wrapper(message: KafkaMessage) -> str:
+    """Wrap kafka message around Message tags"""
+
+    msg_with_wrapper = {
+        "message": {
+            "key": message.key,
+            "content": json.loads(message.value)
+        }
+    }
+    if message.headers:
+        msg_with_wrapper["headers"] = {
+            header[0]: header[1] for header in message.headers
+        }
+    return json.dumps(msg_with_wrapper, cls=BytesEncoder)
 
 
 def get_kafka_statistics(json_data: str) -> dict:
@@ -408,7 +457,16 @@ def is_xml(value: str):
     try:
         ElementTree.fromstring(value)
     except ElementTree.ParseError as exc:
-        raise ValueError("Kafka message is not in Valid XML format") from exc
+        raise ValueError(f"Kafka message({value}) is not in Valid XML format") from exc
+
+
+def is_json(value: str):
+    """Check value is json string or not"""
+    try:
+        json.loads(value)
+    except json.decoder.JSONDecodeError:
+        return False
+    return True
 
 
 class DatasetParameterType(StringParameterType):

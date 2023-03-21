@@ -5,7 +5,6 @@ from cmem_plugin_base.dataintegration.context import ExecutionContext, Execution
 from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
-from cmem_plugin_base.dataintegration.parameter.dataset import DatasetParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.types import IntParameterType
 from cmem_plugin_base.dataintegration.utils import write_to_dataset
@@ -26,7 +25,7 @@ from cmem_plugin_kafka.utils import (
     KafkaConsumer,
     validate_kafka_config,
     get_kafka_statistics,
-    get_default_client_id,
+    get_default_client_id, DatasetParameterType,
 )
 
 CONSUMER_GROUP_DESCRIPTION = """
@@ -107,7 +106,7 @@ consumer will appear as follows.
             " The dropdown lists usable datasets from the current"
             " project only. In case you miss your dataset, check for"
             " the correct type (XML) and build project.",
-            param_type=DatasetParameterType(dataset_type="xml"),
+            param_type=DatasetParameterType(dataset_type="xml,json"),
             default_value="",
         ),
         PluginParameter(
