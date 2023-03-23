@@ -13,7 +13,7 @@ from cmem_plugin_kafka.utils import get_resource_from_dataset
 from .utils import get_kafka_config, needs_cmem, TestExecutionContext, TestUserContext
 from confluent_kafka.admin import AdminClient, NewTopic
 
-PROJECT_NAME = "kafka_test_project"
+PROJECT_NAME = "kafka_handler_test_project"
 DATASET_NAME = "sample-test"
 DATASET_TYPE = "json"
 RESOURCE_NAME = f"{DATASET_NAME}.{DATASET_TYPE}"
@@ -25,8 +25,8 @@ DEFAULT_GROUP = "workflow"
 
 
 @pytest.fixture
-def topic(kafka_service):
-
+def topic():
+    kafka_service = KAFKA_CONFIG["bootstrap_server"]
     a = AdminClient({'bootstrap.servers': kafka_service})
 
     new_topics = [NewTopic(topic, num_partitions=1) for topic in [DEFAULT_TOPIC]]
@@ -83,9 +83,9 @@ def project():
 
 
 @needs_cmem
-def test_kafka_json_data_handler(project, kafka_service, topic):
+def test_kafka_json_data_handler(project, topic):
     """Validate KafkaJSONDataHandler"""
-    _ = kafka_service
+    kafka_service = KAFKA_CONFIG["bootstrap_server"]
     KafkaProducerPlugin(
         message_dataset=project.dataset,
         bootstrap_servers=kafka_service,
@@ -104,7 +104,7 @@ def test_kafka_json_data_handler(project, kafka_service, topic):
         sasl_username=None,
         sasl_password=None,
         kafka_topic=topic,
-        group_id=DEFAULT_GROUP,
+        group_id=None,
         auto_offset_reset="earliest",
     ).execute([], TestExecutionContext(project_id=project.project))
 
@@ -113,6 +113,7 @@ def test_kafka_json_data_handler(project, kafka_service, topic):
         dataset_id=f"{project.project}:{project.dataset}",
         context=TestUserContext(),
     )
+    assert len(resource.content) > 0, "JSON Content is empty"
     messages = ijson.items(resource.content, "item.message")
     count = 0
     for _ in messages:
