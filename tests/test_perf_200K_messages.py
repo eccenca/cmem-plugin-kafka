@@ -10,7 +10,7 @@ from cmem.cmempy.workspace.projects.import_ import (
     import_from_upload_start,
     import_from_upload_status,
 )
-from cmem.cmempy.workspace.projects.project import delete_project, make_new_project
+from cmem.cmempy.workspace.projects.project import delete_project
 
 from cmem_plugin_kafka.utils import get_resource_from_dataset
 from cmem_plugin_kafka.workflow.consumer import KafkaConsumerPlugin
@@ -43,7 +43,7 @@ RESOURCE_LINK = (
 
 
 @pytest.fixture
-def perf_producer_project(request):
+def perf_project(request):
     """Provides the DI build project incl. assets."""
     with suppress(Exception):
         delete_project(PROJECT_NAME)
@@ -63,18 +63,7 @@ def perf_producer_project(request):
     status = import_from_upload_status(import_id)
     while "success" not in status.keys():
         status = import_from_upload_status(import_id)
-    yield request
-    with suppress(Exception):
-        os.remove("kafka_performance_project.zip")
-        delete_project(PROJECT_NAME)
 
-
-@pytest.fixture
-def perf_consumer_project(request):
-    """Provides the DI build project incl. assets."""
-    with suppress(Exception):
-        delete_project(PROJECT_NAME)
-    make_new_project(PROJECT_NAME)
     make_new_dataset(
         project_name=PROJECT_NAME,
         dataset_name=CONSUMER_DATASET_NAME,
@@ -84,12 +73,13 @@ def perf_consumer_project(request):
     )
     yield request
     with suppress(Exception):
+        os.remove("kafka_performance_project.zip")
         delete_project(PROJECT_NAME)
 
 
 @needs_cmem
 @needs_kafka
-def test_performance_execution_kafka_producer(perf_producer_project, topic):
+def test_performance_execution_kafka_producer(perf_project, topic):
     """Test plugin execution for Plain Kafka"""
     # Producer
     KafkaProducerPlugin(
@@ -103,10 +93,6 @@ def test_performance_execution_kafka_producer(perf_producer_project, topic):
         client_id="",
     ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
 
-
-@needs_cmem
-@needs_kafka
-def test_performance_execution_kafka_consumer(perf_consumer_project, topic):
     # Consumer
     KafkaConsumerPlugin(
         message_dataset=CONSUMER_DATASET_ID,
