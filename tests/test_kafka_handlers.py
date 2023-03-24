@@ -7,11 +7,10 @@ from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
 from cmem.cmempy.workspace.projects.project import delete_project, make_new_project
 from cmem.cmempy.workspace.projects.resources.resource import create_resource
 
-from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
-from cmem_plugin_kafka.workflow.consumer import KafkaConsumerPlugin
 from cmem_plugin_kafka.utils import get_resource_from_dataset
+from cmem_plugin_kafka.workflow.consumer import KafkaConsumerPlugin
+from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
 from .utils import get_kafka_config, needs_cmem, TestExecutionContext, TestUserContext
-from confluent_kafka.admin import AdminClient, NewTopic
 
 PROJECT_NAME = "kafka_handler_test_project"
 DATASET_NAME = "sample-test"
@@ -22,33 +21,6 @@ DATASET_ID = f"{DATASET_NAME}"
 KAFKA_CONFIG = get_kafka_config()
 DEFAULT_TOPIC = "eccenca_kafka_handler_workflow"
 DEFAULT_GROUP = "workflow"
-
-
-@pytest.fixture
-def topic():
-    kafka_service = KAFKA_CONFIG["bootstrap_server"]
-    a = AdminClient({'bootstrap.servers': kafka_service})
-
-    new_topics = [NewTopic(topic, num_partitions=1) for topic in [DEFAULT_TOPIC]]
-    fs = a.create_topics(new_topics)
-
-    # Wait for each operation to finish.
-    for topic, f in fs.items():
-        try:
-            f.result()  # The result itself is None
-            print("Topic {} created".format(topic))
-        except Exception as e:
-            print("Failed to create topic {}: {}".format(topic, e))
-    yield DEFAULT_TOPIC
-    fs = a.delete_topics([DEFAULT_TOPIC], operation_timeout=30)
-
-    # Wait for operation to finish.
-    for topic, f in fs.items():
-        try:
-            f.result()  # The result itself is None
-            print("Topic {} deleted".format(topic))
-        except Exception as e:
-            print("Failed to delete topic {}: {}".format(topic, e))
 
 
 @pytest.fixture

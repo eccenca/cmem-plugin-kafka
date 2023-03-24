@@ -34,7 +34,7 @@ PRODUCER_DATASET_ID = f"{PRODUCER_DATASET_NAME}"
 CONSUMER_DATASET_ID = f"{CONSUMER_DATASET_NAME}"
 
 KAFKA_CONFIG = get_kafka_config()
-DEFAULT_GROUP = "workflow"
+DEFAULT_GROUP = None
 DEFAULT_TOPIC = "eccenca_kafka_workflow"
 DEFAULT_RESET = "earliest"
 RESOURCE_LINK = (
@@ -89,7 +89,7 @@ def perf_consumer_project(request):
 
 @needs_cmem
 @needs_kafka
-def test_performance_execution_kafka_producer(perf_producer_project):
+def test_performance_execution_kafka_producer(perf_producer_project, topic):
     """Test plugin execution for Plain Kafka"""
     # Producer
     KafkaProducerPlugin(
@@ -99,14 +99,14 @@ def test_performance_execution_kafka_producer(perf_producer_project):
         sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
         sasl_username=KAFKA_CONFIG["sasl_username"],
         sasl_password=KAFKA_CONFIG["sasl_password"],
-        kafka_topic=DEFAULT_TOPIC,
+        kafka_topic=topic,
         client_id="",
     ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
 
 
 @needs_cmem
 @needs_kafka
-def test_performance_execution_kafka_consumer(perf_consumer_project):
+def test_performance_execution_kafka_consumer(perf_consumer_project, topic):
     # Consumer
     KafkaConsumerPlugin(
         message_dataset=CONSUMER_DATASET_ID,
@@ -115,7 +115,7 @@ def test_performance_execution_kafka_consumer(perf_consumer_project):
         sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
         sasl_username=KAFKA_CONFIG["sasl_username"],
         sasl_password=KAFKA_CONFIG["sasl_password"],
-        kafka_topic=DEFAULT_TOPIC,
+        kafka_topic=topic,
         group_id=DEFAULT_GROUP,
         auto_offset_reset=DEFAULT_RESET,
     ).execute([], TestExecutionContext(project_id=PROJECT_NAME))

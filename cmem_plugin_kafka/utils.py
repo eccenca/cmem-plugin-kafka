@@ -15,11 +15,6 @@ from cmem_plugin_base.dataintegration.context import (
     ExecutionReport,
     UserContext, PluginContext,
 )
-from cmem_plugin_base.dataintegration.entity import (
-    Entity,
-    EntityPath,
-    EntitySchema,
-)
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
 from cmem_plugin_base.dataintegration.types import Autocompletion, StringParameterType
 from cmem_plugin_base.dataintegration.utils import (
@@ -109,51 +104,9 @@ class KafkaConsumer:
         self._log = log
         self._no_of_success_messages = 0
         self._first_message: Optional[KafkaMessage] = None
-        self._schema: EntitySchema = None
 
     def __enter__(self):
         return self.get_payload()
-
-    def get_schema(self):
-        """Return kafka message schema paths"""
-        message = self.get_first_message()
-        if not message:
-            return None
-        json_payload = json.loads(message.value)
-        schema_paths = []
-        self._log.info(f'values : {json_payload["entity"]["values"]}')
-        for path in self._get_paths(json_payload["entity"]["values"]):
-            path_uri = f"{path}"
-            schema_paths.append(EntityPath(path=path_uri))
-        self._schema = EntitySchema(
-            type_uri=json_payload["schema"]["type_uri"],
-            paths=schema_paths,
-        )
-        return self._schema
-
-    def _get_paths(self, values: dict):
-        self._log.info(f"_get_paths: Values dict {values}")
-        return list(values.keys())
-
-    def get_entities(self):
-        """Generate the entities from kafka messages"""
-        if self._first_message:
-            yield self._get_entity(self._first_message)
-
-        for message in self.poll():
-            yield self._get_entity(message)
-
-    def _get_entity(self, message: KafkaMessage):
-        try:
-            json_payload = json.loads(message.value)
-        except json.decoder.JSONDecodeError as exc:
-            raise ValueError("Kafka message in not in valid JSON format") from exc
-
-        entity_uri = json_payload["entity"]["uri"]
-        values = [
-            json_payload["entity"]["values"].get(_.path) for _ in self._schema.paths
-        ]
-        return Entity(uri=entity_uri, values=values)
 
     def get_payload(self):
         """generate file based on kafka message type"""

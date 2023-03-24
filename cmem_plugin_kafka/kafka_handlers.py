@@ -3,14 +3,17 @@ The `kafka_handlers` module provides a base class `KafkaDataHandler` for produci
 messages from data to/from a Kafka topic.
 """
 import json
-from typing import Any, Sequence
+from typing import Any, Sequence, Optional
 
 import ijson
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
-from cmem_plugin_base.dataintegration.entity import Entities
+from cmem_plugin_base.dataintegration.entity import (
+    Entities, EntityPath, EntitySchema,
+    Entity,
+)
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
 
-from cmem_plugin_kafka.utils import KafkaProducer, KafkaMessage
+from cmem_plugin_kafka.utils import KafkaProducer, KafkaMessage, KafkaConsumer
 
 
 class KafkaDataHandler:
@@ -23,17 +26,23 @@ class KafkaDataHandler:
     :type plugin_logger: PluginLogger
     :param kafka_producer: Optional Kafka producer instance to use.
     :type kafka_producer: KafkaProducer
+    :param kafka_consumer: Optional Kafka consumer instance to use.
+    :type kafka_consumer: KafkaConsumer
     """
 
     def __init__(
-            self, context: ExecutionContext,
-            plugin_logger: PluginLogger, kafka_producer: KafkaProducer,
+            self,
+            context: ExecutionContext,
+            plugin_logger: PluginLogger,
+            kafka_producer: Optional[KafkaProducer] = None,
+            kafka_consumer: Optional[KafkaConsumer] = None
     ):
         """
         Initialize a new KafkaDataHandler instance with the specified
         execution context, logger, and producer instances.
         """
         self._kafka_producer = kafka_producer
+        self._kafka_consumer = kafka_consumer
         self._context: ExecutionContext = context
         self._log: PluginLogger = plugin_logger
 
@@ -67,6 +76,27 @@ class KafkaDataHandler:
         """
         raise NotImplementedError("Subclass must implement _split_data method")
 
+    def consume_messages(self):
+        """
+        Consume messages from the Kafka topic and aggregate them into a single object.
+
+        :return: The aggregated object of all consumed messages.
+        :rtype: any
+        """
+        self._kafka_consumer.subscribe()
+        return self._aggregate_data()
+
+    def _aggregate_data(self):
+        """
+        Aggregate the input data into a single object.
+        This method should be implemented by subclasses to handle
+        the specific data format.
+
+        :return: The aggregated object of all consumed messages.
+        :rtype: any
+        """
+        raise NotImplementedError("Subclass must implement _aggregate_data method")
+
     def update_report(self):
         """
          Update the plugin report with the current status of the Kafka producer.
@@ -95,6 +125,7 @@ class KafkaJSONDataHandler(KafkaDataHandler):
     :param kafka_producer: Optional Kafka producer instance to use.
     :type kafka_producer: KafkaProducer
     """
+
     def __init__(
             self, context: ExecutionContext,
             plugin_logger: PluginLogger, kafka_producer: KafkaProducer,
@@ -114,6 +145,9 @@ class KafkaJSONDataHandler(KafkaDataHandler):
             content = message["content"]
             yield KafkaMessage(key=key, value=json.dumps(content), headers=headers)
 
+    def _aggregate_data(self):
+        pass
+
 
 class KafkaEntitiesDataHandler(KafkaDataHandler):
     """
@@ -125,17 +159,24 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
     :type plugin_logger: PluginLogger
     :param kafka_producer: Optional Kafka producer instance to use.
     :type kafka_producer: KafkaProducer
+    :param kafka_consumer: Optional Kafka consumer instance to use.
+    :type kafka_consumer: KafkaConsumer
     """
+
     def __init__(
-            self, context: ExecutionContext,
-            plugin_logger: PluginLogger, kafka_producer: KafkaProducer,
+            self,
+            context: ExecutionContext,
+            plugin_logger: PluginLogger,
+            kafka_producer: Optional[KafkaProducer] = None,
+            kafka_consumer: Optional[KafkaConsumer] = None
     ):
         """
         Initialize a new KafkaEntitiesDataHandler instance with the specified
         execution context, logger, and producer instances.
         """
         plugin_logger.info("Initialize KafkaEntitiesDataHandler")
-        super().__init__(context, plugin_logger, kafka_producer)
+        super().__init__(context, plugin_logger, kafka_producer, kafka_consumer)
+        self._schema: EntitySchema = None
 
     def _split_data(self, data: Entities):
         self._log.info("Generate dict from entities")
@@ -149,3 +190,51 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
             result["entity"] = {"uri": entity.uri, "values": values}
             kafka_payload = json.dumps(result, indent=4)
             yield KafkaMessage(key=None, value=kafka_payload)
+
+    def _aggregate_data(self):
+        schema = self.get_schema()
+        if not schema:
+            return None
+        entities = self.get_entities()
+        return Entities(entities=entities, schema=schema)
+
+    def get_schema(self):
+        """Return kafka message schema paths"""
+        message = self._kafka_consumer.get_first_message()
+        if not message:
+            return None
+        json_payload = json.loads(message.value)
+        schema_paths = []
+        self._log.info(f'values : {json_payload["entity"]["values"]}')
+        for path in self._get_paths(json_payload["entity"]["values"]):
+            path_uri = f"{path}"
+            schema_paths.append(EntityPath(path=path_uri))
+        self._schema = EntitySchema(
+            type_uri=json_payload["schema"]["type_uri"],
+            paths=schema_paths,
+        )
+        return self._schema
+
+    def _get_paths(self, values: dict):
+        self._log.info(f"_get_paths: Values dict {values}")
+        return list(values.keys())
+
+    def get_entities(self):
+        """Generate the entities from kafka messages"""
+        if self._kafka_consumer.get_first_message():
+            yield self._get_entity(self._kafka_consumer.get_first_message())
+
+        for message in self._kafka_consumer.poll():
+            yield self._get_entity(message)
+
+    def _get_entity(self, message: KafkaMessage):
+        try:
+            json_payload = json.loads(message.value)
+        except json.decoder.JSONDecodeError as exc:
+            raise ValueError("Kafka message in not in valid JSON format") from exc
+
+        entity_uri = json_payload["entity"]["uri"]
+        values = [
+            json_payload["entity"]["values"].get(_.path) for _ in self._schema.paths
+        ]
+        return Entity(uri=entity_uri, values=values)

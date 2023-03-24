@@ -27,6 +27,7 @@ from cmem_plugin_kafka.utils import (
     get_kafka_statistics,
     get_default_client_id, DatasetParameterType,
 )
+from cmem_plugin_kafka.kafka_handlers import KafkaEntitiesDataHandler
 
 CONSUMER_GROUP_DESCRIPTION = """
 When a topic is consumed by consumers in the same group, every record will be delivered
@@ -254,11 +255,11 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         )
         kafka_consumer.subscribe()
         if not self.message_dataset:
-            schema = kafka_consumer.get_schema()
-            if not schema:
-                return None
-            entities = kafka_consumer.get_entities()
-            return Entities(entities=entities, schema=schema)
+            return KafkaEntitiesDataHandler(
+                context=context,
+                plugin_logger=self.log,
+                kafka_consumer=kafka_consumer
+            ).consume_messages()
 
         # Prefix project id to dataset name
         self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
