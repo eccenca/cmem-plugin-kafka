@@ -3,8 +3,11 @@ The `kafka_handlers` module provides a base class `KafkaDataHandler` for produci
 messages from data to/from a Kafka topic.
 """
 import json
+import re
 from typing import Any, Sequence, Optional
-
+from xml.sax.handler import ContentHandler  # nosec B406
+from xml.sax.saxutils import escape  # nosec B406
+import defusedxml.ElementTree as ET
 import ijson
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.entity import (
@@ -149,6 +152,126 @@ class KafkaJSONDataHandler(KafkaDataHandler):
         pass
 
 
+class KafkaXMLDataHandler(KafkaDataHandler, ContentHandler):
+    """
+    A class for producing messages from XML Dataset to a Kafka topic.
+
+    :param context: Execution Context to use.
+    :type context: ExecutionContext
+    :param plugin_logger: Plugin logger instance to use.
+    :type plugin_logger: PluginLogger
+    :param kafka_producer: Optional Kafka producer instance to use.
+    :type kafka_producer: KafkaProducer
+    """
+
+    def __init__(
+            self, context: ExecutionContext,
+            plugin_logger: PluginLogger, kafka_producer: KafkaProducer,
+    ):
+        """
+        Initialize a new KafkaXMLDataHandler instance with the specified
+        execution context, logger, and producer instances.
+        """
+        self._level: int = 0
+        self._no_of_children: int = 0
+        self._message: KafkaMessage = KafkaMessage()
+        plugin_logger.info("Initialize KafkaJSONDataHandler")
+        KafkaDataHandler.__init__(self, context, plugin_logger, kafka_producer)
+        ContentHandler.__init__(self)
+
+    def _aggregate_data(self):
+        pass
+
+    def _split_data(self, data):
+        context = ET.iterparse(data, events=("start", "end"))
+        # get the root element
+        event, root = next(context, None)
+        if not event:
+            return
+        for event, element in context:
+            if event == "start":
+                self.start_element(element)
+            elif event == "end":
+                message = self.end_element(element)
+                root.clear()
+                if message:
+                    yield message
+
+    @staticmethod
+    def attrs_s(attrs):
+        """This generates the XML attributes from an element attribute list"""
+        attribute_list = [""]
+        for item in attrs.items():
+            attribute_list.append(f'{item[0]}="{escape(item[1])}"')
+
+        return " ".join(attribute_list)
+
+    @staticmethod
+    def get_key(attrs):
+        """get message key attribute from element attributes list"""
+        for item in attrs.items():
+            if item[0] == "key":
+                return escape(item[1])
+        return None
+
+    def start_element(self, element):
+        """Call when an element starts"""
+        name = element.tag
+        attrs = element.attrib
+        text = element.text
+        self._level += 1
+
+        if name == "Message" and self._level == 1:
+            self.rest_for_next_message(attrs)
+        else:
+            open_tag = f"<{name}{self.attrs_s(attrs)}>"
+            self._message.value += open_tag
+
+        # Number of child for Message tag
+        if self._level == 2:
+            self._no_of_children += 1
+
+        if text:
+            self._message.value += text
+
+    def end_element(self, element):
+        """Call when an elements end"""
+        name = element.tag
+        if name == "Message" and self._level == 1:
+            # If number of children are more than 1,
+            # We can not construct proper kafka xml message.
+            # So, log the error message
+            if self._no_of_children == 1:
+                # Remove newline and white space between open and close tag
+                final_message = re.sub(r">[ \n]+<", "><", self._message.value)
+                # Remove new and white space at the end of the xml
+                self._message.value = re.sub(r"[\n ]+$", "", final_message)
+                self._level -= 1
+                return self._message
+
+            self._log.error(
+                "Not able to process this message. "
+                "Reason: Identified more than one children."
+            )
+
+        else:
+            end_tag = f"</{name}>"
+            self._message.value += end_tag
+        self._level -= 1
+        return None
+
+    def endDocument(self):
+        """End of the file"""
+        self._kafka_producer.flush()
+
+    def rest_for_next_message(self, attrs):
+        """To reset _message"""
+        value = '<?xml version="1.0" encoding="UTF-8"?>'
+        key = self.get_key(attrs)
+        self._message = KafkaMessage(key=key, value=value)
+        self._no_of_children = 0
+
+
 class KafkaEntitiesDataHandler(KafkaDataHandler):
     """
     A class for producing messages from Entities to a Kafka topic.
@@ -192,11 +315,14 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
             yield KafkaMessage(key=None, value=kafka_payload)
 
     def _aggregate_data(self):
-        schema = self.get_schema()
-        if not schema:
-            return None
-        entities = self.get_entities()
-        return Entities(entities=entities, schema=schema)
+        try:
+            schema = self.get_schema()
+            if not schema:
+                return None
+            entities = self.get_entities()
+            return Entities(entities=entities, schema=schema)
+        except KeyError as ex:
+            raise ValueError("Kafka Message is not in expected format") from ex
 
     def get_schema(self):
         """Return kafka message schema paths"""

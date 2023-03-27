@@ -3,8 +3,6 @@ import json
 import re
 from typing import Dict, Any, Iterator, Optional
 from urllib.parse import urlparse
-from xml.sax.handler import ContentHandler  # nosec B406
-from xml.sax.saxutils import escape  # nosec B406
 
 from cmem.cmempy.config import get_cmem_base_uri
 from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
@@ -208,105 +206,6 @@ class KafkaConsumer:
     def close(self):
         """Closes the consumer once all messages were received."""
         self._consumer.close()
-
-
-class KafkaXMLHandler(ContentHandler):
-    """Custom Callback Kafka XML content handler"""
-
-    def __init__(
-        self, kafka_producer: KafkaProducer, context: ExecutionContext, plugin_logger
-    ):
-        super().__init__()
-        self._level: int = 0
-        self._no_of_children: int = 0
-        self._kafka_producer = kafka_producer
-        self._context: ExecutionContext = context
-        self._log: PluginLogger = plugin_logger
-        self._message: KafkaMessage = KafkaMessage()
-
-    @staticmethod
-    def attrs_s(attrs):
-        """This generates the XML attributes from an element attribute list"""
-        attribute_list = [""]
-        for item in attrs.items():
-            attribute_list.append(f'{item[0]}="{escape(item[1])}"')
-
-        return " ".join(attribute_list)
-
-    @staticmethod
-    def get_key(attrs):
-        """get message key attribute from element attributes list"""
-        for item in attrs.items():
-            if item[0] == "key":
-                return escape(item[1])
-        return None
-
-    def startElement(self, name, attrs):
-        """Call when an element starts"""
-        self._level += 1
-
-        if name == "Message" and self._level == 2:
-            self.rest_for_next_message(attrs)
-        else:
-            open_tag = f"<{name}{self.attrs_s(attrs)}>"
-            self._message.value += open_tag
-
-        # Number of child for Message tag
-        if self._level == 3:
-            self._no_of_children += 1
-
-    def endElement(self, name):
-        """Call when an elements end"""
-
-        if name == "Message" and self._level == 2:
-            # If number of children are more than 1,
-            # We can not construct proper kafka xml message.
-            # So, log the error message
-            if self._no_of_children == 1:
-                # Remove newline and white space between open and close tag
-                final_message = re.sub(r">[ \n]+<", "><", self._message.value)
-                # Remove new and white space at the end of the xml
-                self._message.value = re.sub(r"[\n ]+$", "", final_message)
-
-                self._kafka_producer.process(self._message)
-                if self._kafka_producer.get_success_messages_count() % 10 == 0:
-                    self._kafka_producer.poll(0)
-                    self.update_report()
-            else:
-                self._log.error(
-                    "Not able to process this message. "
-                    "Reason: Identified more than one children."
-                )
-
-        else:
-            end_tag = f"</{name}>"
-            self._message.value += end_tag
-        self._level -= 1
-
-    def characters(self, content: str):
-        """Call when a character is read"""
-        self._message.value += content
-
-    def endDocument(self):
-        """End of the file"""
-        self._kafka_producer.flush()
-
-    def rest_for_next_message(self, attrs):
-        """To reset _message"""
-        value = '<?xml version="1.0" encoding="UTF-8"?>'
-        key = self.get_key(attrs)
-        self._message = KafkaMessage(key=key, value=value)
-        self._no_of_children = 0
-
-    def update_report(self):
-        """Update the plugin report with current status"""
-        self._context.report.update(
-            ExecutionReport(
-                entity_count=self._kafka_producer.get_success_messages_count(),
-                operation="wait",
-                operation_desc="messages sent",
-            )
-        )
 
 
 def get_default_client_id(project_id: str, task_id: str):

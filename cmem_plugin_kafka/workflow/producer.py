@@ -10,7 +10,6 @@ from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from confluent_kafka import KafkaError
-from defusedxml import sax
 
 from cmem_plugin_kafka.constants import (
     SECURITY_PROTOCOLS,
@@ -21,18 +20,18 @@ from cmem_plugin_kafka.constants import (
     SASL_PASSWORD_DESCRIPTION,
     CLIENT_ID_DESCRIPTION,
 )
+from cmem_plugin_kafka.kafka_handlers import (
+    KafkaJSONDataHandler,
+    KafkaXMLDataHandler,
+    KafkaEntitiesDataHandler, KafkaDataHandler,
+)
 from cmem_plugin_kafka.utils import (
     KafkaProducer,
-    KafkaXMLHandler,
     validate_kafka_config,
     get_resource_from_dataset,
     get_kafka_statistics,
     get_default_client_id,
     DatasetParameterType,
-)
-from cmem_plugin_kafka.kafka_handlers import (
-    KafkaJSONDataHandler,
-    KafkaEntitiesDataHandler,
 )
 
 TOPIC_DESCRIPTION = """
@@ -225,23 +224,16 @@ class KafkaProducerPlugin(WorkflowPlugin):
                 dataset_id=self.message_dataset, context=context.user
             )
             if _['data']['type'] == 'json':
-                json_handler = KafkaJSONDataHandler(
+                handler: KafkaDataHandler = KafkaJSONDataHandler(
                     context=context, plugin_logger=self.log, kafka_producer=producer
                 )
-                with resource as response:
-                    response.raw.decode_content = True
-                    json_handler.send_messages(response.raw)
             else:
-                parser = sax.make_parser()
-                handler = KafkaXMLHandler(
-                    producer,
-                    context,
-                    plugin_logger=self.log,
+                handler = KafkaXMLDataHandler(
+                    context=context, plugin_logger=self.log, kafka_producer=producer
                 )
-                parser.setContentHandler(handler)
-                with resource as response:
-                    response.raw.decode_content = True
-                    parser.parse(response.raw)
+            with resource as response:
+                response.raw.decode_content = True
+                handler.send_messages(response.raw)
         else:
             entities_handler = KafkaEntitiesDataHandler(
                 context=context,
