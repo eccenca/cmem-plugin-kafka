@@ -103,45 +103,6 @@ class KafkaConsumer:
         self._no_of_success_messages = 0
         self._first_message: Optional[KafkaMessage] = None
 
-    def __enter__(self):
-        return self.get_payload()
-
-    def get_payload(self):
-        """generate file based on kafka message type"""
-        message = self.get_first_message()
-        if not message:
-            return None
-        if is_json(message.value):
-            return self.get_json_payload()
-        return self.get_xml_payload()
-
-    def get_json_payload(self) -> Iterator[bytes]:
-        """generate json file with kafka messages"""
-        yield '['.encode()
-        if self._first_message:
-            self._no_of_success_messages += 1
-            yield get_message_with_json_wrapper(self._first_message).encode()
-        for message in self.poll():
-            yield ",".encode()
-            yield get_message_with_json_wrapper(message).encode()
-        yield ']'.encode()
-
-    def get_xml_payload(self) -> Iterator[bytes]:
-        """generate xml file with kafka messages"""
-        yield '<?xml version="1.0" encoding="UTF-8"?>\n'.encode()
-        yield "<KafkaMessages>".encode()
-        if self._first_message:
-            self._no_of_success_messages += 1
-            yield get_message_with_xml_wrapper(self._first_message).encode()
-        for message in self.poll():
-            yield get_message_with_xml_wrapper(message).encode()
-
-        yield "</KafkaMessages>".encode()
-
-    def __exit__(self, exc_type, exc_value, exc_tb):
-        # Exception handling here
-        self._consumer.close()
-
     def get_success_messages_count(self) -> int:
         """Return count of the successful messages"""
         return self._no_of_success_messages

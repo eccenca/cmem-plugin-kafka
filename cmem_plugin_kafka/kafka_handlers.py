@@ -4,9 +4,10 @@ messages from data to/from a Kafka topic.
 """
 import json
 import re
+from abc import ABC
 from typing import Any, Sequence, Optional
-from xml.sax.handler import ContentHandler  # nosec B406
 from xml.sax.saxutils import escape  # nosec B406
+
 import defusedxml.ElementTree as ET
 import ijson
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
@@ -16,7 +17,8 @@ from cmem_plugin_base.dataintegration.entity import (
 )
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
 
-from cmem_plugin_kafka.utils import KafkaProducer, KafkaMessage, KafkaConsumer
+from cmem_plugin_kafka.utils import KafkaProducer, KafkaMessage, KafkaConsumer, \
+    get_message_with_json_wrapper, get_message_with_xml_wrapper
 
 
 class KafkaDataHandler:
@@ -117,7 +119,16 @@ class KafkaDataHandler:
         )
 
 
-class KafkaJSONDataHandler(KafkaDataHandler):
+class KafkaDatasetHandler(KafkaDataHandler, ABC):
+    """A Base class for producing messages from Dataset to a Kafka topic."""
+    def __enter__(self):
+        return self.consume_messages()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._kafka_consumer.close()
+
+
+class KafkaJSONDataHandler(KafkaDatasetHandler):
     """
     A class for producing messages from JSON Dataset to a Kafka topic.
 
@@ -127,18 +138,23 @@ class KafkaJSONDataHandler(KafkaDataHandler):
     :type plugin_logger: PluginLogger
     :param kafka_producer: Optional Kafka producer instance to use.
     :type kafka_producer: KafkaProducer
+    :param kafka_consumer: Optional Kafka consumer instance to use.
+    :type kafka_consumer: KafkaConsumer
     """
 
     def __init__(
-            self, context: ExecutionContext,
-            plugin_logger: PluginLogger, kafka_producer: KafkaProducer,
+            self,
+            context: ExecutionContext,
+            plugin_logger: PluginLogger,
+            kafka_producer: Optional[KafkaProducer] = None,
+            kafka_consumer: Optional[KafkaConsumer] = None
     ):
         """
         Initialize a new KafkaJSONDataHandler instance with the specified
         execution context, logger, and producer instances.
         """
         plugin_logger.info("Initialize KafkaJSONDataHandler")
-        super().__init__(context, plugin_logger, kafka_producer)
+        super().__init__(context, plugin_logger, kafka_producer, kafka_consumer)
 
     def _split_data(self, data):
         messages = ijson.items(data, "item.message")
@@ -149,10 +165,19 @@ class KafkaJSONDataHandler(KafkaDataHandler):
             yield KafkaMessage(key=key, value=json.dumps(content), headers=headers)
 
     def _aggregate_data(self):
-        pass
+        """generate json file with kafka messages"""
+        yield '['.encode()
+        if self._kafka_consumer.get_first_message():
+            yield get_message_with_json_wrapper(
+                self._kafka_consumer.get_first_message()
+            ).encode()
+        for message in self._kafka_consumer.poll():
+            yield ",".encode()
+            yield get_message_with_json_wrapper(message).encode()
+        yield ']'.encode()
 
 
-class KafkaXMLDataHandler(KafkaDataHandler, ContentHandler):
+class KafkaXMLDataHandler(KafkaDatasetHandler):
     """
     A class for producing messages from XML Dataset to a Kafka topic.
 
@@ -162,11 +187,16 @@ class KafkaXMLDataHandler(KafkaDataHandler, ContentHandler):
     :type plugin_logger: PluginLogger
     :param kafka_producer: Optional Kafka producer instance to use.
     :type kafka_producer: KafkaProducer
+    :param kafka_consumer: Optional Kafka consumer instance to use.
+    :type kafka_consumer: KafkaConsumer
     """
 
     def __init__(
-            self, context: ExecutionContext,
-            plugin_logger: PluginLogger, kafka_producer: KafkaProducer,
+            self,
+            context: ExecutionContext,
+            plugin_logger: PluginLogger,
+            kafka_producer: Optional[KafkaProducer] = None,
+            kafka_consumer: Optional[KafkaConsumer] = None
     ):
         """
         Initialize a new KafkaXMLDataHandler instance with the specified
@@ -176,11 +206,20 @@ class KafkaXMLDataHandler(KafkaDataHandler, ContentHandler):
         self._no_of_children: int = 0
         self._message: KafkaMessage = KafkaMessage()
         plugin_logger.info("Initialize KafkaJSONDataHandler")
-        KafkaDataHandler.__init__(self, context, plugin_logger, kafka_producer)
-        ContentHandler.__init__(self)
+        super().__init__(context, plugin_logger, kafka_producer, kafka_consumer)
 
     def _aggregate_data(self):
-        pass
+        """generate xml file with kafka messages"""
+        yield '<?xml version="1.0" encoding="UTF-8"?>\n'.encode()
+        yield "<KafkaMessages>".encode()
+        if self._kafka_consumer.get_first_message():
+            yield get_message_with_xml_wrapper(
+                self._kafka_consumer.get_first_message()
+            ).encode()
+        for message in self._kafka_consumer.poll():
+            yield get_message_with_xml_wrapper(message).encode()
+
+        yield "</KafkaMessages>".encode()
 
     def _split_data(self, data):
         context = ET.iterparse(data, events=("start", "end"))
@@ -259,10 +298,6 @@ class KafkaXMLDataHandler(KafkaDataHandler, ContentHandler):
             self._message.value += end_tag
         self._level -= 1
         return None
-
-    def endDocument(self):
-        """End of the file"""
-        self._kafka_producer.flush()
 
     def rest_for_next_message(self, attrs):
         """To reset _message"""

@@ -1,6 +1,7 @@
 """Kafka consumer plugin module"""
 from typing import Sequence, Dict, Any, Optional
 
+from cmem.cmempy.workspace.tasks import get_task
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
 from cmem_plugin_base.dataintegration.entity import Entities
@@ -27,7 +28,8 @@ from cmem_plugin_kafka.utils import (
     get_kafka_statistics,
     get_default_client_id, DatasetParameterType,
 )
-from cmem_plugin_kafka.kafka_handlers import KafkaEntitiesDataHandler
+from cmem_plugin_kafka.kafka_handlers import KafkaEntitiesDataHandler, \
+    KafkaJSONDataHandler, KafkaXMLDataHandler, KafkaDatasetHandler
 
 CONSUMER_GROUP_DESCRIPTION = """
 When a topic is consumed by consumers in the same group, every record will be delivered
@@ -261,12 +263,27 @@ class KafkaConsumerPlugin(WorkflowPlugin):
                 kafka_consumer=kafka_consumer
             ).consume_messages()
 
+        task_meta_data = get_task(
+            project=context.task.project_id(),
+            task=self.message_dataset
+        )
+        if task_meta_data["data"]["type"] == 'json':
+            handler: KafkaDatasetHandler = KafkaJSONDataHandler(
+                context=context,
+                plugin_logger=self.log,
+                kafka_consumer=kafka_consumer
+            )
+        else:
+            handler = KafkaXMLDataHandler(
+                context=context,
+                plugin_logger=self.log,
+                kafka_consumer=kafka_consumer
+            )
         # Prefix project id to dataset name
         self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
-
         write_to_dataset(
             dataset_id=self.message_dataset,
-            file_resource=kafka_consumer,
+            file_resource=handler,
             context=context.user,
         )
 
