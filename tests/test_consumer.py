@@ -19,7 +19,6 @@ from .utils import (
     needs_cmem,
     needs_kafka,
     get_kafka_config,
-    XMLUtils,
     TestExecutionContext,
     TestUserContext,
 )
