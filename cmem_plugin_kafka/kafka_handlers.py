@@ -211,10 +211,6 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
         """generate xml file with kafka messages"""
         yield '<?xml version="1.0" encoding="UTF-8"?>\n'.encode()
         yield "<KafkaMessages>".encode()
-        if self._kafka_consumer.get_first_message():
-            yield get_message_with_xml_wrapper(
-                self._kafka_consumer.get_first_message()
-            ).encode()
         for message in self._kafka_consumer.poll():
             yield get_message_with_xml_wrapper(message).encode()
 
