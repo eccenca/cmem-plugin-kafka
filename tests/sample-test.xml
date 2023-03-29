@@ -20,7 +20,7 @@
       <SubTagF>here</SubTagF>
     </SingleTagHere>
   </Message>
-  <Message>
+  <Message key="">
     <SingleTagHere>
       <SubTagG>any content</SubTagG>
       <SubTagH>can be delivered</SubTagH>

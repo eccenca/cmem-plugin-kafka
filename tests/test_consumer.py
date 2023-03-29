@@ -5,6 +5,7 @@ from contextlib import suppress
 
 import pytest
 import requests
+import xmltodict
 from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
 from cmem.cmempy.workspace.projects.project import make_new_project, delete_project
 from cmem.cmempy.workspace.projects.resources.resource import create_resource
@@ -93,7 +94,7 @@ def test_execution_kafka_producer_new_topic(project):
 
 @needs_cmem
 @needs_kafka
-def test_execution_kafka_producer_consumer(project, topic):
+def test_execution_kafka_producer_consumer_with_xml_dataset(project, topic):
     """Test plugin execution for Plain Kafka"""
 
     # Producer
@@ -121,20 +122,24 @@ def test_execution_kafka_producer_consumer(project, topic):
     ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
 
     # Ensure producer and consumer are working properly
-    assert XMLUtils.get_elements_len_from_file(path="tests/sample-test.xml") == 3
     resource, _ = get_resource_from_dataset(
             dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}",
             context=TestUserContext()
     )
-    with resource as response:
-        assert XMLUtils.get_elements_len_fromstring(
-            response.text
-        ) == XMLUtils.get_elements_len_from_file(path="tests/sample-test.xml")
+
+    with open("tests/sample-test.xml", "r") as file:
+        data = file.read().rstrip()
+        data_dict = xmltodict.parse(data)
+        messages = data_dict["KafkaMessages"]["Message"]
+        for message in messages:
+            if "@key" not in message:
+                message["@key"] = ""
+        assert xmltodict.parse(resource.text) == data_dict
 
 
 @needs_cmem
 @needs_kafka
-def test_execution_kafka_consumer_entities(project, topic):
+def test_execution_kafka_producer_consumer_with_entities(project, topic):
     """Test plugin execution for Plain Kafka"""
     entities = RandomValues(random_function="token_urlsafe").execute(
         context=TestExecutionContext()
@@ -151,7 +156,7 @@ def test_execution_kafka_consumer_entities(project, topic):
     ).execute([entities], TestExecutionContext(project_id=PROJECT_NAME))
 
     # Consumer
-    entities = KafkaConsumerPlugin(
+    consumer_entities = KafkaConsumerPlugin(
         message_dataset=None,
         bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
         security_protocol=KAFKA_CONFIG["security_protocol"],
@@ -163,7 +168,11 @@ def test_execution_kafka_consumer_entities(project, topic):
         auto_offset_reset="earliest",
     ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
     count = 0
-    for _ in entities.entities:
+    assert consumer_entities.schema.type_uri == entities.schema.type_uri
+    assert len(consumer_entities.schema.paths) == len(entities.schema.paths)
+    for index, path in enumerate(consumer_entities.schema.paths):
+        assert path.path == entities.schema.paths[index].path
+    for _ in consumer_entities.entities:
         count += 1
 
     assert count == 10
