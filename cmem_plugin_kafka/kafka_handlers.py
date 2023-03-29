@@ -167,13 +167,12 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
     def _aggregate_data(self):
         """generate json file with kafka messages"""
         yield '['.encode()
-        if self._kafka_consumer.get_first_message():
-            yield get_message_with_json_wrapper(
-                self._kafka_consumer.get_first_message()
-            ).encode()
+        count = 0
         for message in self._kafka_consumer.poll():
-            yield ",".encode()
+            if count > 0:
+                yield ",".encode()
             yield get_message_with_json_wrapper(message).encode()
+            count += 1
         yield ']'.encode()
 
 
