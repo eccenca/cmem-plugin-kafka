@@ -166,14 +166,17 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
 
     def _aggregate_data(self):
         """generate json file with kafka messages"""
-        yield '['.encode()
-        count = 0
-        for message in self._kafka_consumer.poll():
-            if count > 0:
-                yield ",".encode()
-            yield get_message_with_json_wrapper(message).encode()
-            count += 1
-        yield ']'.encode()
+        try:
+            yield '['.encode()
+            count = 0
+            for message in self._kafka_consumer.poll():
+                if count > 0:
+                    yield ",".encode()
+                yield get_message_with_json_wrapper(message).encode()
+                count += 1
+            yield ']'.encode()
+        except json.decoder.JSONDecodeError as ex:
+            raise ValueError("Kafka Message is not in expected format ") from ex
 
 
 class KafkaXMLDataHandler(KafkaDatasetHandler):
@@ -351,7 +354,7 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
                 return None
             entities = self.get_entities()
             return Entities(entities=entities, schema=schema)
-        except KeyError as ex:
+        except (KeyError, json.decoder.JSONDecodeError) as ex:
             raise ValueError("Kafka Message is not in expected format") from ex
 
     def get_schema(self):
