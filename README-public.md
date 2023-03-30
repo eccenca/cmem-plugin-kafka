@@ -11,10 +11,14 @@ clients like this:
 cmemc admin workspace python install cmem-plugin-kafka
 ```
 
-## plugin supported message format
+## Plugin supported message format
 
 ### XML dataset format
-```
+
+An example XML document is shown below. This document will be sent as two messages
+to the configured topic. Each message is created as a proper XML document.
+
+```xml
 <?xml version="1.0" encoding="utf-8"?>
 <KafkaMessages>
     <Message>
@@ -41,16 +45,50 @@ cmemc admin workspace python install cmem-plugin-kafka
             .
             .
         </SingleTagHere>
-	</Message>
+    </Message>
 </KafkaMessages>
 ```
-
-### JSON Dataset format
+Producer plugin generates 2 messages with below content
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<PurchaseOrder OrderDate="1996-04-06">
+    <ShipTo country="string">
+        <name>string</name>
+        <street>string</street>
+        <city>string</city>
+        <state>string</state>
+        <zip>9200</zip>
+    </ShipTo>
+    <BillTo country="string">
+        <name>string</name>
+        <street>string</street>
+        <city>string</city>
+        <state>string</state>
+        <zip>2381</zip>
+    </BillTo>
+</PurchaseOrder>
 ```
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<SingleTagHere>
+            .
+            .
+            .
+</SingleTagHere>
+```
+### JSON Dataset format
+
+An example JSON document is shown below. This document will be sent as two messages
+to the configured topic. Each message is created as a proper JSON document.
+
+```json
 [
   {
     "message": {
       "key": "818432-942813-832642-453478",
+      "headers": {
+        "type": "ADD"
+      },
       "content": {
         "location": [
           "Leipzig"
@@ -60,26 +98,43 @@ cmemc admin workspace python install cmem-plugin-kafka
           "order": "1"
         }
       }
-    },
-    "headers": {
-      "type": "ADD"
     }
   },
   {
     "message": {
       "key": "887428-119918-570674-866526",
+      "headers": {
+        "type": "REMOVE"
+      },
       "content": {
         "comments": "We can pass any json payload here."
       }
-    },
-    "headers": {
-      "type": "REMOVE"
     }
   }
 ]
 ```
-### Entities format
+Producer plugin generates 2 messages with below content
+```json
+{
+  "location": [
+    "Leipzig"
+  ],
+  "obstacle": {
+    "name": "Iron Bars",
+    "order": "1"
+  }
+}
 ```
+```json
+{
+  "comments": "We can pass any json payload here."
+}
+```
+### Entities format
+
+Random values plugin entities will generate below format JSON document.
+
+```json
 {
   "schema": {
     "type_uri": "https://example.org/vocab/RandomValueRow"
