@@ -11,6 +11,7 @@ from cmem.cmempy.workspace.projects.import_ import (
     import_from_upload_status,
 )
 from cmem.cmempy.workspace.projects.project import delete_project, make_new_project
+from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access
 from cmem_plugin_examples.workflow.random_values import RandomValues
 
 from cmem_plugin_kafka.utils import get_resource_from_dataset
@@ -49,6 +50,7 @@ JSON_PROJECT_LINK = (
 @pytest.fixture
 def xml_dataset_project():
     """Provides the DI build project incl. assets."""
+    setup_cmempy_user_access(context=TestUserContext())
     with suppress(Exception):
         delete_project(PROJECT_NAME)
 
@@ -77,6 +79,7 @@ def xml_dataset_project():
     )
     yield None
     with suppress(Exception):
+        setup_cmempy_user_access(context=TestUserContext())
         os.remove("kafka_performance_project.zip")
         delete_project(PROJECT_NAME)
 
@@ -84,11 +87,13 @@ def xml_dataset_project():
 @pytest.fixture
 def entities_project():
     """Provides the DI build project incl. assets."""
+    setup_cmempy_user_access(context=TestUserContext())
     project_name = "kafka_entities_perf_project"
     with suppress(Exception):
         delete_project(project_name)
     make_new_project(project_name)
     yield project_name
+    setup_cmempy_user_access(context=TestUserContext())
     delete_project(project_name)
 
 
