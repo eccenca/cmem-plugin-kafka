@@ -32,5 +32,19 @@
         }
       }
     }
+  },
+  {
+    "message": {
+      "key": "887428-119918-570674-87668",
+      "content": {
+        "location": [
+          "Germany"
+        ],
+        "obstacle": {
+          "name": "Trampoline",
+          "order": "2"
+        }
+      }
+    }
   }
 ]

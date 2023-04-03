@@ -1,7 +1,8 @@
 from contextlib import suppress
 from dataclasses import dataclass
 
-import ijson
+import json_stream
+import json_stream.requests
 import pytest
 from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
 from cmem.cmempy.workspace.projects.project import delete_project, make_new_project
@@ -86,8 +87,10 @@ def test_kafka_json_data_handler(project, topic):
         context=TestUserContext(),
     )
     assert len(resource.content) > 0, "JSON Content is empty"
-    messages = ijson.items(resource.content, "item.message")
-    count = 0
-    for _ in messages:
-        count = count + 1
-    assert count == 2
+    with open("tests/sample-test.json", "rb") as response_file:
+        data = json_stream.to_standard_types(json_stream.load(response_file))
+    with resource as consumer_dataset_file:
+        consumer_data = json_stream.to_standard_types(
+            json_stream.requests.load(consumer_dataset_file)
+        )
+    assert data == consumer_data

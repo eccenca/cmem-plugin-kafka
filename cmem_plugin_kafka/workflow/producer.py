@@ -232,8 +232,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
                     context=context, plugin_logger=self.log, kafka_producer=producer
                 )
             with resource as response:
-                response.raw.decode_content = True
-                handler.send_messages(response.raw)
+                handler.send_messages(response)
         else:
             entities_handler = KafkaEntitiesDataHandler(
                 context=context,

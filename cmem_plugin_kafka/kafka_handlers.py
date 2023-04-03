@@ -9,7 +9,8 @@ from typing import Any, Sequence, Optional
 from xml.sax.saxutils import escape  # nosec B406
 
 import defusedxml.ElementTree as ET
-import ijson
+import json_stream
+import json_stream.requests
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.entity import (
     Entities, EntityPath, EntitySchema,
@@ -157,8 +158,8 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
         super().__init__(context, plugin_logger, kafka_producer, kafka_consumer)
 
     def _split_data(self, data):
-        messages = ijson.items(data, "item.message")
-        for message in messages:
+        for message in json_stream.requests.load(data):
+            message = json_stream.to_standard_types(message["message"])
             key = message["key"] if "key" in message else None
             headers = message["headers"] if "headers" in message else {}
             content = message["content"]
@@ -220,7 +221,8 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
         yield "</KafkaMessages>".encode()
 
     def _split_data(self, data):
-        context = ET.iterparse(data, events=("start", "end"))
+        data.raw.decode_content = True
+        context = ET.iterparse(data.raw, events=("start", "end"))
         # get the root element
         event, root = next(context, None)
         if not event:

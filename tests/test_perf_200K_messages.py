@@ -2,6 +2,7 @@ import os
 import shutil
 from contextlib import suppress
 
+import json_stream.requests
 import pytest
 import requests
 from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
@@ -97,6 +98,45 @@ def entities_project():
     delete_project(project_name)
 
 
+@pytest.fixture
+def json_dataset_project():
+    """Provides the DI build project incl. assets."""
+    setup_cmempy_user_access(context=TestUserContext())
+
+    project_name = "kafka_json_perf_project"
+    with suppress(Exception):
+        delete_project(project_name)
+
+    with requests.get(url=JSON_PROJECT_LINK, timeout=10, stream=True) as response:
+        with open("kafka_json_perf_project.zip", "wb") as project_file:
+            shutil.copyfileobj(response.raw, project_file)
+
+    validation_response = upload_project("kafka_json_perf_project.zip")
+    import_id = validation_response["projectImportId"]
+    project_id = validation_response["projectId"]
+
+    import_from_upload_start(
+        import_id=import_id, project_id=project_id, overwrite_existing=True
+    )
+    # loop until "success" boolean is in status response
+    status = import_from_upload_status(import_id)
+    while "success" not in status.keys():
+        status = import_from_upload_status(import_id)
+
+    make_new_dataset(
+        project_name=project_id,
+        dataset_name="json_dataset_result",
+        dataset_type="json",
+        parameters={"file": "json_dataset_result.json"},
+        autoconfigure=False,
+    )
+    yield project_id
+    with suppress(Exception):
+        setup_cmempy_user_access(context=TestUserContext())
+        os.remove("kafka_json_perf_project.zip")
+        delete_project(project_id)
+
+
 @needs_cmem
 @needs_kafka
 def test_perf_kafka_producer_consumer_xml_dataset(xml_dataset_project, topic):
@@ -180,3 +220,47 @@ def test_perf_kafka_producer_consumer_with_entities(entities_project, topic):
         count += 1
 
     assert count == no_of_entities
+
+
+@needs_cmem
+@needs_kafka
+def test_perf_kafka_producer_consumer_with_json_dataset(json_dataset_project, topic):
+    """Test plugin execution for Plain Kafka"""
+    producer_dataset = "huge_json_dataset"
+    consumer_dataset = "json_dataset_result"
+    # Producer
+    KafkaProducerPlugin(
+        message_dataset=producer_dataset,
+        bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
+        security_protocol=KAFKA_CONFIG["security_protocol"],
+        sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
+        sasl_username=KAFKA_CONFIG["sasl_username"],
+        sasl_password=KAFKA_CONFIG["sasl_password"],
+        kafka_topic=topic,
+        client_id="",
+    ).execute([], TestExecutionContext(project_id=json_dataset_project))
+
+    # Consumer
+    KafkaConsumerPlugin(
+        message_dataset=consumer_dataset,
+        bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
+        security_protocol=KAFKA_CONFIG["security_protocol"],
+        sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
+        sasl_username=KAFKA_CONFIG["sasl_username"],
+        sasl_password=KAFKA_CONFIG["sasl_password"],
+        kafka_topic=topic,
+        group_id=DEFAULT_GROUP,
+        auto_offset_reset=DEFAULT_RESET,
+    ).execute([], TestExecutionContext(project_id=json_dataset_project))
+
+    # Ensure producer and consumer are working properly
+    resource, _ = get_resource_from_dataset(
+        dataset_id=f"{json_dataset_project}:{consumer_dataset}",
+        context=TestUserContext(),
+    )
+    with resource as json_file:
+        count = 0
+        data = json_stream.requests.load(json_file)
+        for _ in data:
+            count += 1
+        assert 1000000 == count
