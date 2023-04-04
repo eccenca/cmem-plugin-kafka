@@ -19,6 +19,8 @@ from cmem_plugin_kafka.constants import (
     SASL_ACCOUNT_DESCRIPTION,
     SASL_PASSWORD_DESCRIPTION,
     CLIENT_ID_DESCRIPTION,
+    XML_SAMPLE,
+    JSON_SAMPLE,
 )
 from cmem_plugin_kafka.kafka_handlers import (
     KafkaJSONDataHandler,
@@ -48,34 +50,31 @@ This is especially true for a kafka cluster hosted at
     plugin_id="cmem_plugin_kafka-SendMessages",
     description="Reads a messages dataset and sends records to a"
     " Kafka topic (Producer).",
-    documentation="""This workflow operator uses the Kafka Producer API to send
+    documentation=f"""This workflow operator uses the Kafka Producer API to send
 messages to a [Apache Kafka](https://kafka.apache.org/).
 
-Accepts entities as input, and, if desired, accepts a pre-constructed XML dataset,
+Accepts entities as input, and, if desired, accepts a pre-constructed XML/JSON dataset,
 which is transformed into messages and sent to a designated Kafka topic based
 on configuration.
 
-An example XML document is shown below. This document will be sent as two messages
-to the configured topic. Each message is created as a proper XML document.
-```
-<?xml version="1.0" encoding="utf-8"?>
-<KafkaMessages>
-  <Message>
-    <PurchaseOrder OrderDate="1996-04-06">
-      <ShipTo country="string">
-        <name>string</name>
-      </ShipTo>
-    </PurchaseOrder>
-  </Message>
-  <Message>
-    <PurchaseOrder OrderDate="1996-04-06">
-      <ShipTo country="string">
-        <name>string</name>
-      </ShipTo>
-    </PurchaseOrder>
-  </Message>
-</KafkaMessages>
-```
+<details>
+  <summary>Sample XML format</summary>
+
+  An example XML document is shown below. This document will be sent as two messages
+  to the configured topic. Each message is created as a proper XML document.
+
+{XML_SAMPLE}
+</details>
+
+<details>
+  <summary>Sample JSON format</summary>
+
+  An example JSON document is shown below. This document will be sent as two messages
+  to the configured topic. Each message is created as a proper JSON document.
+
+{JSON_SAMPLE}
+</details>
+
 """,
     parameters=[
         PluginParameter(
@@ -84,7 +83,7 @@ to the configured topic. Each message is created as a proper XML document.
             description="Where do you want to retrieve the messages from?"
             " The dropdown lists usable datasets from the current"
             " project only. In case you miss your dataset, check for"
-            " the correct type (XML) and build project).",
+            " the correct type (XML/JSON) and build project).",
             param_type=DatasetParameterType(dataset_type="xml,json"),
             default_value="",
         ),

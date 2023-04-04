@@ -71,3 +71,58 @@ Maximum total message size in kilobytes that the consumer can buffer for
 a specific partition. The consumer will stop fetching from the partition
 if it hits this limit. This helps prevent consumers from running out of memory.
 """
+
+XML_SAMPLE = """
+```xml
+    <?xml version="1.0" encoding="utf-8"?>
+    <KafkaMessages>
+        <Message>
+        <PurchaseOrder OrderDate="1996-04-06">
+            <ShipTo country="string">
+            <name>string</name>
+            </ShipTo>
+        </PurchaseOrder>
+        </Message>
+        <Message>
+        <PurchaseOrder OrderDate="1996-04-06">
+            <ShipTo country="string">
+            <name>string</name>
+            </ShipTo>
+        </PurchaseOrder>
+        </Message>
+    </KafkaMessages>
+```
+"""
+
+JSON_SAMPLE = """
+```json
+[
+  {
+    "message": {
+      "key": "818432-942813-832642-453478",
+      "headers": {
+        "type": "ADD"
+      },
+      "content": {
+        "location": ["Leipzig"],
+        "obstacle": {
+          "name": "Iron Bars",
+          "order": "1"
+        }
+      }
+    }
+  },
+  {
+    "message": {
+      "key": "887428-119918-570674-866526",
+      "headers": {
+        "type": "REMOVE"
+      },
+      "content": {
+        "comments": "We can pass any json payload here."
+      }
+    }
+  }
+]
+```
+"""

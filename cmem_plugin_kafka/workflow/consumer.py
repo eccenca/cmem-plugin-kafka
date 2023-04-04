@@ -21,6 +21,8 @@ from cmem_plugin_kafka.constants import (
     SASL_PASSWORD_DESCRIPTION,
     CLIENT_ID_DESCRIPTION,
     LOCAL_CONSUMER_QUEUE_MAX_SIZE_DESCRIPTION,
+    XML_SAMPLE,
+    JSON_SAMPLE,
 )
 from cmem_plugin_kafka.utils import (
     KafkaConsumer,
@@ -56,32 +58,25 @@ not exist any more on the server (e.g. because that data has been deleted).
     plugin_id="cmem_plugin_kafka-ReceiveMessages",
     description="Reads messages from a Kafka topic and saves it to a "
     "messages dataset (Consumer).",
-    documentation="""This workflow operator uses the Kafka Consumer API to receive
+    documentation=f"""This workflow operator uses the Kafka Consumer API to receive
 messages from a [Apache Kafka](https://kafka.apache.org/).
 
 Need to specify a topic to receive messages from the desired Kafka topic.
 All messages received from the topic will be stored as entities and, if messages
-were in XML format, can be saved in an XML dataset. A sample response from the
-consumer will appear as follows.
-```
-<?xml version="1.0" encoding="utf-8"?>
-<KafkaMessages>
-  <Message>
-    <PurchaseOrder OrderDate="1996-04-06">
-      <ShipTo country="string">
-        <name>string</name>
-      </ShipTo>
-    </PurchaseOrder>
-  </Message>
-  <Message>
-    <PurchaseOrder OrderDate="1996-04-06">
-      <ShipTo country="string">
-        <name>string</name>
-      </ShipTo>
-    </PurchaseOrder>
-  </Message>
-</KafkaMessages>
-```
+were in XML format, can be saved in an XML dataset. Similarly, if the messages were
+in JSON format, they can be saved in a JSON dataset.
+
+A sample response from the consumer will appear as follows.
+
+<details>
+  <summary>Sample XML Response</summary>
+{XML_SAMPLE}
+</details>
+<details>
+  <summary>Sample XML Response</summary>
+{JSON_SAMPLE}
+</details>
+
 """,
     parameters=[
         PluginParameter(
@@ -108,7 +103,7 @@ consumer will appear as follows.
             description="Where do you want to save the messages?"
             " The dropdown lists usable datasets from the current"
             " project only. In case you miss your dataset, check for"
-            " the correct type (XML) and build project.",
+            " the correct type (XML/JSON) and build project.",
             param_type=DatasetParameterType(dataset_type="xml,json"),
             default_value="",
         ),
