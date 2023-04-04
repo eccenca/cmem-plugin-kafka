@@ -13,13 +13,20 @@ import json_stream
 import json_stream.requests
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.entity import (
-    Entities, EntityPath, EntitySchema,
+    Entities,
+    EntityPath,
+    EntitySchema,
     Entity,
 )
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
 
-from cmem_plugin_kafka.utils import KafkaProducer, KafkaMessage, KafkaConsumer, \
-    get_message_with_json_wrapper, get_message_with_xml_wrapper
+from cmem_plugin_kafka.utils import (
+    KafkaProducer,
+    KafkaMessage,
+    KafkaConsumer,
+    get_message_with_json_wrapper,
+    get_message_with_xml_wrapper,
+)
 
 
 class KafkaDataHandler:
@@ -37,11 +44,11 @@ class KafkaDataHandler:
     """
 
     def __init__(
-            self,
-            context: ExecutionContext,
-            plugin_logger: PluginLogger,
-            kafka_producer: Optional[KafkaProducer] = None,
-            kafka_consumer: Optional[KafkaConsumer] = None
+        self,
+        context: ExecutionContext,
+        plugin_logger: PluginLogger,
+        kafka_producer: Optional[KafkaProducer] = None,
+        kafka_consumer: Optional[KafkaConsumer] = None,
     ):
         """
         Initialize a new KafkaDataHandler instance with the specified
@@ -105,12 +112,12 @@ class KafkaDataHandler:
 
     def update_report(self):
         """
-         Update the plugin report with the current status of the Kafka producer.
+        Update the plugin report with the current status of the Kafka producer.
 
-         This method creates an ExecutionReport object and updates the plugin report
-         with the current status of the Kafka producer, including the number of
-         successfully sent messages.
-         """
+        This method creates an ExecutionReport object and updates the plugin report
+        with the current status of the Kafka producer, including the number of
+        successfully sent messages.
+        """
         self._context.report.update(
             ExecutionReport(
                 entity_count=self._kafka_producer.get_success_messages_count(),
@@ -122,6 +129,7 @@ class KafkaDataHandler:
 
 class KafkaDatasetHandler(KafkaDataHandler, ABC):
     """A Base class for producing messages from Dataset to a Kafka topic."""
+
     def __enter__(self):
         return self.consume_messages()
 
@@ -144,11 +152,11 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
     """
 
     def __init__(
-            self,
-            context: ExecutionContext,
-            plugin_logger: PluginLogger,
-            kafka_producer: Optional[KafkaProducer] = None,
-            kafka_consumer: Optional[KafkaConsumer] = None
+        self,
+        context: ExecutionContext,
+        plugin_logger: PluginLogger,
+        kafka_producer: Optional[KafkaProducer] = None,
+        kafka_consumer: Optional[KafkaConsumer] = None,
     ):
         """
         Initialize a new KafkaJSONDataHandler instance with the specified
@@ -168,14 +176,14 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
     def _aggregate_data(self):
         """generate json file with kafka messages"""
         try:
-            yield '['.encode()
+            yield "[".encode()
             count = 0
             for message in self._kafka_consumer.poll():
                 if count > 0:
                     yield ",".encode()
                 yield get_message_with_json_wrapper(message).encode()
                 count += 1
-            yield ']'.encode()
+            yield "]".encode()
         except json.decoder.JSONDecodeError as ex:
             raise ValueError("Kafka Message is not in expected format ") from ex
 
@@ -195,11 +203,11 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
     """
 
     def __init__(
-            self,
-            context: ExecutionContext,
-            plugin_logger: PluginLogger,
-            kafka_producer: Optional[KafkaProducer] = None,
-            kafka_consumer: Optional[KafkaConsumer] = None
+        self,
+        context: ExecutionContext,
+        plugin_logger: PluginLogger,
+        kafka_producer: Optional[KafkaProducer] = None,
+        kafka_consumer: Optional[KafkaConsumer] = None,
     ):
         """
         Initialize a new KafkaXMLDataHandler instance with the specified
@@ -322,11 +330,11 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
     """
 
     def __init__(
-            self,
-            context: ExecutionContext,
-            plugin_logger: PluginLogger,
-            kafka_producer: Optional[KafkaProducer] = None,
-            kafka_consumer: Optional[KafkaConsumer] = None
+        self,
+        context: ExecutionContext,
+        plugin_logger: PluginLogger,
+        kafka_producer: Optional[KafkaProducer] = None,
+        kafka_consumer: Optional[KafkaConsumer] = None,
     ):
         """
         Initialize a new KafkaEntitiesDataHandler instance with the specified

@@ -13,7 +13,7 @@ TOPIC_PREFIX = "cmem"
 @pytest.fixture
 def topic():
     kafka_service = KAFKA_CONFIG["bootstrap_server"]
-    a = AdminClient({'bootstrap.servers': kafka_service})
+    a = AdminClient({"bootstrap.servers": kafka_service})
     default_topic = f"{TOPIC_PREFIX}_{random.randint(0, 1000)}"
     new_topics = [NewTopic(topic, num_partitions=1) for topic in [default_topic]]
     fs = a.create_topics(new_topics)

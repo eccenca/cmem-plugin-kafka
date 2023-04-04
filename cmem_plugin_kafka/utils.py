@@ -11,7 +11,8 @@ from cmem.cmempy.workspace.tasks import get_task
 from cmem_plugin_base.dataintegration.context import (
     ExecutionContext,
     ExecutionReport,
-    UserContext, PluginContext,
+    UserContext,
+    PluginContext,
 )
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
 from cmem_plugin_base.dataintegration.types import Autocompletion, StringParameterType
@@ -42,10 +43,7 @@ class KafkaMessage:
     """
 
     def __init__(
-            self,
-            key: Optional[str] = None,
-            headers: Optional[dict] = None,
-            value: str = ""
+        self, key: Optional[str] = None, headers: Optional[dict] = None, value: str = ""
     ):
         self.value: str = value
         self.key: Optional[str] = key
@@ -65,10 +63,7 @@ class KafkaProducer:
         """Produce message to topic."""
         self._no_of_success_messages += 1
         self._producer.produce(
-            self._topic,
-            value=message.value,
-            key=message.key,
-            headers=message.headers
+            self._topic, value=message.value, key=message.key, headers=message.headers
         )
 
     def poll(self, timeout):
@@ -226,9 +221,10 @@ def get_message_with_xml_wrapper(message: KafkaMessage) -> str:
 
 class BytesEncoder(json.JSONEncoder):
     """JSON Bytes Encoder"""
+
     def default(self, o):
         if isinstance(o, bytes):
-            return o.decode('utf-8')
+            return o.decode("utf-8")
         return json.JSONEncoder.default(self, o)
 
 
@@ -236,10 +232,7 @@ def get_message_with_json_wrapper(message: KafkaMessage) -> str:
     """Wrap kafka message around Message tags"""
 
     msg_with_wrapper = {
-        "message": {
-            "key": message.key,
-            "content": json.loads(message.value)
-        }
+        "message": {"key": message.key, "content": json.loads(message.value)}
     }
     if message.headers:
         msg_with_wrapper["message"]["headers"] = {
@@ -298,9 +291,9 @@ class DatasetParameterType(StringParameterType):
         """Dataset parameter type."""
         self.dataset_type = dataset_type
 
-    def label(self, value: str,
-              depend_on_parameter_values: list[Any],
-              context: PluginContext) -> Optional[str]:
+    def label(
+        self, value: str, depend_on_parameter_values: list[Any], context: PluginContext
+    ) -> Optional[str]:
         """Returns the label for the given dataset."""
         setup_cmempy_user_access(context.user)
         task_label = str(
@@ -308,12 +301,16 @@ class DatasetParameterType(StringParameterType):
         )
         return f"{task_label}"
 
-    def autocomplete(self, query_terms: list[str],
-                     depend_on_parameter_values: list[Any],
-                     context: PluginContext) -> list[Autocompletion]:
+    def autocomplete(
+        self,
+        query_terms: list[str],
+        depend_on_parameter_values: list[Any],
+        context: PluginContext,
+    ) -> list[Autocompletion]:
         setup_cmempy_user_access(context.user)
-        datasets = list_items(item_type="dataset",
-                              project=context.project_id)["results"]
+        datasets = list_items(item_type="dataset", project=context.project_id)[
+            "results"
+        ]
 
         result = []
         dataset_types = []
@@ -321,7 +318,7 @@ class DatasetParameterType(StringParameterType):
             dataset_types = self.dataset_type.split(",")
 
         for _ in datasets:
-            identifier = _['id']
+            identifier = _["id"]
             title = _["label"]
             label = f"{title} ({identifier})"
             if dataset_types and _["pluginId"] not in dataset_types:

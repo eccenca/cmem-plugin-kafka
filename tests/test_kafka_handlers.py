@@ -48,9 +48,11 @@ def project():
     @dataclass
     class FixtureData:
         """Class for providing fixture meta data."""
+
         project = PROJECT_NAME
         resource = RESOURCE_NAME
         dataset = DATASET_ID
+
     yield FixtureData()
     delete_project(PROJECT_NAME)
 

@@ -182,11 +182,8 @@ def test_perf_kafka_producer_consumer_with_entities(entities_project, topic):
     """Test plugin execution for Plain Kafka"""
     no_of_entities = 1000000
     entities = RandomValues(
-        random_function="token_urlsafe",
-        number_of_entities=no_of_entities
-    ).execute(
-        context=TestExecutionContext()
-    )
+        random_function="token_urlsafe", number_of_entities=no_of_entities
+    ).execute(context=TestExecutionContext())
     # Producer
     KafkaProducerPlugin(
         message_dataset=None,

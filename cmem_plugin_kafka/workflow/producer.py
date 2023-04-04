@@ -25,7 +25,8 @@ from cmem_plugin_kafka.constants import (
 from cmem_plugin_kafka.kafka_handlers import (
     KafkaJSONDataHandler,
     KafkaXMLDataHandler,
-    KafkaEntitiesDataHandler, KafkaDataHandler,
+    KafkaEntitiesDataHandler,
+    KafkaDataHandler,
 )
 from cmem_plugin_kafka.utils import (
     KafkaProducer,
@@ -222,7 +223,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
             resource, _ = get_resource_from_dataset(
                 dataset_id=self.message_dataset, context=context.user
             )
-            if _['data']['type'] == 'json':
+            if _["data"]["type"] == "json":
                 handler: KafkaDataHandler = KafkaJSONDataHandler(
                     context=context, plugin_logger=self.log, kafka_producer=producer
                 )

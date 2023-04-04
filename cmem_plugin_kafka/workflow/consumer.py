@@ -28,10 +28,15 @@ from cmem_plugin_kafka.utils import (
     KafkaConsumer,
     validate_kafka_config,
     get_kafka_statistics,
-    get_default_client_id, DatasetParameterType,
+    get_default_client_id,
+    DatasetParameterType,
 )
-from cmem_plugin_kafka.kafka_handlers import KafkaEntitiesDataHandler, \
-    KafkaJSONDataHandler, KafkaXMLDataHandler, KafkaDatasetHandler
+from cmem_plugin_kafka.kafka_handlers import (
+    KafkaEntitiesDataHandler,
+    KafkaJSONDataHandler,
+    KafkaXMLDataHandler,
+    KafkaDatasetHandler,
+)
 
 CONSUMER_GROUP_DESCRIPTION = """
 When a topic is consumed by consumers in the same group, every record will be delivered
@@ -253,26 +258,19 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         kafka_consumer.subscribe()
         if not self.message_dataset:
             return KafkaEntitiesDataHandler(
-                context=context,
-                plugin_logger=self.log,
-                kafka_consumer=kafka_consumer
+                context=context, plugin_logger=self.log, kafka_consumer=kafka_consumer
             ).consume_messages()
 
         task_meta_data = get_task(
-            project=context.task.project_id(),
-            task=self.message_dataset
+            project=context.task.project_id(), task=self.message_dataset
         )
-        if task_meta_data["data"]["type"] == 'json':
+        if task_meta_data["data"]["type"] == "json":
             handler: KafkaDatasetHandler = KafkaJSONDataHandler(
-                context=context,
-                plugin_logger=self.log,
-                kafka_consumer=kafka_consumer
+                context=context, plugin_logger=self.log, kafka_consumer=kafka_consumer
             )
         else:
             handler = KafkaXMLDataHandler(
-                context=context,
-                plugin_logger=self.log,
-                kafka_consumer=kafka_consumer
+                context=context, plugin_logger=self.log, kafka_consumer=kafka_consumer
             )
         # Prefix project id to dataset name
         self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
