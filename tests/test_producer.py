@@ -46,7 +46,7 @@ def project(request):
 
 @needs_cmem
 @needs_kafka
-def test_execution_plain_kafka(project):
+def test_execution_plain_kafka(project, topic):
     """Test plugin execution for Plain Kafka"""
     KafkaProducerPlugin(
         message_dataset=DATASET_ID,
@@ -55,13 +55,13 @@ def test_execution_plain_kafka(project):
         sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
         sasl_username=KAFKA_CONFIG["sasl_username"],
         sasl_password=KAFKA_CONFIG["sasl_password"],
-        kafka_topic=DEFAULT_TOPIC,
+        kafka_topic=topic,
     ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
 
 @needs_cmem
 @needs_kafka
-def test_validate_invalid_inputs(project):
+def test_validate_invalid_inputs(project, topic):
     # Invalid Dataset
     with pytest.raises(requests.exceptions.HTTPError):
         KafkaProducerPlugin(
@@ -71,7 +71,7 @@ def test_validate_invalid_inputs(project):
             sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
             sasl_username=KAFKA_CONFIG["sasl_username"],
             sasl_password=KAFKA_CONFIG["sasl_password"],
-            kafka_topic=DEFAULT_TOPIC,
+            kafka_topic=topic,
         ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
     # Invalid SECURITY PROTOCOL

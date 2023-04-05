@@ -2,9 +2,10 @@
 import random
 import string
 from contextlib import suppress
-import time
+
 import pytest
 import requests
+import xmltodict
 from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
 from cmem.cmempy.workspace.projects.project import make_new_project, delete_project
 from cmem.cmempy.workspace.projects.resources.resource import create_resource
@@ -18,7 +19,6 @@ from .utils import (
     needs_cmem,
     needs_kafka,
     get_kafka_config,
-    XMLUtils,
     TestExecutionContext,
     TestUserContext,
 )
@@ -34,8 +34,7 @@ PRODUCER_DATASET_ID = f"{PRODUCER_DATASET_NAME}"
 CONSUMER_DATASET_ID = f"{CONSUMER_DATASET_NAME}"
 
 KAFKA_CONFIG = get_kafka_config()
-DEFAULT_GROUP = "workflow"
-DEFAULT_TOPIC = "eccenca_kafka_workflow"
+DEFAULT_GROUP = None
 DEFAULT_RESET = "latest"
 
 
@@ -71,8 +70,7 @@ def project(request):
 
 @needs_cmem
 @needs_kafka
-def test_execution_kafka_producer_consumer(project):
-    """Test plugin execution for Plain Kafka"""
+def test_execution_kafka_producer_new_topic(project):
     # By default, new topic will not available
     with pytest.raises(
         ValueError,
@@ -89,9 +87,14 @@ def test_execution_kafka_producer_consumer(project):
             sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
             sasl_username=KAFKA_CONFIG["sasl_username"],
             sasl_password=KAFKA_CONFIG["sasl_password"],
-            kafka_topic=DEFAULT_TOPIC,
+            kafka_topic="NEW_TOPIC_" + str(random.randint(0, 100)),
         ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
-    time.sleep(10)
+
+
+@needs_cmem
+@needs_kafka
+def test_execution_kafka_producer_consumer_with_xml_dataset(project, topic):
+    """Test plugin execution for Plain Kafka"""
 
     # Producer
     KafkaProducerPlugin(
@@ -101,7 +104,7 @@ def test_execution_kafka_producer_consumer(project):
         sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
         sasl_username=KAFKA_CONFIG["sasl_username"],
         sasl_password=KAFKA_CONFIG["sasl_password"],
-        kafka_topic=DEFAULT_TOPIC,
+        kafka_topic=topic,
     ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
 
     # Consumer
@@ -112,24 +115,29 @@ def test_execution_kafka_producer_consumer(project):
         sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
         sasl_username=KAFKA_CONFIG["sasl_username"],
         sasl_password=KAFKA_CONFIG["sasl_password"],
-        kafka_topic=DEFAULT_TOPIC,
+        kafka_topic=topic,
         group_id=DEFAULT_GROUP,
         auto_offset_reset="earliest",
     ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
 
     # Ensure producer and consumer are working properly
-    assert XMLUtils.get_elements_len_from_file(path="tests/sample-test.xml") == 3
-    with get_resource_from_dataset(
+    resource, _ = get_resource_from_dataset(
         dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}", context=TestUserContext()
-    ) as response:
-        assert XMLUtils.get_elements_len_fromstring(
-            response.text
-        ) == XMLUtils.get_elements_len_from_file(path="tests/sample-test.xml")
+    )
+
+    with open("tests/sample-test.xml", "r") as file:
+        data = file.read().rstrip()
+        data_dict = xmltodict.parse(data)
+        messages = data_dict["KafkaMessages"]["Message"]
+        for message in messages:
+            if "@key" not in message:
+                message["@key"] = ""
+        assert xmltodict.parse(resource.text) == data_dict
 
 
 @needs_cmem
 @needs_kafka
-def test_execution_kafka_consumer_entities(project):
+def test_execution_kafka_producer_consumer_with_entities(project, topic):
     """Test plugin execution for Plain Kafka"""
     entities = RandomValues(random_function="token_urlsafe").execute(
         context=TestExecutionContext()
@@ -142,23 +150,27 @@ def test_execution_kafka_consumer_entities(project):
         sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
         sasl_username=KAFKA_CONFIG["sasl_username"],
         sasl_password=KAFKA_CONFIG["sasl_password"],
-        kafka_topic=DEFAULT_TOPIC,
+        kafka_topic=topic,
     ).execute([entities], TestExecutionContext(project_id=PROJECT_NAME))
 
     # Consumer
-    entities = KafkaConsumerPlugin(
+    consumer_entities = KafkaConsumerPlugin(
         message_dataset=None,
         bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
         security_protocol=KAFKA_CONFIG["security_protocol"],
         sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
         sasl_username=KAFKA_CONFIG["sasl_username"],
         sasl_password=KAFKA_CONFIG["sasl_password"],
-        kafka_topic=DEFAULT_TOPIC,
+        kafka_topic=topic,
         group_id=DEFAULT_GROUP,
         auto_offset_reset="earliest",
     ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
     count = 0
-    for _ in entities.entities:
+    assert consumer_entities.schema.type_uri == entities.schema.type_uri
+    assert len(consumer_entities.schema.paths) == len(entities.schema.paths)
+    for index, path in enumerate(consumer_entities.schema.paths):
+        assert path.path == entities.schema.paths[index].path
+    for _ in consumer_entities.entities:
         count += 1
 
     assert count == 10
@@ -166,7 +178,7 @@ def test_execution_kafka_consumer_entities(project):
 
 @needs_cmem
 @needs_kafka
-def test_validate_invalid_inputs(project):
+def test_validate_invalid_inputs(project, topic):
     """Validate Invalid Inputs"""
     # Invalid Dataset
     with pytest.raises(requests.exceptions.HTTPError):
@@ -177,7 +189,7 @@ def test_validate_invalid_inputs(project):
             sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
             sasl_username=KAFKA_CONFIG["sasl_username"],
             sasl_password=KAFKA_CONFIG["sasl_password"],
-            kafka_topic=DEFAULT_TOPIC,
+            kafka_topic=topic,
             group_id=DEFAULT_GROUP,
             auto_offset_reset=DEFAULT_RESET,
         ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
@@ -191,7 +203,7 @@ def test_validate_invalid_inputs(project):
             sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
             sasl_username=KAFKA_CONFIG["sasl_username"],
             sasl_password=KAFKA_CONFIG["sasl_password"],
-            kafka_topic=DEFAULT_TOPIC,
+            kafka_topic=topic,
             group_id=DEFAULT_GROUP,
             auto_offset_reset=DEFAULT_RESET,
         ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
@@ -207,7 +219,7 @@ def test_validate_bootstrap_server():
             sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
             sasl_username=KAFKA_CONFIG["sasl_username"],
             sasl_password=KAFKA_CONFIG["sasl_password"],
-            kafka_topic=DEFAULT_TOPIC,
+            kafka_topic="DEFAULT_TOPIC",
             group_id=DEFAULT_GROUP,
             auto_offset_reset=DEFAULT_RESET,
         )
@@ -224,7 +236,7 @@ def test_validate_bootstrap_server():
             sasl_mechanisms="PLAIN",
             sasl_username="",
             sasl_password="",
-            kafka_topic=DEFAULT_TOPIC,
+            kafka_topic="DEFAULT_TOPIC",
             group_id=DEFAULT_GROUP,
             auto_offset_reset=DEFAULT_RESET,
         ).execute(None, None)
@@ -232,7 +244,7 @@ def test_validate_bootstrap_server():
 
 @needs_cmem
 @needs_kafka
-def test_validate_auto_offset_reset_parameter(project):
+def test_validate_auto_offset_reset_parameter(project, topic):
     """Test plugin execution for Plain Kafka"""
     letters = string.ascii_letters
     NO_INITIAL_OFFSET_GROUP = (
@@ -251,7 +263,7 @@ def test_validate_auto_offset_reset_parameter(project):
             sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
             sasl_username=KAFKA_CONFIG["sasl_username"],
             sasl_password=KAFKA_CONFIG["sasl_password"],
-            kafka_topic=DEFAULT_TOPIC,
+            kafka_topic=topic,
             group_id=NO_INITIAL_OFFSET_GROUP,
             auto_offset_reset="error",
         ).execute([], TestExecutionContext(project_id=PROJECT_NAME))

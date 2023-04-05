@@ -1,11 +1,11 @@
 """Kafka consumer plugin module"""
 from typing import Sequence, Dict, Any, Optional
 
+from cmem.cmempy.workspace.tasks import get_task
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
-from cmem_plugin_base.dataintegration.parameter.dataset import DatasetParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.types import IntParameterType
 from cmem_plugin_base.dataintegration.utils import write_to_dataset
@@ -21,12 +21,21 @@ from cmem_plugin_kafka.constants import (
     SASL_PASSWORD_DESCRIPTION,
     CLIENT_ID_DESCRIPTION,
     LOCAL_CONSUMER_QUEUE_MAX_SIZE_DESCRIPTION,
+    XML_SAMPLE,
+    JSON_SAMPLE,
 )
 from cmem_plugin_kafka.utils import (
     KafkaConsumer,
     validate_kafka_config,
     get_kafka_statistics,
     get_default_client_id,
+    DatasetParameterType,
+)
+from cmem_plugin_kafka.kafka_handlers import (
+    KafkaEntitiesDataHandler,
+    KafkaJSONDataHandler,
+    KafkaXMLDataHandler,
+    KafkaDatasetHandler,
 )
 
 CONSUMER_GROUP_DESCRIPTION = """
@@ -54,32 +63,25 @@ not exist any more on the server (e.g. because that data has been deleted).
     plugin_id="cmem_plugin_kafka-ReceiveMessages",
     description="Reads messages from a Kafka topic and saves it to a "
     "messages dataset (Consumer).",
-    documentation="""This workflow operator uses the Kafka Consumer API to receive
+    documentation=f"""This workflow operator uses the Kafka Consumer API to receive
 messages from a [Apache Kafka](https://kafka.apache.org/).
 
 Need to specify a topic to receive messages from the desired Kafka topic.
 All messages received from the topic will be stored as entities and, if messages
-were in XML format, can be saved in an XML dataset. A sample response from the
-consumer will appear as follows.
-```
-<?xml version="1.0" encoding="utf-8"?>
-<KafkaMessages>
-  <Message>
-    <PurchaseOrder OrderDate="1996-04-06">
-      <ShipTo country="string">
-        <name>string</name>
-      </ShipTo>
-    </PurchaseOrder>
-  </Message>
-  <Message>
-    <PurchaseOrder OrderDate="1996-04-06">
-      <ShipTo country="string">
-        <name>string</name>
-      </ShipTo>
-    </PurchaseOrder>
-  </Message>
-</KafkaMessages>
-```
+were in XML format, can be saved in an XML dataset. Similarly, if the messages were
+in JSON format, they can be saved in a JSON dataset.
+
+A sample response from the consumer will appear as follows.
+
+<details>
+  <summary>Sample XML Response</summary>
+{XML_SAMPLE}
+</details>
+<details>
+  <summary>Sample XML Response</summary>
+{JSON_SAMPLE}
+</details>
+
 """,
     parameters=[
         PluginParameter(
@@ -106,8 +108,8 @@ consumer will appear as follows.
             description="Where do you want to save the messages?"
             " The dropdown lists usable datasets from the current"
             " project only. In case you miss your dataset, check for"
-            " the correct type (XML) and build project.",
-            param_type=DatasetParameterType(dataset_type="xml"),
+            " the correct type (XML/JSON) and build project.",
+            param_type=DatasetParameterType(dataset_type="xml,json"),
             default_value="",
         ),
         PluginParameter(
@@ -255,18 +257,26 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         )
         kafka_consumer.subscribe()
         if not self.message_dataset:
-            schema = kafka_consumer.get_schema()
-            if not schema:
-                return None
-            entities = kafka_consumer.get_entities()
-            return Entities(entities=entities, schema=schema)
+            return KafkaEntitiesDataHandler(
+                context=context, plugin_logger=self.log, kafka_consumer=kafka_consumer
+            ).consume_messages()
 
+        task_meta_data = get_task(
+            project=context.task.project_id(), task=self.message_dataset
+        )
+        if task_meta_data["data"]["type"] == "json":
+            handler: KafkaDatasetHandler = KafkaJSONDataHandler(
+                context=context, plugin_logger=self.log, kafka_consumer=kafka_consumer
+            )
+        else:
+            handler = KafkaXMLDataHandler(
+                context=context, plugin_logger=self.log, kafka_consumer=kafka_consumer
+            )
         # Prefix project id to dataset name
         self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
-
         write_to_dataset(
             dataset_id=self.message_dataset,
-            file_resource=kafka_consumer,
+            file_resource=handler,
             context=context.user,
         )
 

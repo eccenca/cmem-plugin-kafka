@@ -1,26 +1,21 @@
 """Kafka utils modules"""
 import json
 import re
-from typing import Dict, Any, Iterator, Optional, Sequence
+from typing import Dict, Any, Iterator, Optional
 from urllib.parse import urlparse
-from xml.sax.handler import ContentHandler  # nosec B406
-from xml.sax.saxutils import escape  # nosec B406
 
 from cmem.cmempy.config import get_cmem_base_uri
 from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
+from cmem.cmempy.workspace.search import list_items
 from cmem.cmempy.workspace.tasks import get_task
 from cmem_plugin_base.dataintegration.context import (
     ExecutionContext,
     ExecutionReport,
     UserContext,
-)
-from cmem_plugin_base.dataintegration.entity import (
-    Entities,
-    Entity,
-    EntityPath,
-    EntitySchema,
+    PluginContext,
 )
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
+from cmem_plugin_base.dataintegration.types import Autocompletion, StringParameterType
 from cmem_plugin_base.dataintegration.utils import (
     setup_cmempy_user_access,
     split_task_id,
@@ -47,9 +42,12 @@ class KafkaMessage:
         Kafka message payload
     """
 
-    def __init__(self, key: Optional[str] = None, value: str = ""):
+    def __init__(
+        self, key: Optional[str] = None, headers: Optional[dict] = None, value: str = ""
+    ):
         self.value: str = value
         self.key: Optional[str] = key
+        self.headers: Optional[dict] = headers
 
 
 class KafkaProducer:
@@ -64,7 +62,9 @@ class KafkaProducer:
     def process(self, message: KafkaMessage):
         """Produce message to topic."""
         self._no_of_success_messages += 1
-        self._producer.produce(self._topic, value=message.value, key=message.key)
+        self._producer.produce(
+            self._topic, value=message.value, key=message.key, headers=message.headers
+        )
 
     def poll(self, timeout):
         """Polls the producer for events and calls the corresponding callbacks"""
@@ -97,64 +97,6 @@ class KafkaConsumer:
         self._log = log
         self._no_of_success_messages = 0
         self._first_message: Optional[KafkaMessage] = None
-        self._schema: EntitySchema = None
-
-    def __enter__(self):
-        return self.get_xml_payload()
-
-    def get_schema(self):
-        """Return kafka message schema paths"""
-        message = self.get_first_message()
-        if not message:
-            return None
-        json_payload = json.loads(message.value)
-        schema_paths = []
-        self._log.info(f'values : {json_payload["entity"]["values"]}')
-        for path in self._get_paths(json_payload["entity"]["values"]):
-            path_uri = f"{path}"
-            schema_paths.append(EntityPath(path=path_uri))
-        self._schema = EntitySchema(
-            type_uri=json_payload["schema"]["type_uri"],
-            paths=schema_paths,
-        )
-        return self._schema
-
-    def _get_paths(self, values: dict):
-        self._log.info(f"_get_paths: Values dict {values}")
-        return list(values.keys())
-
-    def get_entities(self):
-        """Generate the entities from kafka messages"""
-        if self._first_message:
-            yield self._get_entity(self._first_message)
-
-        for message in self.poll():
-            yield self._get_entity(message)
-
-    def _get_entity(self, message: KafkaMessage):
-        try:
-            json_payload = json.loads(message.value)
-        except json.decoder.JSONDecodeError as exc:
-            raise ValueError("Kafka message in not in valid JSON format") from exc
-
-        entity_uri = json_payload["entity"]["uri"]
-        values = [
-            json_payload["entity"]["values"].get(_.path) for _ in self._schema.paths
-        ]
-        return Entity(uri=entity_uri, values=values)
-
-    def get_xml_payload(self) -> Iterator[bytes]:
-        """generate xml file with kafka messages"""
-        yield '<?xml version="1.0" encoding="UTF-8"?>\n'.encode()
-        yield "<KafkaMessages>".encode()
-        for message in self.poll():
-            yield get_message_with_wrapper(message).encode()
-
-        yield "</KafkaMessages>".encode()
-
-    def __exit__(self, exc_type, exc_value, exc_tb):
-        # Exception handling here
-        self._consumer.close()
 
     def get_success_messages_count(self) -> int:
         """Return count of the successful messages"""
@@ -177,9 +119,13 @@ class KafkaConsumer:
 
         if msg is None:
             self._log.info("get_first_message: Messages are empty")
+        elif msg.error():
+            self._log.error(f"Consumer poll Error:{msg.error()}")
+            raise KafkaException(msg.error())
         else:
             self._first_message = KafkaMessage(
                 key=msg.key().decode("utf-8") if msg.key() else "",
+                headers=msg.headers(),
                 value=msg.value().decode("utf-8"),
             )
         return self._first_message
@@ -198,6 +144,7 @@ class KafkaConsumer:
             self._no_of_success_messages += 1
             kafka_message = KafkaMessage(
                 key=msg.key().decode("utf-8") if msg.key() else "",
+                headers=msg.headers(),
                 value=msg.value().decode("utf-8"),
             )
             if not self._first_message:
@@ -215,150 +162,6 @@ class KafkaConsumer:
     def close(self):
         """Closes the consumer once all messages were received."""
         self._consumer.close()
-
-
-class KafkaXMLHandler(ContentHandler):
-    """Custom Callback Kafka XML content handler"""
-
-    def __init__(
-        self, kafka_producer: KafkaProducer, context: ExecutionContext, plugin_logger
-    ):
-        super().__init__()
-        self._level: int = 0
-        self._no_of_children: int = 0
-        self._kafka_producer = kafka_producer
-        self._context: ExecutionContext = context
-        self._log: PluginLogger = plugin_logger
-        self._message: KafkaMessage = KafkaMessage()
-
-    @staticmethod
-    def attrs_s(attrs):
-        """This generates the XML attributes from an element attribute list"""
-        attribute_list = [""]
-        for item in attrs.items():
-            attribute_list.append(f'{item[0]}="{escape(item[1])}"')
-
-        return " ".join(attribute_list)
-
-    @staticmethod
-    def get_key(attrs):
-        """get message key attribute from element attributes list"""
-        for item in attrs.items():
-            if item[0] == "key":
-                return escape(item[1])
-        return None
-
-    def startElement(self, name, attrs):
-        """Call when an element starts"""
-        self._level += 1
-
-        if name == "Message" and self._level == 2:
-            self.rest_for_next_message(attrs)
-        else:
-            open_tag = f"<{name}{self.attrs_s(attrs)}>"
-            self._message.value += open_tag
-
-        # Number of child for Message tag
-        if self._level == 3:
-            self._no_of_children += 1
-
-    def endElement(self, name):
-        """Call when an elements end"""
-
-        if name == "Message" and self._level == 2:
-            # If number of children are more than 1,
-            # We can not construct proper kafka xml message.
-            # So, log the error message
-            if self._no_of_children == 1:
-                # Remove newline and white space between open and close tag
-                final_message = re.sub(r">[ \n]+<", "><", self._message.value)
-                # Remove new and white space at the end of the xml
-                self._message.value = re.sub(r"[\n ]+$", "", final_message)
-
-                self._kafka_producer.process(self._message)
-                if self._kafka_producer.get_success_messages_count() % 10 == 0:
-                    self._kafka_producer.poll(0)
-                    self.update_report()
-            else:
-                self._log.error(
-                    "Not able to process this message. "
-                    "Reason: Identified more than one children."
-                )
-
-        else:
-            end_tag = f"</{name}>"
-            self._message.value += end_tag
-        self._level -= 1
-
-    def characters(self, content: str):
-        """Call when a character is read"""
-        self._message.value += content
-
-    def endDocument(self):
-        """End of the file"""
-        self._kafka_producer.flush()
-
-    def rest_for_next_message(self, attrs):
-        """To reset _message"""
-        value = '<?xml version="1.0" encoding="UTF-8"?>'
-        key = self.get_key(attrs)
-        self._message = KafkaMessage(key, value)
-        self._no_of_children = 0
-
-    def update_report(self):
-        """Update the plugin report with current status"""
-        self._context.report.update(
-            ExecutionReport(
-                entity_count=self._kafka_producer.get_success_messages_count(),
-                operation="wait",
-                operation_desc="messages sent",
-            )
-        )
-
-
-class KafkaEntitiesHandler:
-    """Custom Callback Kafka XML content handler"""
-
-    def __init__(
-        self, kafka_producer: KafkaProducer, context: ExecutionContext, plugin_logger
-    ):
-        self._kafka_producer = kafka_producer
-        self._context: ExecutionContext = context
-        self._log: PluginLogger = plugin_logger
-
-    def process(self, entities: Entities):
-        """Process entities"""
-        for message_dict in self.get_dict(entities):
-            kafka_payload = json.dumps(message_dict, indent=4)
-            self._kafka_producer.process(KafkaMessage(key=None, value=kafka_payload))
-            if self._kafka_producer.get_success_messages_count() % 10 == 0:
-                self._kafka_producer.poll(0)
-                self.update_report()
-        self._kafka_producer.flush()
-
-    def update_report(self):
-        """Update the plugin report with current status"""
-        self._context.report.update(
-            ExecutionReport(
-                entity_count=self._kafka_producer.get_success_messages_count(),
-                operation="wait",
-                operation_desc="messages sent",
-            )
-        )
-
-    def get_dict(self, entities: Entities) -> Iterator[Dict[str, str]]:
-        """get dict from entities"""
-        self._log.info("Generate dict from entities")
-
-        paths = entities.schema.paths
-        type_uri = entities.schema.type_uri
-        result: dict[str, Any] = {"schema": {"type_uri": type_uri}}
-        for entity in entities.entities:
-            values: dict[str, Sequence[str]] = {}
-            for i, path in enumerate(paths):
-                values[path.path] = list(entity.values[i])
-            result["entity"] = {"uri": entity.uri, "values": values}
-            yield result
 
 
 def get_default_client_id(project_id: str, task_id: str):
@@ -390,15 +193,21 @@ def validate_kafka_config(config: Dict[str, Any], topic: str, log: PluginLogger)
 
 def get_resource_from_dataset(dataset_id: str, context: UserContext):
     """Get resource from dataset"""
-    setup_cmempy_user_access(context=context)
     project_id, task_id = split_task_id(dataset_id)
-    task_meta_data = get_task(project=project_id, task=task_id)
+    task_meta_data = get_task_metadata(project_id, task_id, context)
     resource_name = str(task_meta_data["data"]["parameters"]["file"]["value"])
 
-    return get_resource_response(project_id, resource_name)
+    return get_resource_response(project_id, resource_name), task_meta_data
 
 
-def get_message_with_wrapper(message: KafkaMessage) -> str:
+def get_task_metadata(project: str, task: str, context: UserContext):
+    """get metadata information of a task"""
+    setup_cmempy_user_access(context=context)
+    task_meta_data = get_task(project=project, task=task)
+    return task_meta_data
+
+
+def get_message_with_xml_wrapper(message: KafkaMessage) -> str:
     """Wrap kafka message around Message tags"""
     is_xml(message.value)
     # strip xml metadata
@@ -408,6 +217,28 @@ def get_message_with_wrapper(message: KafkaMessage) -> str:
     msg_with_wrapper += re.sub(regex_pattern, "", message.value)
     msg_with_wrapper += "</Message>\n"
     return msg_with_wrapper
+
+
+class BytesEncoder(json.JSONEncoder):
+    """JSON Bytes Encoder"""
+
+    def default(self, o):
+        if isinstance(o, bytes):
+            return o.decode("utf-8")
+        return json.JSONEncoder.default(self, o)
+
+
+def get_message_with_json_wrapper(message: KafkaMessage) -> str:
+    """Wrap kafka message around Message tags"""
+
+    msg_with_wrapper = {
+        "message": {"key": message.key, "content": json.loads(message.value)}
+    }
+    if message.headers:
+        msg_with_wrapper["message"]["headers"] = {
+            header[0]: header[1] for header in message.headers
+        }
+    return json.dumps(msg_with_wrapper, cls=BytesEncoder)
 
 
 def get_kafka_statistics(json_data: str) -> dict:
@@ -435,4 +266,69 @@ def is_xml(value: str):
     try:
         ElementTree.fromstring(value)
     except ElementTree.ParseError as exc:
-        raise ValueError("Kafka message is not in Valid XML format") from exc
+        raise ValueError(f"Kafka message({value}) is not in Valid XML format") from exc
+
+
+def is_json(value: str):
+    """Check value is json string or not"""
+    try:
+        json.loads(value)
+    except json.decoder.JSONDecodeError:
+        return False
+    return True
+
+
+class DatasetParameterType(StringParameterType):
+    """Dataset parameter type."""
+
+    allow_only_autocompleted_values: bool = True
+
+    autocomplete_value_with_labels: bool = True
+
+    dataset_type: Optional[str] = None
+
+    def __init__(self, dataset_type: str = ""):
+        """Dataset parameter type."""
+        self.dataset_type = dataset_type
+
+    def label(
+        self, value: str, depend_on_parameter_values: list[Any], context: PluginContext
+    ) -> Optional[str]:
+        """Returns the label for the given dataset."""
+        setup_cmempy_user_access(context.user)
+        task_label = str(
+            get_task(project=context.project_id, task=value)["metadata"]["label"]
+        )
+        return f"{task_label}"
+
+    def autocomplete(
+        self,
+        query_terms: list[str],
+        depend_on_parameter_values: list[Any],
+        context: PluginContext,
+    ) -> list[Autocompletion]:
+        setup_cmempy_user_access(context.user)
+        datasets = list_items(item_type="dataset", project=context.project_id)[
+            "results"
+        ]
+
+        result = []
+        dataset_types = []
+        if self.dataset_type:
+            dataset_types = self.dataset_type.split(",")
+
+        for _ in datasets:
+            identifier = _["id"]
+            title = _["label"]
+            label = f"{title} ({identifier})"
+            if dataset_types and _["pluginId"] not in dataset_types:
+                # Ignore datasets of other types
+                continue
+            for term in query_terms:
+                if term.lower() in label.lower():
+                    result.append(Autocompletion(value=identifier, label=label))
+            if len(query_terms) == 0:
+                # add any dataset to list if no search terms are given
+                result.append(Autocompletion(value=identifier, label=label))
+        result.sort(key=lambda x: x.label)  # type: ignore
+        return list(set(result))

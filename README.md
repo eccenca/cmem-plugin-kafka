@@ -57,3 +57,30 @@ export LIBRARY_PATH=/opt/homebrew/lib
   * `pip install https://files.pythonhosted.org/packages/fb/16/d04dded73439266a3dbcd585f1128483dcf509e039bacd93642ac5de97d4/confluent-kafka-1.8.2.tar.gz`
 * then try `poetry install`
 
+### Kafka CLI Utility
+
+kcat (formerly kafkacat) is a command-line utility that you can use to test and debug Apache Kafka® deployments. 
+kcat is an open-source utility, available at https://github.com/edenhill/kcat. 
+
+#### To send messages
+
+```commandline
+docker run -it --rm \
+        edenhill/kcat \
+                -b kafka-broker:9092 \
+                -t test \
+                -K: \
+                -P 
+```
+
+#### To consume messages
+
+```commandline
+ocker run -it --rm \
+        edenhill/kcat \
+           -b kafka-broker:9092 \
+           -C \
+           -f '\nKey (%K bytes): %k\t\nValue (%S bytes): %s\n\Partition: %p\tOffset: %o\n--\n' \
+           -t test
+```
+
