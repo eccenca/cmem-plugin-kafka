@@ -20,7 +20,7 @@ homepage = "https://github.com/eccenca/cmem-plugin-kafka"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-cmem-plugin-base = "^3.0.0"
+cmem-plugin-base = "^3.1.0"
 confluent-kafka = [
     { version = "1.9.2" },
     # before you publish, comment out this next line
@@ -31,14 +31,14 @@ json-stream = "2.3.0"
 
 [tool.poetry.group.dev.dependencies]
 bandit = "^1.7.5"
-black = "^23.1.0"
-coverage = "^7.2.1"
+black = "^23.3.0"
+coverage = "^7.2.3"
 defusedxml = "^0.7.1"
 flake8-formatter-junit-xml = "^0.0.6"
 genbadge = "^1.1.0"
-mypy = "^1.1.1"
+mypy = "^1.2.0"
 pylint-junit = "^0.3.2"
-pytest = "^7.2.2"
+pytest = "^7.3.1"
 pytest-cov = "^4.0.0"
 pytest-memray = "^1.4.0"
 safety = "^1.10.3"
