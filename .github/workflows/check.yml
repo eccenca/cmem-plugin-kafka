@@ -63,6 +63,11 @@ jobs:
       - name: pylint
         run: |
           task check:pylint
+          
+      - name: kafka-check
+        run: |
+          ps aux | grep kafka
+          netstat -an | grep 9092
 
       - name: pytest
         env:
