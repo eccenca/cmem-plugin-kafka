@@ -44,7 +44,7 @@ jobs:
 
       - name: run kafka docker container
         id: kafka-docker-container
-        uses: isbang/compose-action@v1.1.0
+        uses: isbang/compose-action@v1.4.1
         with:
           compose-file: "./docker/docker-compose.yml"
 
@@ -67,7 +67,7 @@ jobs:
       - name: kafka-check
         run: |
           ps aux | grep kafka
-          netstat -an | grep 9092
+          lsof -i -P -n | grep 9092
 
       - name: pytest
         env:
