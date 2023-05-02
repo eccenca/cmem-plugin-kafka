@@ -67,7 +67,7 @@ jobs:
       - name: kafka-check
         run: |
           ps aux | grep kafka
-          lsof -i -P -n | grep 9092
+          lsof -i -P -n
 
       - name: pytest
         env:
