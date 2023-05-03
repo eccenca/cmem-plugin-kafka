@@ -236,7 +236,7 @@ def test_perf_kafka_producer_consumer_with_json_dataset(json_dataset_project, to
         kafka_topic=topic,
         client_id="",
     ).execute([], TestExecutionContext(project_id=json_dataset_project))
-
+    setup_cmempy_user_access(context=TestUserContext())
     # Consumer
     KafkaConsumerPlugin(
         message_dataset=consumer_dataset,
