@@ -20,7 +20,7 @@ from cmem_plugin_kafka.constants import (
     SASL_PASSWORD_DESCRIPTION,
     CLIENT_ID_DESCRIPTION,
     XML_SAMPLE,
-    JSON_SAMPLE,
+    JSON_SAMPLE, COMPRESSION_TYPES,
 )
 from cmem_plugin_kafka.kafka_handlers import (
     KafkaJSONDataHandler,
@@ -131,6 +131,14 @@ on configuration.
             default_value="",
             description=CLIENT_ID_DESCRIPTION,
         ),
+        PluginParameter(
+            name="compression_type",
+            label="Compression Type",
+            advanced=True,
+            param_type=ChoiceParameterType(COMPRESSION_TYPES),
+            default_value="none",
+            description=CLIENT_ID_DESCRIPTION,
+        ),
     ],
 )
 # pylint: disable-msg=too-many-instance-attributes
@@ -147,6 +155,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
         sasl_password: str,
         kafka_topic: str,
         client_id: str = "",
+        compression_type: str = "none"
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError("Specified server id is invalid")
@@ -158,6 +167,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
         self.sasl_password = sasl_password
         self.kafka_topic = kafka_topic
         self.client_id = client_id
+        self.compression_type = compression_type
         self._kafka_stats: dict = {}
 
     def metrics_callback(self, json: str):
@@ -181,6 +191,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
             if self.client_id
             else get_default_client_id(project_id=project_id, task_id=task_id),
             "statistics.interval.ms": "1000",
+            "compression.type": self.compression_type,
             "stats_cb": self.metrics_callback,
             "error_cb": self.error_callback,
         }

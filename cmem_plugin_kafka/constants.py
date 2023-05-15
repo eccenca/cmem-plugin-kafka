@@ -15,6 +15,17 @@ SASL_MECHANISMS = collections.OrderedDict(
     {"PLAIN": "Authentication based on username and passwords (PLAIN)"}
 )
 
+#Compression Types
+COMPRESSION_TYPES = collections.OrderedDict(
+    {
+        "none": "none",
+        "gzip": "gzip",
+        "snappy": "snappy",
+        "lz4": "lz4",
+        "zstd": "zstd"
+    }
+)
+
 # Auto Offset Resets
 AUTO_OFFSET_RESET = collections.OrderedDict(
     {
