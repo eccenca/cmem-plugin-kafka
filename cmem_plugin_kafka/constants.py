@@ -15,7 +15,7 @@ SASL_MECHANISMS = collections.OrderedDict(
     {"PLAIN": "Authentication based on username and passwords (PLAIN)"}
 )
 
-#Compression Types
+# Compression Types
 COMPRESSION_TYPES = collections.OrderedDict(
     {
         "none": "none",
