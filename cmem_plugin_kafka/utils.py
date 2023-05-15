@@ -182,11 +182,31 @@ class KafkaConsumer:
                 raise KafkaException(msg.error())
 
             self._no_of_success_messages += 1
+            headers = dict(msg.headers()) if msg.headers() else {}
+            if headers and 'compression.type' in headers:
+                compression_type = headers['compression.type']
+                if compression_type == b'gzip':
+                    decompressed_message = gzip.decompress(msg.value())
+                elif compression_type == b'snappy':
+                    decompressed_message = snappy.decompress(msg.value())
+                elif compression_type == b'zstd':
+                    decompressor = zstandard.ZstdDecompressor()
+                    decompressed_message = decompressor.decompress(msg.value())
+                elif compression_type == b'lz4':
+                    decompressed_message = lz4frame.decompress(msg.value())
+                else:
+                    raise ValueError(
+                        f'Unsupported compression codec: {compression_type}'
+                    )
+            else:
+                decompressed_message = msg.value()
+
             kafka_message = KafkaMessage(
                 key=msg.key().decode("utf-8") if msg.key() else "",
                 headers=msg.headers(),
-                value=msg.value().decode("utf-8"),
+                value=decompressed_message.decode("utf-8"),
             )
+
             if not self._first_message:
                 self._first_message = kafka_message
             if not self._no_of_success_messages % 10:
