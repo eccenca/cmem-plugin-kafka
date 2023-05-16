@@ -20,7 +20,7 @@ from cmem_plugin_kafka.constants import (
     SASL_PASSWORD_DESCRIPTION,
     CLIENT_ID_DESCRIPTION,
     XML_SAMPLE,
-    JSON_SAMPLE, COMPRESSION_TYPES,
+    JSON_SAMPLE, COMPRESSION_TYPES, COMPRESSION_TYPE_DESCRIPTION,
 )
 from cmem_plugin_kafka.kafka_handlers import (
     KafkaJSONDataHandler,
@@ -137,7 +137,7 @@ on configuration.
             advanced=True,
             param_type=ChoiceParameterType(COMPRESSION_TYPES),
             default_value="none",
-            description=CLIENT_ID_DESCRIPTION,
+            description=COMPRESSION_TYPE_DESCRIPTION,
         ),
     ],
 )
