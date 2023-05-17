@@ -8,7 +8,8 @@ from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.types import IntParameterType
-from cmem_plugin_base.dataintegration.utils import write_to_dataset
+from cmem_plugin_base.dataintegration.utils import write_to_dataset, \
+    setup_cmempy_user_access
 from confluent_kafka import KafkaError
 
 from cmem_plugin_kafka.constants import (
@@ -260,7 +261,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             return KafkaEntitiesDataHandler(
                 context=context, plugin_logger=self.log, kafka_consumer=kafka_consumer
             ).consume_messages()
-
+        setup_cmempy_user_access(context=context.user)
         task_meta_data = get_task(
             project=context.task.project_id(), task=self.message_dataset
         )
