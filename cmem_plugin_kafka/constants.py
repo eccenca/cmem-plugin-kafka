@@ -18,11 +18,11 @@ SASL_MECHANISMS = collections.OrderedDict(
 # Compression Types
 COMPRESSION_TYPES = collections.OrderedDict(
     {
-        "none": "none",
+        "none": "None",
         "gzip": "gzip",
-        "snappy": "snappy",
-        "lz4": "lz4",
-        "zstd": "zstd"
+        "snappy": "Snappy",
+        "lz4": "LZ4",
+        "zstd": "Zstandard"
     }
 )
 
