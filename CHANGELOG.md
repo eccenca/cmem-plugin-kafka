@@ -13,6 +13,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - `Local Consumer Queue Size` parameter to limit local consumer queue size
 - Consume input entities in KafkaProducerPlugin to generate messages
 - Generate output entities in KafkaConsumerPlugin from messages
+- Consume JSON dataset in KafkaProducerPlugin to generate messages
+- Generate JSON dataset in KafkaConsumerPlugin from messages
+- `Compression Type` parameter has added to support standard compression
 
 ### Changed
 

@@ -137,6 +137,50 @@ def test_execution_kafka_producer_consumer_with_xml_dataset(project, topic):
 
 @needs_cmem
 @needs_kafka
+@pytest.mark.parametrize("compression_type", ["gzip", "snappy", "lz4", "zstd"])
+def test_validate_compression(project, topic, compression_type):
+    # Producer
+    KafkaProducerPlugin(
+        message_dataset=PRODUCER_DATASET_ID,
+        bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
+        security_protocol=KAFKA_CONFIG["security_protocol"],
+        sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
+        sasl_username=KAFKA_CONFIG["sasl_username"],
+        sasl_password=KAFKA_CONFIG["sasl_password"],
+        kafka_topic=topic,
+        compression_type=compression_type
+    ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
+
+    # Consumer
+    KafkaConsumerPlugin(
+        message_dataset=CONSUMER_DATASET_ID,
+        bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
+        security_protocol=KAFKA_CONFIG["security_protocol"],
+        sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
+        sasl_username=KAFKA_CONFIG["sasl_username"],
+        sasl_password=KAFKA_CONFIG["sasl_password"],
+        kafka_topic=topic,
+        group_id=DEFAULT_GROUP,
+        auto_offset_reset="earliest",
+    ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
+
+    # Ensure producer and consumer are working properly
+    resource, _ = get_resource_from_dataset(
+        dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}", context=TestUserContext()
+    )
+
+    with open("tests/sample-test.xml", "r") as file:
+        data = file.read().rstrip()
+        data_dict = xmltodict.parse(data)
+        messages = data_dict["KafkaMessages"]["Message"]
+        for message in messages:
+            if "@key" not in message:
+                message["@key"] = ""
+        assert xmltodict.parse(resource.text) == data_dict
+
+
+@needs_cmem
+@needs_kafka
 def test_execution_kafka_producer_consumer_with_entities(project, topic):
     """Test plugin execution for Plain Kafka"""
     entities = RandomValues(random_function="token_urlsafe").execute(

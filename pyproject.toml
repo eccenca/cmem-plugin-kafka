@@ -28,6 +28,9 @@ confluent-kafka = [
 ]
 defusedxml = "^0.7.1"
 json-stream = "2.3.0"
+python-snappy = "^0.6.1"
+zstandard = "^0.21.0"
+lz4 = "^4.3.2"
 
 [tool.poetry.group.dev.dependencies]
 bandit = "^1.7.5"

@@ -1,9 +1,12 @@
 """Kafka utils modules"""
+import gzip
 import json
 import re
 from typing import Dict, Any, Iterator, Optional
 from urllib.parse import urlparse
 
+import lz4.frame as lz4frame
+import zstandard
 from cmem.cmempy.config import get_cmem_base_uri
 from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
 from cmem.cmempy.workspace.search import list_items
@@ -23,6 +26,7 @@ from cmem_plugin_base.dataintegration.utils import (
 from confluent_kafka import Producer, Consumer, KafkaException, KafkaError
 from confluent_kafka.admin import AdminClient, TopicMetadata, ClusterMetadata
 from defusedxml import ElementTree
+from snappy import snappy
 
 from cmem_plugin_kafka.constants import KAFKA_TIMEOUT
 
@@ -58,13 +62,49 @@ class KafkaProducer:
         self._producer = Producer(config)
         self._topic = topic
         self._no_of_success_messages: int = 0
+        self.compression_type = config.get("compression.type", 'none')
 
     def process(self, message: KafkaMessage):
         """Produce message to topic."""
         self._no_of_success_messages += 1
+        headers = message.headers if message.headers else {}
+        if self.compression_type != 'none' :
+            headers['compression.type'] = self.compression_type
         self._producer.produce(
-            self._topic, value=message.value, key=message.key, headers=message.headers
+            self._topic,
+            value=self.compress(message.value),
+            key=message.key,
+            headers=headers
         )
+
+    def compress(self, value: str):
+        """
+        Compresses the given value based on the configured compression type.
+
+        Args:
+            value (bytes): The value to compress.
+
+        Returns:
+            bytes: The compressed value.
+
+        Raises:
+            ValueError: If an unsupported compression type is provided.
+        """
+        _ = value.encode('utf-8')
+        if self.compression_type == 'none':
+            return _
+        if self.compression_type == 'gzip':
+            return gzip.compress(_)
+        if self.compression_type == 'snappy':
+            return snappy.compress(_)
+        if self.compression_type == 'zstd':
+            compressor = zstandard.ZstdCompressor(level=3)
+            compressed_data = compressor.compress(_)
+            return compressed_data
+        if self.compression_type == 'lz4':
+            compressed_data = lz4frame.compress(_)
+            return compressed_data
+        raise ValueError(f'Unsupported compression type: {self.compression_type}')
 
     def poll(self, timeout):
         """Polls the producer for events and calls the corresponding callbacks"""
@@ -142,11 +182,31 @@ class KafkaConsumer:
                 raise KafkaException(msg.error())
 
             self._no_of_success_messages += 1
+            headers = dict(msg.headers()) if msg.headers() else {}
+            if headers and 'compression.type' in headers:
+                compression_type = headers['compression.type']
+                if compression_type == b'gzip':
+                    decompressed_message = gzip.decompress(msg.value())
+                elif compression_type == b'snappy':
+                    decompressed_message = snappy.decompress(msg.value())
+                elif compression_type == b'zstd':
+                    decompressor = zstandard.ZstdDecompressor()
+                    decompressed_message = decompressor.decompress(msg.value())
+                elif compression_type == b'lz4':
+                    decompressed_message = lz4frame.decompress(msg.value())
+                else:
+                    raise ValueError(
+                        f'Unsupported compression codec: {compression_type}'
+                    )
+            else:
+                decompressed_message = msg.value()
+
             kafka_message = KafkaMessage(
                 key=msg.key().decode("utf-8") if msg.key() else "",
                 headers=msg.headers(),
-                value=msg.value().decode("utf-8"),
+                value=decompressed_message.decode("utf-8"),
             )
+
             if not self._first_message:
                 self._first_message = kafka_message
             if not self._no_of_success_messages % 10:
