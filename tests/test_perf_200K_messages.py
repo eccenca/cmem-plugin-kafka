@@ -164,6 +164,7 @@ def test_perf_kafka_producer_consumer_xml_dataset(xml_dataset_project, topic):
         kafka_topic=topic,
         group_id=DEFAULT_GROUP,
         auto_offset_reset=DEFAULT_RESET,
+        message_limit=-1,
     ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
 
     # Ensure producer and consumer are working properly
@@ -206,6 +207,7 @@ def test_perf_kafka_producer_consumer_with_entities(entities_project, topic):
         kafka_topic=topic,
         group_id=DEFAULT_GROUP,
         auto_offset_reset="earliest",
+        message_limit=-1,
     ).execute([], TestExecutionContext(project_id=entities_project))
 
     assert consumer_entities.schema.type_uri == entities.schema.type_uri
@@ -248,6 +250,7 @@ def test_perf_kafka_producer_consumer_with_json_dataset(json_dataset_project, to
         kafka_topic=topic,
         group_id=DEFAULT_GROUP,
         auto_offset_reset=DEFAULT_RESET,
+        message_limit=-1,
     ).execute([], TestExecutionContext(project_id=json_dataset_project))
 
     # Ensure producer and consumer are working properly
