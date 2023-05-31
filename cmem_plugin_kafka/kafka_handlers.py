@@ -69,9 +69,11 @@ class KafkaDataHandler:
         :type data: any
         """
         messages = self._split_data(data)
+        count = 0
         for message in messages:
             self._kafka_producer.process(message)
-            if self._kafka_producer.get_success_messages_count() % 10 == 0:
+            count += 1
+            if count % 10 == 0:
                 self._kafka_producer.poll(0)
                 self.update_report()
         self._kafka_producer.flush()
