@@ -21,8 +21,8 @@ from cmem_plugin_kafka.constants import (
     SASL_PASSWORD_DESCRIPTION,
     CLIENT_ID_DESCRIPTION,
     XML_SAMPLE,
-    JSON_SAMPLE, COMPRESSION_TYPES, COMPRESSION_TYPE_DESCRIPTION, MESSAGE_MAX_SIZE,
-)
+    JSON_SAMPLE, COMPRESSION_TYPES, COMPRESSION_TYPE_DESCRIPTION,
+    MESSAGE_MAX_SIZE_DESCRIPTION, )
 from cmem_plugin_kafka.kafka_handlers import (
     KafkaJSONDataHandler,
     KafkaXMLDataHandler,
@@ -138,7 +138,7 @@ on configuration.
             advanced=True,
             param_type=IntParameterType(),
             default_value="1048576",
-            description=MESSAGE_MAX_SIZE,
+            description=MESSAGE_MAX_SIZE_DESCRIPTION,
         ),
         PluginParameter(
             name="compression_type",
