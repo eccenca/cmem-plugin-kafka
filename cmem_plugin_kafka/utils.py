@@ -66,14 +66,20 @@ class KafkaProducer:
 
     def process(self, message: KafkaMessage):
         """Produce message to topic."""
-        self._no_of_success_messages += 1
+        # self._no_of_success_messages += 1
         headers = message.headers if message.headers else {}
         self._producer.produce(
             self._topic,
             value=message.value.encode('utf-8'),
             key=message.key,
-            headers=headers
+            headers=headers,
+            on_delivery=self.on_delivery
         )
+
+    def on_delivery(self, err, msg):
+        if err:
+            raise KafkaException(err)
+        self._no_of_success_messages += 1
 
     def poll(self, timeout):
         """Polls the producer for events and calls the corresponding callbacks"""
