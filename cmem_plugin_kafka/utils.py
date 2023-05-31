@@ -112,6 +112,7 @@ class KafkaConsumer:
         self._log = log
         self._no_of_success_messages = 0
         self._first_message: Optional[KafkaMessage] = None
+        self.fetch_limit = -1
 
     def get_success_messages_count(self) -> int:
         """Return count of the successful messages"""
@@ -148,6 +149,10 @@ class KafkaConsumer:
     def poll(self) -> Iterator[KafkaMessage]:
         """Polls the consumer for events and calls the corresponding callbacks"""
         while True:
+            if 0 <= self.fetch_limit == self._no_of_success_messages:
+                self._log.info("Message fetch fetch_limit reached")
+                break
+
             msg = self._consumer.poll(timeout=KAFKA_TIMEOUT)
             if msg is None:
                 self._log.info("Messages are empty")

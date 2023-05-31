@@ -23,7 +23,7 @@ from cmem_plugin_kafka.constants import (
     CLIENT_ID_DESCRIPTION,
     LOCAL_CONSUMER_QUEUE_MAX_SIZE_DESCRIPTION,
     XML_SAMPLE,
-    JSON_SAMPLE,
+    JSON_SAMPLE, MESSAGE_LIMIT_DESCRIPTION,
 )
 from cmem_plugin_kafka.utils import (
     KafkaConsumer,
@@ -164,6 +164,14 @@ A sample response from the consumer will appear as follows.
             default_value=5000,
             description=LOCAL_CONSUMER_QUEUE_MAX_SIZE_DESCRIPTION,
         ),
+        PluginParameter(
+            name="message_limit",
+            label="Message Limit",
+            advanced=True,
+            param_type=IntParameterType(),
+            default_value=100000,
+            description=MESSAGE_LIMIT_DESCRIPTION,
+        ),
     ],
 )
 class KafkaConsumerPlugin(WorkflowPlugin):
@@ -183,6 +191,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         group_id: str = "",
         client_id: str = "",
         local_consumer_queue_size: int = 5000,
+        message_limit: int = 100000
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError("Specified server id is invalid")
@@ -197,6 +206,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.auto_offset_reset = auto_offset_reset
         self.client_id = client_id
         self.local_consumer_queue_size = local_consumer_queue_size
+        self.message_limit = int(message_limit)
         self._kafka_stats: dict = {}
 
     def metrics_callback(self, json: str):
@@ -256,6 +266,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             log=self.log,
             context=context,
         )
+        kafka_consumer.fetch_limit = self.message_limit
         kafka_consumer.subscribe()
         if not self.message_dataset:
             return KafkaEntitiesDataHandler(

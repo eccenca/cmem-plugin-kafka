@@ -96,6 +96,10 @@ a specific partition. The consumer will stop fetching from the partition
 if it hits this limit. This helps prevent consumers from running out of memory.
 """
 
+MESSAGE_LIMIT_DESCRIPTION = """
+The maximum number of messages to fetch and process in each run.
+"""
+
 XML_SAMPLE = """
 ```xml
     <?xml version="1.0" encoding="utf-8"?>
