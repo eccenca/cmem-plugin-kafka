@@ -98,6 +98,14 @@ if it hits this limit. This helps prevent consumers from running out of memory.
 
 MESSAGE_LIMIT_DESCRIPTION = """
 The maximum number of messages to fetch and process in each run.
+If 0 or less, all messages will be fetched.
+"""
+
+ENABLE_AUTO_COMMIT_DESCRIPTION = """
+Automatically and periodically commit offsets in the background.
+
+Note: setting this to false does not prevent the consumer from fetching
+previously committed start offsets.
 """
 
 XML_SAMPLE = """
