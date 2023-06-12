@@ -7,7 +7,7 @@ from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
-from cmem_plugin_base.dataintegration.types import IntParameterType
+from cmem_plugin_base.dataintegration.types import IntParameterType, BoolParameterType
 from cmem_plugin_base.dataintegration.utils import write_to_dataset, \
     setup_cmempy_user_access
 from confluent_kafka import KafkaError
@@ -23,7 +23,7 @@ from cmem_plugin_kafka.constants import (
     CLIENT_ID_DESCRIPTION,
     LOCAL_CONSUMER_QUEUE_MAX_SIZE_DESCRIPTION,
     XML_SAMPLE,
-    JSON_SAMPLE,
+    JSON_SAMPLE, MESSAGE_LIMIT_DESCRIPTION, ENABLE_AUTO_COMMIT_DESCRIPTION,
 )
 from cmem_plugin_kafka.utils import (
     KafkaConsumer,
@@ -164,6 +164,23 @@ A sample response from the consumer will appear as follows.
             default_value=5000,
             description=LOCAL_CONSUMER_QUEUE_MAX_SIZE_DESCRIPTION,
         ),
+        PluginParameter(
+            name="message_limit",
+            label="Message Limit",
+            advanced=True,
+            param_type=IntParameterType(),
+            default_value=100000,
+            description=MESSAGE_LIMIT_DESCRIPTION,
+        ),
+
+        PluginParameter(
+            name="enable_auto_commit",
+            label="Enable Auto Commit",
+            advanced=True,
+            param_type=BoolParameterType(),
+            default_value=True,
+            description=ENABLE_AUTO_COMMIT_DESCRIPTION,
+        ),
     ],
 )
 class KafkaConsumerPlugin(WorkflowPlugin):
@@ -183,6 +200,8 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         group_id: str = "",
         client_id: str = "",
         local_consumer_queue_size: int = 5000,
+        message_limit: int = 100000,
+        enable_auto_commit: bool = True
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError("Specified server id is invalid")
@@ -197,6 +216,8 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.auto_offset_reset = auto_offset_reset
         self.client_id = client_id
         self.local_consumer_queue_size = local_consumer_queue_size
+        self.message_limit = int(message_limit)
+        self.enable_auto_commit = bool(enable_auto_commit)
         self._kafka_stats: dict = {}
 
     def metrics_callback(self, json: str):
@@ -219,7 +240,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         config = {
             "bootstrap.servers": self.bootstrap_servers,
             "security.protocol": self.security_protocol,
-            "enable.auto.commit": True,
+            "enable.auto.commit": self.enable_auto_commit,
             "auto.offset.reset": self.auto_offset_reset,
             "group.id": self.group_id if self.group_id else default_client_id,
             "client.id": self.client_id if self.client_id else default_client_id,
@@ -256,6 +277,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             log=self.log,
             context=context,
         )
+        kafka_consumer.fetch_limit = self.message_limit
         kafka_consumer.subscribe()
         if not self.message_dataset:
             return KafkaEntitiesDataHandler(

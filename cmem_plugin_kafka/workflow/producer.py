@@ -9,6 +9,7 @@ from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
+from cmem_plugin_base.dataintegration.types import IntParameterType
 from confluent_kafka import KafkaError
 
 from cmem_plugin_kafka.constants import (
@@ -21,7 +22,7 @@ from cmem_plugin_kafka.constants import (
     CLIENT_ID_DESCRIPTION,
     XML_SAMPLE,
     JSON_SAMPLE, COMPRESSION_TYPES, COMPRESSION_TYPE_DESCRIPTION,
-)
+    MESSAGE_MAX_SIZE_DESCRIPTION, )
 from cmem_plugin_kafka.kafka_handlers import (
     KafkaJSONDataHandler,
     KafkaXMLDataHandler,
@@ -132,6 +133,14 @@ on configuration.
             description=CLIENT_ID_DESCRIPTION,
         ),
         PluginParameter(
+            name="message_max_bytes",
+            label="Maximum Message Size",
+            advanced=True,
+            param_type=IntParameterType(),
+            default_value="1048576",
+            description=MESSAGE_MAX_SIZE_DESCRIPTION,
+        ),
+        PluginParameter(
             name="compression_type",
             label="Compression Type",
             advanced=True,
@@ -155,6 +164,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
         sasl_password: str,
         kafka_topic: str,
         client_id: str = "",
+        message_max_bytes: str = "1048576",
         compression_type: str = "none"
     ) -> None:
         if not isinstance(bootstrap_servers, str):
@@ -167,6 +177,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
         self.sasl_password = sasl_password
         self.kafka_topic = kafka_topic
         self.client_id = client_id
+        self.message_max_bytes = message_max_bytes
         self.compression_type = compression_type
         self._kafka_stats: dict = {}
 
@@ -191,6 +202,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
             if self.client_id
             else get_default_client_id(project_id=project_id, task_id=task_id),
             "statistics.interval.ms": "1000",
+            "message.max.bytes": int(self.message_max_bytes),
             "compression.type": self.compression_type,
             "stats_cb": self.metrics_callback,
             "error_cb": self.error_callback,

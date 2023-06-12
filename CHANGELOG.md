@@ -16,6 +16,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - Consume JSON dataset in KafkaProducerPlugin to generate messages
 - Generate JSON dataset in KafkaConsumerPlugin from messages
 - `Compression Type` parameter has added to support standard compression
+- `message limit` parameter has been added to the advanced section of kafka consumer
+- `auto commit` parameter has been added to the advanced section of kafka consumer
 
 ### Changed
 
