@@ -27,7 +27,7 @@ confluent-kafka = [
     # { markers = "sys_platform == 'darwin'", url = "https://files.pythonhosted.org/packages/fb/16/d04dded73439266a3dbcd585f1128483dcf509e039bacd93642ac5de97d4/confluent-kafka-1.8.2.tar.gz"}
 ]
 defusedxml = "^0.7.1"
-json-stream = "2.3.0"
+json-stream = "2.3.1"
 
 [tool.poetry.group.dev.dependencies]
 bandit = "^1.7.5"
