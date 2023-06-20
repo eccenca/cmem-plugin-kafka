@@ -136,6 +136,8 @@ class KafkaDatasetHandler(KafkaDataHandler, ABC):
         return self.consume_messages()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if not exc_val:
+            self._kafka_consumer.commit()
         self._kafka_consumer.close()
 
 
@@ -397,6 +399,8 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
 
         for message in self._kafka_consumer.poll():
             yield self._get_entity(message)
+
+        self._kafka_consumer.commit()
 
     def _get_entity(self, message: KafkaMessage):
         try:

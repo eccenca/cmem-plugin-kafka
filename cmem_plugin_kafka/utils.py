@@ -102,11 +102,18 @@ class KafkaProducer:
 class KafkaConsumer:
     """Kafka consumer wrapper over confluent consumer"""
 
+    # pylint: disable=too-many-instance-attributes
     def __init__(
-        self, config: dict, topic: str, log: PluginLogger, context: ExecutionContext
+            self,
+            config: dict,
+            commit_offset: bool,
+            topic: str,
+            log: PluginLogger,
+            context: ExecutionContext
     ):
         """Create consumer instance"""
         self._consumer = Consumer(config)
+        self._commit_offset = commit_offset
         self._context = context
         self._topic = topic
         self._log = log
@@ -117,6 +124,11 @@ class KafkaConsumer:
     def get_success_messages_count(self) -> int:
         """Return count of the successful messages"""
         return self._no_of_success_messages
+
+    def commit(self):
+        """Commit the latest offset"""
+        if self._commit_offset:
+            self._consumer.commit()
 
     def subscribe(self):
         """Subscribes to a topic to consume messages"""
