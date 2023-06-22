@@ -2,11 +2,11 @@
 
 This eccenca Corporate Memory plugin allows for sending and receiving messages from Apache Kafka.
 
+[![eccenca Corporate Memory](https://img.shields.io/badge/eccenca-Corporate%20Memory-orange)](https://documentation.eccenca.com) [![workflow](https://github.com/eccenca/cmem-plugin-kafka/actions/workflows/check.yml/badge.svg)](https://github.com/eccenca/cmem-plugin-kafka/actions) [![pypi version](https://img.shields.io/pypi/v/cmem-plugin-kafka)](https://pypi.org/project/kafka) [![license](https://img.shields.io/pypi/l/kafka)](https://pypi.org/project/kafka)
+
 ## Installation
 
 `cmemc -c my-cmem admin workspace python install cmem-plugin-kafka`
-
-[![eccenca Corporate Memory](https://img.shields.io/badge/eccenca-Corporate%20Memory-orange)](https://documentation.eccenca.com)   
 
 ## Development
 
