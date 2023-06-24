@@ -216,6 +216,8 @@ def test_validate_message_limit_parameter(project, topic):
     assert len(data_dict["KafkaMessages"]["Message"]) == 2
 
 
+@needs_cmem
+@needs_kafka
 def test_validate_disable_commit_parameter(project, topic):
 
     # Producer
@@ -291,7 +293,7 @@ def test_validate_disable_commit_parameter(project, topic):
     data_dict = xmltodict.parse(resource.text)
     assert not data_dict["KafkaMessages"]
 
-    
+
 @needs_cmem
 @needs_kafka
 def test_execution_kafka_producer_consumer_with_entities(project, topic):
