@@ -216,6 +216,82 @@ def test_validate_message_limit_parameter(project, topic):
     assert len(data_dict["KafkaMessages"]["Message"]) == 2
 
 
+def test_validate_disable_commit_parameter(project, topic):
+
+    # Producer
+    KafkaProducerPlugin(
+        message_dataset=PRODUCER_DATASET_ID,
+        bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
+        security_protocol=KAFKA_CONFIG["security_protocol"],
+        sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
+        sasl_username=KAFKA_CONFIG["sasl_username"],
+        sasl_password=KAFKA_CONFIG["sasl_password"],
+        kafka_topic=topic,
+    ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
+
+    # Consumer
+    KafkaConsumerPlugin(
+        message_dataset=CONSUMER_DATASET_ID,
+        bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
+        security_protocol=KAFKA_CONFIG["security_protocol"],
+        sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
+        sasl_username=KAFKA_CONFIG["sasl_username"],
+        sasl_password=KAFKA_CONFIG["sasl_password"],
+        kafka_topic=topic,
+        group_id=DEFAULT_GROUP,
+        auto_offset_reset="earliest",
+        disable_commit=True,
+    ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
+
+    # Ensure producer and consumer are working properly
+    resource, _ = get_resource_from_dataset(
+        dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}", context=TestUserContext()
+    )
+    data_dict = xmltodict.parse(resource.text)
+    assert len(data_dict["KafkaMessages"]["Message"]) == 3
+
+    # Consumer
+    KafkaConsumerPlugin(
+        message_dataset=CONSUMER_DATASET_ID,
+        bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
+        security_protocol=KAFKA_CONFIG["security_protocol"],
+        sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
+        sasl_username=KAFKA_CONFIG["sasl_username"],
+        sasl_password=KAFKA_CONFIG["sasl_password"],
+        kafka_topic=topic,
+        group_id=DEFAULT_GROUP,
+        auto_offset_reset="earliest",
+        disable_commit=False,
+    ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
+
+    # Ensure producer and consumer are working properly
+    resource, _ = get_resource_from_dataset(
+        dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}", context=TestUserContext()
+    )
+    data_dict = xmltodict.parse(resource.text)
+    assert len(data_dict["KafkaMessages"]["Message"]) == 3
+    # Consumer
+    KafkaConsumerPlugin(
+        message_dataset=CONSUMER_DATASET_ID,
+        bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
+        security_protocol=KAFKA_CONFIG["security_protocol"],
+        sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
+        sasl_username=KAFKA_CONFIG["sasl_username"],
+        sasl_password=KAFKA_CONFIG["sasl_password"],
+        kafka_topic=topic,
+        group_id=DEFAULT_GROUP,
+        auto_offset_reset="earliest",
+        disable_commit=False,
+    ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
+
+    # Ensure producer and consumer are working properly
+    resource, _ = get_resource_from_dataset(
+        dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}", context=TestUserContext()
+    )
+    data_dict = xmltodict.parse(resource.text)
+    assert not data_dict["KafkaMessages"]
+
+    
 @needs_cmem
 @needs_kafka
 def test_execution_kafka_producer_consumer_with_entities(project, topic):
