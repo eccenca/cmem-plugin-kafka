@@ -2,9 +2,11 @@
 The `kafka_handlers` module provides a base class `KafkaDataHandler` for producing
 messages from data to/from a Kafka topic.
 """
+import hashlib
 import json
 import re
 from abc import ABC
+from datetime import datetime
 from typing import Any, Sequence, Optional
 from xml.sax.saxutils import escape  # nosec B406
 
@@ -347,6 +349,7 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
         plugin_logger.info("Initialize KafkaEntitiesDataHandler")
         super().__init__(context, plugin_logger, kafka_producer, kafka_consumer)
         self._schema: EntitySchema = None
+        self._plain_schema = False
 
     def _split_data(self, data: Entities):
         self._log.info("Generate dict from entities")
@@ -376,16 +379,31 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
         message = self._kafka_consumer.get_first_message()
         if not message:
             return None
-        json_payload = json.loads(message.value)
-        schema_paths = []
-        self._log.info(f'values : {json_payload["entity"]["values"]}')
-        for path in self._get_paths(json_payload["entity"]["values"]):
-            path_uri = f"{path}"
-            schema_paths.append(EntityPath(path=path_uri))
-        self._schema = EntitySchema(
-            type_uri=json_payload["schema"]["type_uri"],
-            paths=schema_paths,
-        )
+        try:
+            json_payload = json.loads(message.value)
+            schema_paths = []
+            self._log.info(f'values : {json_payload["entity"]["values"]}')
+            for path in self._get_paths(json_payload["entity"]["values"]):
+                path_uri = f"{path}"
+                schema_paths.append(EntityPath(path=path_uri))
+            self._schema = EntitySchema(
+                type_uri=json_payload["schema"]["type_uri"],
+                paths=schema_paths,
+            )
+        except (KeyError, json.decoder.JSONDecodeError, ) as exe:
+            self._log.info(f"Using plain entity due to exception: {exe}")
+            schema_paths = [
+                EntityPath(path='key'),
+                EntityPath(path='content'),
+                EntityPath(path='offset'),
+                EntityPath(path='ts'),
+                EntityPath(path='ts-consumption'),
+            ]
+            self._schema = EntitySchema(
+                type_uri="https://github.com/eccenca/cmem-plugin-kafka#PlainMessage",
+                paths=schema_paths,
+            )
+            self._plain_schema = True
         return self._schema
 
     def _get_paths(self, values: dict):
@@ -401,8 +419,23 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
             yield self._get_entity(message)
 
         self._kafka_consumer.commit()
+        self._kafka_consumer.close()
 
     def _get_entity(self, message: KafkaMessage):
+        if self._plain_schema:
+            sha256 = hashlib.sha256(
+                message.key.encode() if message.key else "".encode()
+            ).hexdigest()
+            entity_uri = f"urn:hash::sha256:{sha256}"
+            values = [
+                [message.key],
+                [message.value],
+                [f"{message.offset}"],
+                [f"{message.timestamp}"],
+                [f"{int(round(datetime.now().timestamp() * 1000))}"]
+            ]
+            return Entity(uri=entity_uri, values=values)
+
         try:
             json_payload = json.loads(message.value)
         except json.decoder.JSONDecodeError as exc:
