@@ -396,7 +396,7 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
                 EntityPath(path='key'),
                 EntityPath(path='content'),
                 EntityPath(path='offset'),
-                EntityPath(path='ts'),
+                EntityPath(path='ts-production'),
                 EntityPath(path='ts-consumption'),
             ]
             self._schema = EntitySchema(
