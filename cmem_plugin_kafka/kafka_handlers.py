@@ -349,7 +349,6 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
         plugin_logger.info("Initialize KafkaEntitiesDataHandler")
         super().__init__(context, plugin_logger, kafka_producer, kafka_consumer)
         self._schema: EntitySchema = None
-        self._plain_schema = False
 
     def _split_data(self, data: Entities):
         self._log.info("Generate dict from entities")
@@ -365,45 +364,23 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
             yield KafkaMessage(key=None, value=kafka_payload)
 
     def _aggregate_data(self):
-        try:
-            schema = self.get_schema()
-            if not schema:
-                return None
-            entities = self.get_entities()
-            return Entities(entities=entities, schema=schema)
-        except (KeyError, json.decoder.JSONDecodeError) as ex:
-            raise ValueError("Kafka Message is not in expected format") from ex
+        schema = self.get_schema()
+        entities = self.get_entities()
+        return Entities(entities=entities, schema=schema)
 
     def get_schema(self):
         """Return kafka message schema paths"""
-        message = self._kafka_consumer.get_first_message()
-        if not message:
-            return None
-        try:
-            json_payload = json.loads(message.value)
-            schema_paths = []
-            self._log.info(f'values : {json_payload["entity"]["values"]}')
-            for path in self._get_paths(json_payload["entity"]["values"]):
-                path_uri = f"{path}"
-                schema_paths.append(EntityPath(path=path_uri))
-            self._schema = EntitySchema(
-                type_uri=json_payload["schema"]["type_uri"],
-                paths=schema_paths,
-            )
-        except (KeyError, json.decoder.JSONDecodeError, ) as exe:
-            self._log.info(f"Using plain entity due to exception: {exe}")
-            schema_paths = [
-                EntityPath(path='key'),
-                EntityPath(path='content'),
-                EntityPath(path='offset'),
-                EntityPath(path='ts-production'),
-                EntityPath(path='ts-consumption'),
-            ]
-            self._schema = EntitySchema(
-                type_uri="https://github.com/eccenca/cmem-plugin-kafka#PlainMessage",
-                paths=schema_paths,
-            )
-            self._plain_schema = True
+        schema_paths = [
+            EntityPath(path='key'),
+            EntityPath(path='content'),
+            EntityPath(path='offset'),
+            EntityPath(path='ts-production'),
+            EntityPath(path='ts-consumption'),
+        ]
+        self._schema = EntitySchema(
+            type_uri="https://github.com/eccenca/cmem-plugin-kafka#PlainMessage",
+            paths=schema_paths,
+        )
         return self._schema
 
     def _get_paths(self, values: dict):
@@ -412,8 +389,6 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
 
     def get_entities(self):
         """Generate the entities from kafka messages"""
-        if self._kafka_consumer.get_first_message():
-            yield self._get_entity(self._kafka_consumer.get_first_message())
 
         for message in self._kafka_consumer.poll():
             yield self._get_entity(message)
@@ -421,28 +396,17 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
         self._kafka_consumer.commit()
         self._kafka_consumer.close()
 
-    def _get_entity(self, message: KafkaMessage):
-        if self._plain_schema:
-            sha256 = hashlib.sha256(
-                message.key.encode() if message.key else "".encode()
-            ).hexdigest()
-            entity_uri = f"urn:hash::sha256:{sha256}"
-            values = [
-                [message.key],
-                [message.value],
-                [f"{message.offset}"],
-                [f"{message.timestamp}"],
-                [f"{int(round(datetime.now().timestamp() * 1000))}"]
-            ]
-            return Entity(uri=entity_uri, values=values)
-
-        try:
-            json_payload = json.loads(message.value)
-        except json.decoder.JSONDecodeError as exc:
-            raise ValueError("Kafka message in not in valid JSON format") from exc
-
-        entity_uri = json_payload["entity"]["uri"]
+    @staticmethod
+    def _get_entity(message: KafkaMessage):
+        sha256 = hashlib.sha256(
+            message.key.encode() if message.key else "".encode()
+        ).hexdigest()
+        entity_uri = f"urn:hash::sha256:{sha256}"
         values = [
-            json_payload["entity"]["values"].get(_.path) for _ in self._schema.paths
+            [message.key],
+            [message.value],
+            [f"{message.offset}"],
+            [f"{message.timestamp}"],
+            [f"{int(round(datetime.now().timestamp() * 1000))}"]
         ]
         return Entity(uri=entity_uri, values=values)
