@@ -42,6 +42,10 @@ jobs:
           path: .venv
           key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
+      - name: Install dynamic versioning plugin
+        run: |
+          poetry self add "poetry-dynamic-versioning[plugin]"
+
       - name: run kafka docker container
         id: kafka-docker-container
         uses: isbang/compose-action@v1.1.0

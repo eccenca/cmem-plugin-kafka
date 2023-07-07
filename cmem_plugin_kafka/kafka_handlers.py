@@ -396,6 +396,12 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
         self._kafka_consumer.commit()
         self._kafka_consumer.close()
 
+    def _get_entity(self, message: KafkaMessage):
+        try:
+            json_payload = json.loads(message.value)
+        except json.decoder.JSONDecodeError as exc:
+            raise ValueError("Kafka message in not in valid JSON format") from exc
+
     @staticmethod
     def _get_entity(message: KafkaMessage):
         sha256 = hashlib.sha256(
