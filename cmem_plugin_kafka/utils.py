@@ -43,11 +43,18 @@ class KafkaMessage:
     """
 
     def __init__(
-        self, key: Optional[str] = None, headers: Optional[dict] = None, value: str = ""
+            self,
+            key: Optional[str] = None,
+            headers: Optional[dict] = None,
+            value: str = "",
+            offset: Optional[int] = None,
+            timestamp: Optional[int] = None
     ):
         self.value: str = value
         self.key: Optional[str] = key
         self.headers: Optional[dict] = headers
+        self.offset = offset
+        self.timestamp = timestamp
 
 
 class KafkaProducer:
@@ -155,6 +162,8 @@ class KafkaConsumer:
                 key=msg.key().decode("utf-8") if msg.key() else "",
                 headers=msg.headers(),
                 value=msg.value().decode("utf-8"),
+                offset=msg.offset(),
+                timestamp=msg.timestamp()[1],
             )
         return self._first_message
 
@@ -179,6 +188,8 @@ class KafkaConsumer:
                 key=msg.key().decode("utf-8") if msg.key() else "",
                 headers=msg.headers(),
                 value=msg.value().decode("utf-8"),
+                offset=msg.offset(),
+                timestamp=msg.timestamp()[1],
             )
 
             if not self._first_message:

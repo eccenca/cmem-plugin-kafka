@@ -26,7 +26,6 @@ from .utils import (
     XMLUtils,
     TestUserContext,
 )
-
 PROJECT_NAME = "kafka_performance_project"
 PRODUCER_DATASET_NAME = "sample-test"
 CONSUMER_DATASET_NAME = "sample-test-result"
@@ -210,11 +209,10 @@ def test_perf_kafka_producer_consumer_with_entities(entities_project, topic):
         message_limit=-1,
     ).execute([], TestExecutionContext(project_id=entities_project))
 
-    assert consumer_entities.schema.type_uri == entities.schema.type_uri
-    assert len(consumer_entities.schema.paths) == len(entities.schema.paths)
-    for index, path in enumerate(consumer_entities.schema.paths):
-        assert path.path == entities.schema.paths[index].path
     count = 0
+    assert consumer_entities.schema.type_uri == \
+           "https://github.com/eccenca/cmem-plugin-kafka#PlainMessage"
+    assert len(consumer_entities.schema.paths) == 5
     for _ in consumer_entities.entities:
         count += 1
 

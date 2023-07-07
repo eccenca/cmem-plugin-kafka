@@ -325,10 +325,9 @@ def test_execution_kafka_producer_consumer_with_entities(project, topic):
         auto_offset_reset="earliest",
     ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
     count = 0
-    assert consumer_entities.schema.type_uri == entities.schema.type_uri
-    assert len(consumer_entities.schema.paths) == len(entities.schema.paths)
-    for index, path in enumerate(consumer_entities.schema.paths):
-        assert path.path == entities.schema.paths[index].path
+    assert consumer_entities.schema.type_uri == \
+           "https://github.com/eccenca/cmem-plugin-kafka#PlainMessage"
+    assert len(consumer_entities.schema.paths) == 5
     for _ in consumer_entities.entities:
         count += 1
 
