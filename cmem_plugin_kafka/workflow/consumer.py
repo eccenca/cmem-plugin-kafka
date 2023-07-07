@@ -23,7 +23,7 @@ from cmem_plugin_kafka.constants import (
     CLIENT_ID_DESCRIPTION,
     LOCAL_CONSUMER_QUEUE_MAX_SIZE_DESCRIPTION,
     XML_SAMPLE,
-    JSON_SAMPLE, MESSAGE_LIMIT_DESCRIPTION, ENABLE_AUTO_COMMIT_DESCRIPTION,
+    JSON_SAMPLE, MESSAGE_LIMIT_DESCRIPTION, DISABLE_COMMIT_DESCRIPTION,
 )
 from cmem_plugin_kafka.utils import (
     KafkaConsumer,
@@ -174,12 +174,12 @@ A sample response from the consumer will appear as follows.
         ),
 
         PluginParameter(
-            name="enable_auto_commit",
-            label="Enable Auto Commit",
+            name="disable_commit",
+            label="Disable Commit",
             advanced=True,
             param_type=BoolParameterType(),
-            default_value=True,
-            description=ENABLE_AUTO_COMMIT_DESCRIPTION,
+            default_value=False,
+            description=DISABLE_COMMIT_DESCRIPTION,
         ),
     ],
 )
@@ -201,7 +201,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         client_id: str = "",
         local_consumer_queue_size: int = 5000,
         message_limit: int = 100000,
-        enable_auto_commit: bool = True
+        disable_commit: bool = False
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError("Specified server id is invalid")
@@ -217,7 +217,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.client_id = client_id
         self.local_consumer_queue_size = local_consumer_queue_size
         self.message_limit = int(message_limit)
-        self.enable_auto_commit = bool(enable_auto_commit)
+        self.disable_commit = bool(disable_commit)
         self._kafka_stats: dict = {}
 
     def metrics_callback(self, json: str):
@@ -240,7 +240,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         config = {
             "bootstrap.servers": self.bootstrap_servers,
             "security.protocol": self.security_protocol,
-            "enable.auto.commit": self.enable_auto_commit,
+            "enable.auto.commit": False,
             "auto.offset.reset": self.auto_offset_reset,
             "group.id": self.group_id if self.group_id else default_client_id,
             "client.id": self.client_id if self.client_id else default_client_id,
@@ -273,6 +273,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             config=self.get_config(
                 project_id=context.task.project_id(), task_id=context.task.task_id()
             ),
+            commit_offset=not self.disable_commit,
             topic=self.kafka_topic,
             log=self.log,
             context=context,
@@ -302,7 +303,6 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             file_resource=handler,
             context=context.user,
         )
-
         context.report.update(
             ExecutionReport(
                 entity_count=kafka_consumer.get_success_messages_count(),

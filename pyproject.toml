@@ -22,12 +22,13 @@ homepage = "https://github.com/eccenca/cmem-plugin-kafka"
 python = "^3.9"
 cmem-plugin-base = "^3.1.0"
 confluent-kafka = [
-    { version = "1.9.2" },
+    { version = "2.1.1" },
     # before you publish, comment out this next line
     # { markers = "sys_platform == 'darwin'", url = "https://files.pythonhosted.org/packages/fb/16/d04dded73439266a3dbcd585f1128483dcf509e039bacd93642ac5de97d4/confluent-kafka-1.8.2.tar.gz"}
 ]
 defusedxml = "^0.7.1"
 json-stream = "2.3.0"
+json-stream-rs-tokenizer = "0.4.17"
 
 [tool.poetry.group.dev.dependencies]
 bandit = "^1.7.5"
