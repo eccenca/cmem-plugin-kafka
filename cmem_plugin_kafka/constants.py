@@ -102,7 +102,9 @@ If 0 or less, all messages will be fetched.
 """
 
 DISABLE_COMMIT_DESCRIPTION = """
-Setting this to false will allow the consumer to commit the offset to kafka.
+Setting this to true will disable committing messages after retrival.
+
+This means you will receive the same messages on the next execution (for debugging).
 """
 
 XML_SAMPLE = """
@@ -159,3 +161,65 @@ JSON_SAMPLE = """
 ]
 ```
 """
+
+CONSUMER_GROUP_DESCRIPTION = """
+When a topic is consumed by consumers in the same group, every record will be delivered
+to only one consumer of that group.
+If all the consumers of a topic are labeled the same consumer group, then the
+records will effectively be load-balanced over these consumers.
+If all the consumer of a topic are labeled different consumer groups, then each
+record will be broadcast to all the consumers.
+
+When the Group Id field is empty, the plugin defaults to DNS:PROJECT ID:TASK ID.
+"""
+
+AUTO_OFFSET_RESET_DESCRIPTION = """
+What to do when there is no initial offset in Kafka or if the current offset does
+not exist any more on the server (e.g. because that data has been deleted).
+
+- `earliest` will fetch the whole topic beginning from the oldest record.
+- `latest` will receive nothing but will get any new records on the next run.
+"""
+
+PARSE_JSON_LINK = (
+    "https://documentation.eccenca.com/latest/"
+    "deploy-and-configure/configuration/dataintegration/plugin-reference/#parse-json"
+)
+
+PARSE_XML_LINK = (
+    "https://documentation.eccenca.com/latest/"
+    "deploy-and-configure/configuration/dataintegration/plugin-reference/#parse-xml"
+)
+
+PLUGIN_DOCUMENTATION = f"""
+This workflow operator uses the Kafka Consumer API
+to receive messages from an [Apache Kafka](https://kafka.apache.org/) topic.
+
+Messages received from the topic will be generated as entities with the following
+flat schema:
+
+- **key** - the optional key of the message,
+- **content** - the message itself as plain text (use other operators, such as
+  [Parse JSON]({PARSE_JSON_LINK}) or [Parse XML]({PARSE_XML_LINK}) to process
+  complex message content),
+- **offset** - the given offset of the message in the topic,
+- **ts-production** - the timestamp when the message was written to the topic,
+- **ts-consumption** - the timestamp when the message was consumed from the topic.
+
+In order to process the resulting entities, they have to run through a transformation.
+
+As an alternate working mode, messages can be exported directly to a JSON or XML
+dataset if you know that the messages on your topic are valid JSON or XML documents
+(see Advanced Options > Messages Dataset).
+
+In this case, a sample response from the consumer will appear as follows:
+
+<details>
+  <summary>Sample JSON Response</summary>
+{JSON_SAMPLE}
+</details>
+<details>
+  <summary>Sample XML Response</summary>
+{XML_SAMPLE}
+</details>
+"""  # noqa: E501
