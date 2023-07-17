@@ -28,7 +28,7 @@ confluent-kafka = [
 ]
 defusedxml = "^0.7.1"
 json-stream = "2.3.0"
-json-stream-rs-tokenizer = "0.4.17"
+json-stream-rs-tokenizer = "0.4.22"
 
 [tool.poetry.group.dev.dependencies]
 bandit = "^1.7.5"
