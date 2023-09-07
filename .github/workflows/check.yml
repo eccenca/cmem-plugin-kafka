@@ -43,7 +43,7 @@ jobs:
 
       - name: run kafka docker container
         id: kafka-docker-container
-        uses: isbang/compose-action@v1.1.0
+        uses: isbang/compose-action@v1.5.1
         with:
           compose-file: "./docker/docker-compose.yml"
 
