@@ -8,12 +8,12 @@ tasks:
     desc: Start or restart the kafka orchestration
     cmds:
       - >
-        docker-compose -f docker/docker-compose.yml up
+        docker compose -f docker/docker-compose.yml up
         --wait --no-color --force-recreate --renew-anon-volumes
 
   kafka:stop:
     desc: Stop the kafka orchestration
     cmds:
-      - docker-compose -f docker/docker-compose.yml stop
-      - docker-compose -f docker/docker-compose.yml rm -f
+      - docker compose -f docker/docker-compose.yml stop
+      - docker compose -f docker/docker-compose.yml rm -f
 
