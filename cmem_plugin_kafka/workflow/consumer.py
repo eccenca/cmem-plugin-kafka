@@ -1,16 +1,21 @@
 """Kafka consumer plugin module"""
 from typing import Sequence, Dict, Any, Optional
 
+from cmem.cmempy.api import request
+from cmem.cmempy.workspace.projects.datasets.dataset import get_dataset_file_uri
 from cmem.cmempy.workspace.tasks import get_task
-from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
+from cmem_plugin_base.dataintegration.context import (
+    ExecutionContext,
+    ExecutionReport,
+    UserContext
+)
 from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.types import IntParameterType, BoolParameterType
 from cmem_plugin_base.dataintegration.utils import (
-    write_to_dataset,
-    setup_cmempy_user_access
+    setup_cmempy_user_access, split_task_id
 )
 from confluent_kafka import KafkaError
 
@@ -30,18 +35,17 @@ from cmem_plugin_kafka.constants import (
     AUTO_OFFSET_RESET_DESCRIPTION,
     CONSUMER_GROUP_DESCRIPTION
 )
-from cmem_plugin_kafka.utils import (
-    KafkaConsumer,
-    validate_kafka_config,
-    get_kafka_statistics,
-    get_default_client_id,
-    DatasetParameterType,
-)
 from cmem_plugin_kafka.kafka_handlers import (
     KafkaEntitiesDataHandler,
     KafkaJSONDataHandler,
     KafkaXMLDataHandler,
     KafkaDatasetHandler,
+)
+from cmem_plugin_kafka.utils import (
+    KafkaConsumer,
+    validate_kafka_config,
+    get_kafka_statistics,
+    get_default_client_id, DatasetParameterType,
 )
 
 
@@ -281,3 +285,58 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         )
 
         return None
+
+
+def write_to_dataset(
+    dataset_id: str, file_resource=None, context: Optional[UserContext] = None
+):
+    """Write to a dataset.
+
+    Args:
+        dataset_id (str): The combined task ID.
+        file_resource (file stream): Already opened byte file stream
+        context (UserContext):
+            The user context to setup environment for accessing CMEM with cmempy.
+
+    Returns:
+        requests.Response object
+
+    Raises:
+        ValueError: in case the task ID is not splittable
+        ValueError: missing parameter
+    """
+    setup_cmempy_user_access(context=context)
+    project_id, task_id = split_task_id(dataset_id)
+
+    return post_resource(
+        project_id=project_id,
+        dataset_id=task_id,
+        file_resource=file_resource,
+    )
+
+
+def post_resource(project_id, dataset_id, file_resource=None):
+    """
+    Post a resource to a dataset.
+
+    If the dataset resource already exists, posting a new resource will replace it.
+
+    Args:
+        project_id (str): The ID of the project.
+        dataset_id (str): The ID of the dataset.
+        file_resource (io Binary Object, optional): The file resource to be uploaded.
+
+    Returns:
+        Response: The response from the request.
+
+    """
+    endpoint = get_dataset_file_uri().format(project_id, dataset_id)
+
+    with file_resource as file:
+        response = request(
+            endpoint,
+            method="PUT",
+            stream=True,
+            data=file,
+        )
+    return response
