@@ -26,7 +26,7 @@ $ eval $(cmemc -c my-cmem config eval)
 In order to setup access to your Kafka, write the connection details to the `.env` file:
 ```shell-session
 $ cat .env
-KAFKA_BOOTSTRAP_SERVER=localhost:9092
+KAFKA_BOOTSTRAP_SERVER=localhost:9093
 KAFKA_SECURITY_PROTOCOL=PLAINTEXT
 ```
 
