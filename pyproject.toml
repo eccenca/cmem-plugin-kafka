@@ -26,7 +26,7 @@ confluent-kafka = [
 ]
 defusedxml = "^0.7.1"
 json-stream = "2.3.0"
-json-stream-rs-tokenizer = "0.4.17"
+json-stream-rs-tokenizer = "0.4.23"
 # if you need to change python version here, change it also in .python-version
 python = "^3.11"
 
