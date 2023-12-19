@@ -1,51 +1,47 @@
 """Kafka consumer plugin module"""
-from typing import Sequence, Dict, Any, Optional
+from collections.abc import Sequence
+from typing import Any, Optional
 
 from cmem.cmempy.api import request
 from cmem.cmempy.workspace.projects.datasets.dataset import get_dataset_file_uri
 from cmem.cmempy.workspace.tasks import get_task
-from cmem_plugin_base.dataintegration.context import (
-    ExecutionContext,
-    ExecutionReport,
-    UserContext
-)
-from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
+from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport, UserContext
+from cmem_plugin_base.dataintegration.description import Plugin, PluginParameter
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
-from cmem_plugin_base.dataintegration.types import IntParameterType, BoolParameterType
-from cmem_plugin_base.dataintegration.utils import (
-    setup_cmempy_user_access, split_task_id
-)
+from cmem_plugin_base.dataintegration.types import BoolParameterType, IntParameterType
+from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access, split_task_id
 from confluent_kafka import KafkaError
 
 from cmem_plugin_kafka.constants import (
-    SECURITY_PROTOCOLS,
-    SASL_MECHANISMS,
     AUTO_OFFSET_RESET,
+    AUTO_OFFSET_RESET_DESCRIPTION,
     BOOTSTRAP_SERVERS_DESCRIPTION,
-    SECURITY_PROTOCOL_DESCRIPTION,
-    SASL_ACCOUNT_DESCRIPTION,
-    SASL_PASSWORD_DESCRIPTION,
     CLIENT_ID_DESCRIPTION,
+    CONSUMER_GROUP_DESCRIPTION,
+    DISABLE_COMMIT_DESCRIPTION,
     LOCAL_CONSUMER_QUEUE_MAX_SIZE_DESCRIPTION,
     MESSAGE_LIMIT_DESCRIPTION,
-    DISABLE_COMMIT_DESCRIPTION,
     PLUGIN_DOCUMENTATION,
-    AUTO_OFFSET_RESET_DESCRIPTION,
-    CONSUMER_GROUP_DESCRIPTION
+    SASL_ACCOUNT_DESCRIPTION,
+    SASL_MECHANISMS,
+    SASL_PASSWORD_DESCRIPTION,
+    SECURITY_PROTOCOL_DESCRIPTION,
+    SECURITY_PROTOCOLS,
 )
 from cmem_plugin_kafka.kafka_handlers import (
+    KafkaDatasetHandler,
     KafkaEntitiesDataHandler,
     KafkaJSONDataHandler,
     KafkaXMLDataHandler,
-    KafkaDatasetHandler,
 )
 from cmem_plugin_kafka.utils import (
+    DatasetParameterType,
     KafkaConsumer,
-    validate_kafka_config,
+    get_default_client_id,
     get_kafka_statistics,
-    get_default_client_id, DatasetParameterType,
+    validate_kafka_config,
 )
 
 
@@ -71,8 +67,7 @@ from cmem_plugin_kafka.utils import (
         PluginParameter(
             name="kafka_topic",
             label="Topic",
-            description="The name of the category/feed where messages were"
-            " published.",
+            description="The name of the category/feed where messages were" " published.",
         ),
         PluginParameter(
             name="message_dataset",
@@ -144,7 +139,6 @@ from cmem_plugin_kafka.utils import (
             default_value=100000,
             description=MESSAGE_LIMIT_DESCRIPTION,
         ),
-
         PluginParameter(
             name="disable_commit",
             label="Disable Commit",
@@ -173,7 +167,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         client_id: str = "",
         local_consumer_queue_size: int = 5000,
         message_limit: int = 100000,
-        disable_commit: bool = False
+        disable_commit: bool = False,
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise ValueError("Specified server id is invalid")
@@ -193,7 +187,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self._kafka_stats: dict = {}
 
     def metrics_callback(self, json: str):
-        """sends producer metrics to server"""
+        """Sends producer metrics to server"""
         self._kafka_stats = get_kafka_statistics(json_data=json)
         for key, value in self._kafka_stats.items():
             self.log.info(f"kafka-stats: {key:10} - {value:10}")
@@ -204,11 +198,9 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         if err.code() == -193:  # -193 -> _RESOLVE
             raise err
 
-    def get_config(self, project_id: str = "", task_id: str = "") -> Dict[str, Any]:
-        """construct and return kafka connection configuration"""
-        default_client_id = get_default_client_id(
-            project_id=project_id, task_id=task_id
-        )
+    def get_config(self, project_id: str = "", task_id: str = "") -> dict[str, Any]:
+        """Construct and return kafka connection configuration"""
+        default_client_id = get_default_client_id(project_id=project_id, task_id=task_id)
         config = {
             "bootstrap.servers": self.bootstrap_servers,
             "security.protocol": self.security_protocol,
@@ -235,9 +227,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         """Validate parameters"""
         validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
 
-    def execute(
-        self, inputs: Sequence[Entities], context: ExecutionContext
-    ) -> Optional[Entities]:
+    def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> Optional[Entities]:
         self.log.info("Kafka Consumer Started")
         self.validate()
 
@@ -257,9 +247,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
                 context=context, plugin_logger=self.log, kafka_consumer=kafka_consumer
             ).consume_messages()
         setup_cmempy_user_access(context=context.user)
-        task_meta_data = get_task(
-            project=context.task.project_id(), task=self.message_dataset
-        )
+        task_meta_data = get_task(project=context.task.project_id(), task=self.message_dataset)
         if task_meta_data["data"]["type"] == "json":
             handler: KafkaDatasetHandler = KafkaJSONDataHandler(
                 context=context, plugin_logger=self.log, kafka_consumer=kafka_consumer
@@ -287,21 +275,22 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         return None
 
 
-def write_to_dataset(
-    dataset_id: str, file_resource=None, context: Optional[UserContext] = None
-):
+def write_to_dataset(dataset_id: str, file_resource=None, context: Optional[UserContext] = None):
     """Write to a dataset.
 
     Args:
+    ----
         dataset_id (str): The combined task ID.
         file_resource (file stream): Already opened byte file stream
         context (UserContext):
             The user context to setup environment for accessing CMEM with cmempy.
 
     Returns:
+    -------
         requests.Response object
 
     Raises:
+    ------
         ValueError: in case the task ID is not splittable
         ValueError: missing parameter
     """
@@ -316,17 +305,18 @@ def write_to_dataset(
 
 
 def post_resource(project_id, dataset_id, file_resource=None):
-    """
-    Post a resource to a dataset.
+    """Post a resource to a dataset.
 
     If the dataset resource already exists, posting a new resource will replace it.
 
     Args:
+    ----
         project_id (str): The ID of the project.
         dataset_id (str): The ID of the dataset.
         file_resource (io Binary Object, optional): The file resource to be uploaded.
 
     Returns:
+    -------
         Response: The response from the request.
 
     """

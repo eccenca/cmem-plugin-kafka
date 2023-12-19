@@ -10,7 +10,7 @@ KAFKA_CONFIG = get_kafka_config()
 TOPIC_PREFIX = "cmem"
 
 
-@pytest.fixture
+@pytest.fixture()
 def topic():
     kafka_service = KAFKA_CONFIG["bootstrap_server"]
     a = AdminClient({"bootstrap.servers": kafka_service})
@@ -22,9 +22,9 @@ def topic():
     for topic, f in fs.items():
         try:
             f.result()  # The result itself is None
-            print("Topic {} created".format(topic))
+            print(f"Topic {topic} created")
         except Exception as e:
-            print("Failed to create topic {}: {}".format(topic, e))
+            print(f"Failed to create topic {topic}: {e}")
     yield default_topic
     fs = a.delete_topics([default_topic], operation_timeout=30)
 
@@ -32,6 +32,6 @@ def topic():
     for topic, f in fs.items():
         try:
             f.result()  # The result itself is None
-            print("Topic {} deleted".format(topic))
+            print(f"Topic {topic} deleted")
         except Exception as e:
-            print("Failed to delete topic {}: {}".format(topic, e))
+            print(f"Failed to delete topic {topic}: {e}")

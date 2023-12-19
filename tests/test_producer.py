@@ -4,12 +4,13 @@ from contextlib import suppress
 import pytest
 import requests
 from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
-from cmem.cmempy.workspace.projects.project import make_new_project, delete_project
+from cmem.cmempy.workspace.projects.project import delete_project, make_new_project
 from cmem.cmempy.workspace.projects.resources.resource import create_resource
 from confluent_kafka import cimpl
 
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
-from .utils import needs_cmem, needs_kafka, get_kafka_config, TestExecutionContext
+
+from .utils import TestExecutionContext, get_kafka_config, needs_cmem, needs_kafka
 
 PROJECT_NAME = "kafka_test_project"
 DATASET_NAME = "sample-test"
@@ -21,7 +22,7 @@ KAFKA_CONFIG = get_kafka_config()
 DEFAULT_TOPIC = "eccenca_kafka_workflow"
 
 
-@pytest.fixture
+@pytest.fixture()
 def project(request):
     """Provides the DI build project incl. assets."""
     with suppress(Exception):

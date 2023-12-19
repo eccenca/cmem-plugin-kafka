@@ -17,13 +17,7 @@ SASL_MECHANISMS = collections.OrderedDict(
 
 # Compression Types
 COMPRESSION_TYPES = collections.OrderedDict(
-    {
-        "none": "None",
-        "gzip": "gzip",
-        "snappy": "Snappy",
-        "lz4": "LZ4",
-        "zstd": "Zstandard"
-    }
+    {"none": "None", "gzip": "gzip", "snappy": "Snappy", "lz4": "LZ4", "zstd": "Zstandard"}
 )
 
 # Auto Offset Resets
@@ -222,4 +216,4 @@ In this case, a sample response from the consumer will appear as follows:
   <summary>Sample XML Response</summary>
 {XML_SAMPLE}
 </details>
-"""  # noqa: E501
+"""

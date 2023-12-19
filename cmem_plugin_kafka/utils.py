@@ -1,7 +1,8 @@
 """Kafka utils modules"""
 import json
 import re
-from typing import Dict, Any, Iterator, Optional
+from collections.abc import Iterator
+from typing import Any, Optional
 from urllib.parse import urlparse
 
 from cmem.cmempy.config import get_cmem_base_uri
@@ -11,8 +12,8 @@ from cmem.cmempy.workspace.tasks import get_task
 from cmem_plugin_base.dataintegration.context import (
     ExecutionContext,
     ExecutionReport,
-    UserContext,
     PluginContext,
+    UserContext,
 )
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
 from cmem_plugin_base.dataintegration.types import Autocompletion, StringParameterType
@@ -20,8 +21,8 @@ from cmem_plugin_base.dataintegration.utils import (
     setup_cmempy_user_access,
     split_task_id,
 )
-from confluent_kafka import Producer, Consumer, KafkaException, KafkaError
-from confluent_kafka.admin import AdminClient, TopicMetadata, ClusterMetadata
+from confluent_kafka import Consumer, KafkaError, KafkaException, Producer
+from confluent_kafka.admin import AdminClient, ClusterMetadata, TopicMetadata
 from defusedxml import ElementTree
 
 from cmem_plugin_kafka.constants import KAFKA_TIMEOUT
@@ -29,8 +30,7 @@ from cmem_plugin_kafka.constants import KAFKA_TIMEOUT
 
 # pylint: disable-msg=too-few-public-methods
 class KafkaMessage:
-    """
-    A class used to represent/hold a Kafka Message key and value
+    """A class used to represent/hold a Kafka Message key and value
 
     ...
 
@@ -43,12 +43,12 @@ class KafkaMessage:
     """
 
     def __init__(
-            self,
-            key: Optional[str] = None,
-            headers: Optional[dict] = None,
-            value: str = "",
-            offset: Optional[int] = None,
-            timestamp: Optional[int] = None
+        self,
+        key: Optional[str] = None,
+        headers: Optional[dict] = None,
+        value: str = "",
+        offset: Optional[int] = None,
+        timestamp: Optional[int] = None,
     ):
         self.value: str = value
         self.key: Optional[str] = key
@@ -65,7 +65,7 @@ class KafkaProducer:
         self._producer = Producer(config)
         self._topic = topic
         self._no_of_success_messages: int = 0
-        self.compression_type = config.get("compression.type", 'none')
+        self.compression_type = config.get("compression.type", "none")
 
     def process(self, message: KafkaMessage):
         """Produce message to topic."""
@@ -73,15 +73,14 @@ class KafkaProducer:
         headers = message.headers if message.headers else {}
         self._producer.produce(
             self._topic,
-            value=message.value.encode('utf-8'),
+            value=message.value.encode("utf-8"),
             key=message.key,
             headers=headers,
-            on_delivery=self.on_delivery
+            on_delivery=self.on_delivery,
         )
 
     def on_delivery(self, err, msg):
-        """
-        Callback method executed after a message is delivered to the Kafka broker.
+        """Callback method executed after a message is delivered to the Kafka broker.
         """
         _ = msg
         if err:
@@ -111,12 +110,12 @@ class KafkaConsumer:
 
     # pylint: disable=too-many-instance-attributes
     def __init__(
-            self,
-            config: dict,
-            commit_offset: bool,
-            topic: str,
-            log: PluginLogger,
-            context: ExecutionContext
+        self,
+        config: dict,
+        commit_offset: bool,
+        topic: str,
+        log: PluginLogger,
+        context: ExecutionContext,
     ):
         """Create consumer instance"""
         self._consumer = Consumer(config)
@@ -210,18 +209,16 @@ class KafkaConsumer:
 
 
 def get_default_client_id(project_id: str, task_id: str):
-    """return dns:projectId:taskId when client id is empty"""
+    """Return dns:projectId:taskId when client id is empty"""
     base_url = get_cmem_base_uri()
     dns = urlparse(base_url).netloc
     return f"{dns}:{project_id}:{task_id}"
 
 
-def validate_kafka_config(config: Dict[str, Any], topic: str, log: PluginLogger):
+def validate_kafka_config(config: dict[str, Any], topic: str, log: PluginLogger):
     """Validate kafka configuration"""
     admin_client = AdminClient(config)
-    cluster_metadata: ClusterMetadata = admin_client.list_topics(
-        topic=topic, timeout=KAFKA_TIMEOUT
-    )
+    cluster_metadata: ClusterMetadata = admin_client.list_topics(topic=topic, timeout=KAFKA_TIMEOUT)
 
     topic_meta: TopicMetadata = cluster_metadata.topics[topic]
     kafka_error: KafkaError = topic_meta.error
@@ -246,7 +243,7 @@ def get_resource_from_dataset(dataset_id: str, context: UserContext):
 
 
 def get_task_metadata(project: str, task: str, context: UserContext):
-    """get metadata information of a task"""
+    """Get metadata information of a task"""
     setup_cmempy_user_access(context=context)
     task_meta_data = get_task(project=project, task=task)
     return task_meta_data
@@ -275,10 +272,7 @@ class BytesEncoder(json.JSONEncoder):
 
 def get_message_with_json_wrapper(message: KafkaMessage) -> str:
     """Wrap kafka message around Message tags"""
-
-    msg_with_wrapper = {
-        "message": {"key": message.key, "content": json.loads(message.value)}
-    }
+    msg_with_wrapper = {"message": {"key": message.key, "content": json.loads(message.value)}}
     if message.headers:
         msg_with_wrapper["message"]["headers"] = {
             header[0]: header[1] for header in message.headers
@@ -299,9 +293,7 @@ def get_kafka_statistics(json_data: str) -> dict:
     ]
     stats = json.loads(json_data)
     return {
-        key: ",".join(stats[key].keys())
-        if isinstance(stats[key], dict)
-        else f"{stats[key]}"
+        key: ",".join(stats[key].keys()) if isinstance(stats[key], dict) else f"{stats[key]}"
         for key in interested_keys
     }
 
@@ -341,9 +333,7 @@ class DatasetParameterType(StringParameterType):
     ) -> Optional[str]:
         """Returns the label for the given dataset."""
         setup_cmempy_user_access(context.user)
-        task_label = str(
-            get_task(project=context.project_id, task=value)["metadata"]["label"]
-        )
+        task_label = str(get_task(project=context.project_id, task=value)["metadata"]["label"])
         return f"{task_label}"
 
     def autocomplete(
@@ -353,9 +343,7 @@ class DatasetParameterType(StringParameterType):
         context: PluginContext,
     ) -> list[Autocompletion]:
         setup_cmempy_user_access(context.user)
-        datasets = list_items(item_type="dataset", project=context.project_id)[
-            "results"
-        ]
+        datasets = list_items(item_type="dataset", project=context.project_id)["results"]
 
         result = []
         dataset_types = []

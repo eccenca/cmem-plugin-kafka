@@ -7,20 +7,21 @@ import pytest
 import requests
 import xmltodict
 from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
-from cmem.cmempy.workspace.projects.project import make_new_project, delete_project
+from cmem.cmempy.workspace.projects.project import delete_project, make_new_project
 from cmem.cmempy.workspace.projects.resources.resource import create_resource
 from cmem_plugin_examples.workflow.random_values import RandomValues
-from confluent_kafka import cimpl, KafkaException
+from confluent_kafka import KafkaException, cimpl
 
 from cmem_plugin_kafka.utils import get_resource_from_dataset
 from cmem_plugin_kafka.workflow.consumer import KafkaConsumerPlugin
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
+
 from .utils import (
-    needs_cmem,
-    needs_kafka,
-    get_kafka_config,
     TestExecutionContext,
     TestUserContext,
+    get_kafka_config,
+    needs_cmem,
+    needs_kafka,
 )
 
 PROJECT_NAME = "kafka_consumer_project"
@@ -38,7 +39,7 @@ DEFAULT_GROUP = None
 DEFAULT_RESET = "latest"
 
 
-@pytest.fixture
+@pytest.fixture()
 def project(request):
     """Provides the DI build project incl. assets."""
     with suppress(Exception):
@@ -95,7 +96,6 @@ def test_execution_kafka_producer_new_topic(project):
 @needs_kafka
 def test_execution_kafka_producer_consumer_with_xml_dataset(project, topic):
     """Test plugin execution for Plain Kafka"""
-
     # Producer
     KafkaProducerPlugin(
         message_dataset=PRODUCER_DATASET_ID,
@@ -125,7 +125,7 @@ def test_execution_kafka_producer_consumer_with_xml_dataset(project, topic):
         dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}", context=TestUserContext()
     )
 
-    with open("tests/sample-test.xml", "r") as file:
+    with open("tests/sample-test.xml") as file:
         data = file.read().rstrip()
         data_dict = xmltodict.parse(data)
         messages = data_dict["KafkaMessages"]["Message"]
@@ -148,7 +148,7 @@ def test_validate_compression(project, topic, compression_type):
         sasl_username=KAFKA_CONFIG["sasl_username"],
         sasl_password=KAFKA_CONFIG["sasl_password"],
         kafka_topic=topic,
-        compression_type=compression_type
+        compression_type=compression_type,
     ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
 
     # Consumer
@@ -169,7 +169,7 @@ def test_validate_compression(project, topic, compression_type):
         dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}", context=TestUserContext()
     )
 
-    with open("tests/sample-test.xml", "r") as file:
+    with open("tests/sample-test.xml") as file:
         data = file.read().rstrip()
         data_dict = xmltodict.parse(data)
         messages = data_dict["KafkaMessages"]["Message"]
@@ -182,7 +182,6 @@ def test_validate_compression(project, topic, compression_type):
 @needs_cmem
 @needs_kafka
 def test_validate_message_limit_parameter(project, topic):
-
     # Producer
     KafkaProducerPlugin(
         message_dataset=PRODUCER_DATASET_ID,
@@ -219,7 +218,6 @@ def test_validate_message_limit_parameter(project, topic):
 @needs_cmem
 @needs_kafka
 def test_validate_disable_commit_parameter(project, topic):
-
     # Producer
     KafkaProducerPlugin(
         message_dataset=PRODUCER_DATASET_ID,
@@ -298,9 +296,7 @@ def test_validate_disable_commit_parameter(project, topic):
 @needs_kafka
 def test_execution_kafka_producer_consumer_with_entities(project, topic):
     """Test plugin execution for Plain Kafka"""
-    entities = RandomValues(random_function="token_urlsafe").execute(
-        context=TestExecutionContext()
-    )
+    entities = RandomValues(random_function="token_urlsafe").execute(context=TestExecutionContext())
     # Producer
     KafkaProducerPlugin(
         message_dataset=None,
@@ -325,8 +321,10 @@ def test_execution_kafka_producer_consumer_with_entities(project, topic):
         auto_offset_reset="earliest",
     ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
     count = 0
-    assert consumer_entities.schema.type_uri == \
-           "https://github.com/eccenca/cmem-plugin-kafka#PlainMessage"
+    assert (
+        consumer_entities.schema.type_uri
+        == "https://github.com/eccenca/cmem-plugin-kafka#PlainMessage"
+    )
     assert len(consumer_entities.schema.paths) == 5
     for _ in consumer_entities.entities:
         count += 1

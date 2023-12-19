@@ -1,16 +1,14 @@
 """Testing utilities."""
 import os
-from defusedxml import sax
-from xml.sax.handler import ContentHandler
 from typing import ClassVar
+from xml.sax.handler import ContentHandler
 
-from cmem.cmempy.config import get_oauth_default_credentials
-from defusedxml import ElementTree
 import pytest
 
 # check for cmem environment and skip if not present
 from _pytest.mark import MarkDecorator
 from cmem.cmempy.api import get_token
+from cmem.cmempy.config import get_oauth_default_credentials
 from cmem_plugin_base.dataintegration.context import (
     ExecutionContext,
     PluginContext,
@@ -18,6 +16,7 @@ from cmem_plugin_base.dataintegration.context import (
     TaskContext,
     UserContext,
 )
+from defusedxml import ElementTree, sax
 
 needs_cmem: MarkDecorator = pytest.mark.skipif(
     "CMEM_BASE_URI" not in os.environ, reason="Needs CMEM configuration"

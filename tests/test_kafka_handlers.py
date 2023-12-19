@@ -11,7 +11,8 @@ from cmem.cmempy.workspace.projects.resources.resource import create_resource
 from cmem_plugin_kafka.utils import get_resource_from_dataset
 from cmem_plugin_kafka.workflow.consumer import KafkaConsumerPlugin
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
-from .utils import get_kafka_config, needs_cmem, TestExecutionContext, TestUserContext
+
+from .utils import TestExecutionContext, TestUserContext, get_kafka_config, needs_cmem
 
 PROJECT_NAME = "kafka_handler_test_project"
 DATASET_NAME = "sample-test"
@@ -24,7 +25,7 @@ DEFAULT_TOPIC = "eccenca_kafka_handler_workflow"
 DEFAULT_GROUP = "workflow"
 
 
-@pytest.fixture
+@pytest.fixture()
 def project():
     """Provides the DI build project incl. assets."""
     with suppress(Exception):

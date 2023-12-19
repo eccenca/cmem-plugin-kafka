@@ -7,9 +7,9 @@ import pytest
 import requests
 from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
 from cmem.cmempy.workspace.projects.import_ import (
-    upload_project,
     import_from_upload_start,
     import_from_upload_status,
+    upload_project,
 )
 from cmem.cmempy.workspace.projects.project import delete_project, make_new_project
 from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access
@@ -18,14 +18,16 @@ from cmem_plugin_examples.workflow.random_values import RandomValues
 from cmem_plugin_kafka.utils import get_resource_from_dataset
 from cmem_plugin_kafka.workflow.consumer import KafkaConsumerPlugin
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
+
 from .utils import (
+    TestExecutionContext,
+    TestUserContext,
+    XMLUtils,
+    get_kafka_config,
     needs_cmem,
     needs_kafka,
-    get_kafka_config,
-    TestExecutionContext,
-    XMLUtils,
-    TestUserContext,
 )
+
 PROJECT_NAME = "kafka_performance_project"
 PRODUCER_DATASET_NAME = "sample-test"
 CONSUMER_DATASET_NAME = "sample-test-result"
@@ -39,15 +41,11 @@ KAFKA_CONFIG = get_kafka_config()
 DEFAULT_GROUP = None
 DEFAULT_TOPIC = "eccenca_kafka_workflow"
 DEFAULT_RESET = "earliest"
-XML_PROJECT_LINK = (
-    "https://download.eccenca.com/cmem-plugin-kafka/kafka_performance_project.zip"
-)
-JSON_PROJECT_LINK = (
-    "https://download.eccenca.com/cmem-plugin-kafka/kafka_json_perf_project.zip"
-)
+XML_PROJECT_LINK = "https://download.eccenca.com/cmem-plugin-kafka/kafka_performance_project.zip"
+JSON_PROJECT_LINK = "https://download.eccenca.com/cmem-plugin-kafka/kafka_json_perf_project.zip"
 
 
-@pytest.fixture
+@pytest.fixture()
 def xml_dataset_project():
     """Provides the DI build project incl. assets."""
     setup_cmempy_user_access(context=TestUserContext())
@@ -62,9 +60,7 @@ def xml_dataset_project():
     import_id = validation_response["projectImportId"]
     project_id = validation_response["projectId"]
 
-    import_from_upload_start(
-        import_id=import_id, project_id=project_id, overwrite_existing=True
-    )
+    import_from_upload_start(import_id=import_id, project_id=project_id, overwrite_existing=True)
     # loop until "success" boolean is in status response
     status = import_from_upload_status(import_id)
     while "success" not in status.keys():
@@ -84,7 +80,7 @@ def xml_dataset_project():
         delete_project(PROJECT_NAME)
 
 
-@pytest.fixture
+@pytest.fixture()
 def entities_project():
     """Provides the DI build project incl. assets."""
     setup_cmempy_user_access(context=TestUserContext())
@@ -97,7 +93,7 @@ def entities_project():
     delete_project(project_name)
 
 
-@pytest.fixture
+@pytest.fixture()
 def json_dataset_project():
     """Provides the DI build project incl. assets."""
     setup_cmempy_user_access(context=TestUserContext())
@@ -114,9 +110,7 @@ def json_dataset_project():
     import_id = validation_response["projectImportId"]
     project_id = validation_response["projectId"]
 
-    import_from_upload_start(
-        import_id=import_id, project_id=project_id, overwrite_existing=True
-    )
+    import_from_upload_start(import_id=import_id, project_id=project_id, overwrite_existing=True)
     # loop until "success" boolean is in status response
     status = import_from_upload_status(import_id)
     while "success" not in status.keys():
@@ -210,8 +204,10 @@ def test_perf_kafka_producer_consumer_with_entities(entities_project, topic):
     ).execute([], TestExecutionContext(project_id=entities_project))
 
     count = 0
-    assert consumer_entities.schema.type_uri == \
-           "https://github.com/eccenca/cmem-plugin-kafka#PlainMessage"
+    assert (
+        consumer_entities.schema.type_uri
+        == "https://github.com/eccenca/cmem-plugin-kafka#PlainMessage"
+    )
     assert len(consumer_entities.schema.paths) == 5
     for _ in consumer_entities.entities:
         count += 1
@@ -261,4 +257,4 @@ def test_perf_kafka_producer_consumer_with_json_dataset(json_dataset_project, to
         data = json_stream.requests.load(json_file)
         for _ in data:
             count += 1
-        assert 1000000 == count
+        assert count == 1000000
