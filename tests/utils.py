@@ -2,6 +2,7 @@
 import os
 from defusedxml import sax
 from xml.sax.handler import ContentHandler
+from typing import ClassVar
 
 from cmem.cmempy.config import get_oauth_default_credentials
 from defusedxml import ElementTree
@@ -12,10 +13,10 @@ from _pytest.mark import MarkDecorator
 from cmem.cmempy.api import get_token
 from cmem_plugin_base.dataintegration.context import (
     ExecutionContext,
+    PluginContext,
     ReportContext,
     TaskContext,
     UserContext,
-    PluginContext,
 )
 
 needs_cmem: MarkDecorator = pytest.mark.skipif(
@@ -44,7 +45,7 @@ class TestUserContext(UserContext):
     """dummy user context that can be used in tests"""
 
     __test__ = False
-    default_credential: dict = {}
+    default_credential: ClassVar[dict] = {}
 
     def __init__(self):
         # get access token from default service account
