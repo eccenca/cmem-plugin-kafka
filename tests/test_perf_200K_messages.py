@@ -132,7 +132,7 @@ def json_dataset_project():
 
 @needs_cmem
 @needs_kafka
-def test_perf_kafka_producer_consumer_xml_dataset(xml_dataset_project, topic):
+def test_perf_kafka_producer_consumer_xml_dataset(xml_dataset_project, topic) -> None:
     """Test plugin execution for Plain Kafka"""
     # Producer
     KafkaProducerPlugin(
@@ -172,7 +172,7 @@ def test_perf_kafka_producer_consumer_xml_dataset(xml_dataset_project, topic):
 
 @needs_cmem
 @needs_kafka
-def test_perf_kafka_producer_consumer_with_entities(entities_project, topic):
+def test_perf_kafka_producer_consumer_with_entities(entities_project, topic) -> None:
     """Test plugin execution for Plain Kafka"""
     no_of_entities = 1000000
     entities = RandomValues(
@@ -217,7 +217,7 @@ def test_perf_kafka_producer_consumer_with_entities(entities_project, topic):
 
 @needs_cmem
 @needs_kafka
-def test_perf_kafka_producer_consumer_with_json_dataset(json_dataset_project, topic):
+def test_perf_kafka_producer_consumer_with_json_dataset(json_dataset_project, topic) -> None:
     """Test plugin execution for Plain Kafka"""
     producer_dataset = "huge_json_dataset"
     consumer_dataset = "json_dataset_result"

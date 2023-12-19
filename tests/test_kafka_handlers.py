@@ -59,7 +59,7 @@ def project():
 
 
 @needs_cmem
-def test_kafka_json_data_handler(project, topic):
+def test_kafka_json_data_handler(project, topic) -> None:
     """Validate KafkaJSONDataHandler"""
     kafka_service = KAFKA_CONFIG["bootstrap_server"]
     KafkaProducerPlugin(

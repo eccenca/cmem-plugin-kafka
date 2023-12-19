@@ -71,7 +71,7 @@ def project(request):
 
 @needs_cmem
 @needs_kafka
-def test_execution_kafka_producer_new_topic(project):
+def test_execution_kafka_producer_new_topic(project) -> None:
     # By default, new topic will not available
     with pytest.raises(
         ValueError,
@@ -94,7 +94,7 @@ def test_execution_kafka_producer_new_topic(project):
 
 @needs_cmem
 @needs_kafka
-def test_execution_kafka_producer_consumer_with_xml_dataset(project, topic):
+def test_execution_kafka_producer_consumer_with_xml_dataset(project, topic) -> None:
     """Test plugin execution for Plain Kafka"""
     # Producer
     KafkaProducerPlugin(
@@ -138,7 +138,7 @@ def test_execution_kafka_producer_consumer_with_xml_dataset(project, topic):
 @needs_cmem
 @needs_kafka
 @pytest.mark.parametrize("compression_type", ["gzip", "snappy", "lz4", "zstd"])
-def test_validate_compression(project, topic, compression_type):
+def test_validate_compression(project, topic, compression_type) -> None:
     # Producer
     KafkaProducerPlugin(
         message_dataset=PRODUCER_DATASET_ID,
@@ -181,7 +181,7 @@ def test_validate_compression(project, topic, compression_type):
 
 @needs_cmem
 @needs_kafka
-def test_validate_message_limit_parameter(project, topic):
+def test_validate_message_limit_parameter(project, topic) -> None:
     # Producer
     KafkaProducerPlugin(
         message_dataset=PRODUCER_DATASET_ID,
@@ -217,7 +217,7 @@ def test_validate_message_limit_parameter(project, topic):
 
 @needs_cmem
 @needs_kafka
-def test_validate_disable_commit_parameter(project, topic):
+def test_validate_disable_commit_parameter(project, topic) -> None:
     # Producer
     KafkaProducerPlugin(
         message_dataset=PRODUCER_DATASET_ID,
@@ -294,7 +294,7 @@ def test_validate_disable_commit_parameter(project, topic):
 
 @needs_cmem
 @needs_kafka
-def test_execution_kafka_producer_consumer_with_entities(project, topic):
+def test_execution_kafka_producer_consumer_with_entities(project, topic) -> None:
     """Test plugin execution for Plain Kafka"""
     entities = RandomValues(random_function="token_urlsafe").execute(context=TestExecutionContext())
     # Producer
@@ -334,7 +334,7 @@ def test_execution_kafka_producer_consumer_with_entities(project, topic):
 
 @needs_cmem
 @needs_kafka
-def test_validate_invalid_inputs(project, topic):
+def test_validate_invalid_inputs(project, topic) -> None:
     """Validate Invalid Inputs"""
     # Invalid Dataset
     with pytest.raises(requests.exceptions.HTTPError):
@@ -365,7 +365,7 @@ def test_validate_invalid_inputs(project, topic):
         ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
 
 
-def test_validate_bootstrap_server():
+def test_validate_bootstrap_server() -> None:
     """Validate bootstrap service value"""
     with pytest.raises(ValueError, match="Specified server id is invalid"):
         KafkaConsumerPlugin(
@@ -400,7 +400,7 @@ def test_validate_bootstrap_server():
 
 @needs_cmem
 @needs_kafka
-def test_validate_auto_offset_reset_parameter(project, topic):
+def test_validate_auto_offset_reset_parameter(project, topic) -> None:
     """Test plugin execution for Plain Kafka"""
     letters = string.ascii_letters
     NO_INITIAL_OFFSET_GROUP = (

@@ -47,7 +47,7 @@ def project(request):
 
 @needs_cmem
 @needs_kafka
-def test_execution_plain_kafka(project, topic):
+def test_execution_plain_kafka(project, topic) -> None:
     """Test plugin execution for Plain Kafka"""
     KafkaProducerPlugin(
         message_dataset=DATASET_ID,
@@ -62,7 +62,7 @@ def test_execution_plain_kafka(project, topic):
 
 @needs_cmem
 @needs_kafka
-def test_validate_invalid_inputs(project, topic):
+def test_validate_invalid_inputs(project, topic) -> None:
     # Invalid Dataset
     with pytest.raises(requests.exceptions.HTTPError):
         KafkaProducerPlugin(
@@ -88,7 +88,7 @@ def test_validate_invalid_inputs(project, topic):
         ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
 
 
-def test_validate_bootstrap_server():
+def test_validate_bootstrap_server() -> None:
     """Validate bootstrap service value"""
     with pytest.raises(ValueError, match="Specified server id is invalid"):
         KafkaProducerPlugin(
