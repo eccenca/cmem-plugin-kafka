@@ -2,7 +2,7 @@
 import json
 import re
 from collections.abc import Iterator
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 from cmem.cmempy.config import get_cmem_base_uri
@@ -44,15 +44,15 @@ class KafkaMessage:
 
     def __init__(
         self,
-        key: Optional[str] = None,
-        headers: Optional[dict] = None,
+        key: str | None = None,
+        headers: dict | None = None,
         value: str = "",
-        offset: Optional[int] = None,
-        timestamp: Optional[int] = None,
+        offset: int | None = None,
+        timestamp: int | None = None,
     ):
         self.value: str = value
-        self.key: Optional[str] = key
-        self.headers: Optional[dict] = headers
+        self.key: str | None = key
+        self.headers: dict | None = headers
         self.offset = offset
         self.timestamp = timestamp
 
@@ -67,7 +67,7 @@ class KafkaProducer:
         self._no_of_success_messages: int = 0
         self.compression_type = config.get("compression.type", "none")
 
-    def process(self, message: KafkaMessage):
+    def process(self, message: KafkaMessage) -> None:
         """Produce message to topic."""
         # self._no_of_success_messages += 1
         headers = message.headers if message.headers else {}
@@ -79,19 +79,18 @@ class KafkaProducer:
             on_delivery=self.on_delivery,
         )
 
-    def on_delivery(self, err, msg):
-        """Callback method executed after a message is delivered to the Kafka broker.
-        """
+    def on_delivery(self, err, msg) -> None:
+        """Callback method executed after a message is delivered to the Kafka broker."""
         _ = msg
         if err:
             raise KafkaException(err)
         self._no_of_success_messages += 1
 
-    def poll(self, timeout):
+    def poll(self, timeout) -> None:
         """Polls the producer for events and calls the corresponding callbacks"""
         self._producer.poll(timeout)
 
-    def flush(self, timeout=KAFKA_TIMEOUT):
+    def flush(self, timeout=KAFKA_TIMEOUT) -> None:
         """Wait for all messages in the Producer queue to be delivered."""
         prev = 0
         while True:
@@ -124,19 +123,19 @@ class KafkaConsumer:
         self._topic = topic
         self._log = log
         self._no_of_success_messages = 0
-        self._first_message: Optional[KafkaMessage] = None
+        self._first_message: KafkaMessage | None = None
         self.fetch_limit = -1
 
     def get_success_messages_count(self) -> int:
         """Return count of the successful messages"""
         return self._no_of_success_messages
 
-    def commit(self):
+    def commit(self) -> None:
         """Commit the latest offset"""
         if self._commit_offset:
             self._consumer.commit()
 
-    def subscribe(self):
+    def subscribe(self) -> None:
         """Subscribes to a topic to consume messages"""
         self._consumer.subscribe(topics=[self._topic])
 
@@ -203,19 +202,19 @@ class KafkaConsumer:
                 )
             yield kafka_message
 
-    def close(self):
+    def close(self) -> None:
         """Closes the consumer once all messages were received."""
         self._consumer.close()
 
 
-def get_default_client_id(project_id: str, task_id: str):
+def get_default_client_id(project_id: str, task_id: str) -> str:
     """Return dns:projectId:taskId when client id is empty"""
     base_url = get_cmem_base_uri()
     dns = urlparse(base_url).netloc
     return f"{dns}:{project_id}:{task_id}"
 
 
-def validate_kafka_config(config: dict[str, Any], topic: str, log: PluginLogger):
+def validate_kafka_config(config: dict[str, Any], topic: str, log: PluginLogger) -> None:
     """Validate kafka configuration"""
     admin_client = AdminClient(config)
     cluster_metadata: ClusterMetadata = admin_client.list_topics(topic=topic, timeout=KAFKA_TIMEOUT)
@@ -245,8 +244,7 @@ def get_resource_from_dataset(dataset_id: str, context: UserContext):
 def get_task_metadata(project: str, task: str, context: UserContext):
     """Get metadata information of a task"""
     setup_cmempy_user_access(context=context)
-    task_meta_data = get_task(project=project, task=task)
-    return task_meta_data
+    return get_task(project=project, task=task)
 
 
 def get_message_with_xml_wrapper(message: KafkaMessage) -> str:
@@ -298,7 +296,7 @@ def get_kafka_statistics(json_data: str) -> dict:
     }
 
 
-def is_xml(value: str):
+def is_xml(value: str) -> None:
     """Check value is xml string or not"""
     try:
         ElementTree.fromstring(value)
@@ -306,7 +304,7 @@ def is_xml(value: str):
         raise ValueError(f"Kafka message({value}) is not in Valid XML format") from exc
 
 
-def is_json(value: str):
+def is_json(value: str) -> bool:
     """Check value is json string or not"""
     try:
         json.loads(value)
@@ -322,7 +320,7 @@ class DatasetParameterType(StringParameterType):
 
     autocomplete_value_with_labels: bool = True
 
-    dataset_type: Optional[str] = None
+    dataset_type: str | None = None
 
     def __init__(self, dataset_type: str = ""):
         """Dataset parameter type."""
@@ -330,7 +328,7 @@ class DatasetParameterType(StringParameterType):
 
     def label(
         self, value: str, depend_on_parameter_values: list[Any], context: PluginContext
-    ) -> Optional[str]:
+    ) -> str | None:
         """Returns the label for the given dataset."""
         setup_cmempy_user_access(context.user)
         task_label = str(get_task(project=context.project_id, task=value)["metadata"]["label"])

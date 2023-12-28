@@ -63,7 +63,7 @@ def xml_dataset_project():
     import_from_upload_start(import_id=import_id, project_id=project_id, overwrite_existing=True)
     # loop until "success" boolean is in status response
     status = import_from_upload_status(import_id)
-    while "success" not in status.keys():
+    while "success" not in status:
         status = import_from_upload_status(import_id)
 
     make_new_dataset(
@@ -113,7 +113,7 @@ def json_dataset_project():
     import_from_upload_start(import_id=import_id, project_id=project_id, overwrite_existing=True)
     # loop until "success" boolean is in status response
     status = import_from_upload_status(import_id)
-    while "success" not in status.keys():
+    while "success" not in status:
         status = import_from_upload_status(import_id)
 
     make_new_dataset(

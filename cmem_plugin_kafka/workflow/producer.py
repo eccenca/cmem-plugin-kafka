@@ -182,13 +182,13 @@ class KafkaProducerPlugin(WorkflowPlugin):
         self.compression_type = compression_type
         self._kafka_stats: dict = {}
 
-    def metrics_callback(self, json: str):
+    def metrics_callback(self, json: str) -> None:
         """Sends producer metrics to server"""
         self._kafka_stats = get_kafka_statistics(json_data=json)
         for key, value in self._kafka_stats.items():
             self.log.info(f"kafka-stats: {key:10} - {value:10}")
 
-    def error_callback(self, err: KafkaError):
+    def error_callback(self, err: KafkaError) -> None:
         """Error callback"""
         self.log.info(f"kafka-error:{err}")
         if err.code() == -193:  # -193 -> _RESOLVE
@@ -218,7 +218,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
             )
         return config
 
-    def validate(self):
+    def validate(self) -> None:
         """Validate parameters"""
         validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
 

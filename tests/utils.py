@@ -116,7 +116,7 @@ class XMLUtils:
             def __init__(self):
                 self.count = 0
 
-            def startElement(self, name, attrs):
+            def startElement(self, name, attrs) -> None:
                 if name == "Message":
                     self.count += 1
 

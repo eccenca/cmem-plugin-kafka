@@ -5,9 +5,8 @@ import hashlib
 import json
 import re
 from abc import ABC
-from collections.abc import Sequence
 from datetime import datetime
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any
 from xml.sax.saxutils import escape  # nosec B406
 
 import defusedxml.ElementTree as ET
@@ -30,6 +29,9 @@ from cmem_plugin_kafka.utils import (
     get_message_with_xml_wrapper,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 
 class KafkaDataHandler:
     """Base class for producing messages from data to a Kafka topic.
@@ -48,8 +50,8 @@ class KafkaDataHandler:
         self,
         context: ExecutionContext,
         plugin_logger: PluginLogger,
-        kafka_producer: Optional[KafkaProducer] = None,
-        kafka_consumer: Optional[KafkaConsumer] = None,
+        kafka_producer: KafkaProducer | None = None,
+        kafka_consumer: KafkaConsumer | None = None,
     ):
         """Initialize a new KafkaDataHandler instance with the specified
         execution context, logger, and producer instances.
@@ -59,7 +61,7 @@ class KafkaDataHandler:
         self._context: ExecutionContext = context
         self._log: PluginLogger = plugin_logger
 
-    def send_messages(self, data):
+    def send_messages(self, data) -> None:
         """Send messages to the Kafka topic from the input data.
         This method splits the input data into individual messages, then sends each
         message as a separate Kafka record.
@@ -77,7 +79,7 @@ class KafkaDataHandler:
                 self.update_report()
         self._kafka_producer.flush()
 
-    def _split_data(self, data):
+    def _split_data(self, data) -> None:
         """Split the input data into individual messages.
         This method should be implemented by subclasses to handle the specific
         data format.
@@ -98,7 +100,7 @@ class KafkaDataHandler:
         self._kafka_consumer.subscribe()
         return self._aggregate_data()
 
-    def _aggregate_data(self):
+    def _aggregate_data(self) -> None:
         """Aggregate the input data into a single object.
         This method should be implemented by subclasses to handle
         the specific data format.
@@ -108,7 +110,7 @@ class KafkaDataHandler:
         """
         raise NotImplementedError("Subclass must implement _aggregate_data method")
 
-    def update_report(self):
+    def update_report(self) -> None:
         """Update the plugin report with the current status of the Kafka producer.
 
         This method creates an ExecutionReport object and updates the plugin report
@@ -153,8 +155,8 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
         self,
         context: ExecutionContext,
         plugin_logger: PluginLogger,
-        kafka_producer: Optional[KafkaProducer] = None,
-        kafka_consumer: Optional[KafkaConsumer] = None,
+        kafka_producer: KafkaProducer | None = None,
+        kafka_consumer: KafkaConsumer | None = None,
     ):
         """Initialize a new KafkaJSONDataHandler instance with the specified
         execution context, logger, and producer instances.
@@ -202,8 +204,8 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
         self,
         context: ExecutionContext,
         plugin_logger: PluginLogger,
-        kafka_producer: Optional[KafkaProducer] = None,
-        kafka_consumer: Optional[KafkaConsumer] = None,
+        kafka_producer: KafkaProducer | None = None,
+        kafka_consumer: KafkaConsumer | None = None,
     ):
         """Initialize a new KafkaXMLDataHandler instance with the specified
         execution context, logger, and producer instances.
@@ -256,7 +258,7 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
                 return escape(item[1])
         return None
 
-    def start_element(self, element):
+    def start_element(self, element) -> None:
         """Call when an element starts"""
         name = element.tag
         attrs = element.attrib
@@ -301,7 +303,7 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
         self._level -= 1
         return None
 
-    def rest_for_next_message(self, attrs):
+    def rest_for_next_message(self, attrs) -> None:
         """To reset _message"""
         value = '<?xml version="1.0" encoding="UTF-8"?>'
         key = self.get_key(attrs)
@@ -326,8 +328,8 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
         self,
         context: ExecutionContext,
         plugin_logger: PluginLogger,
-        kafka_producer: Optional[KafkaProducer] = None,
-        kafka_consumer: Optional[KafkaConsumer] = None,
+        kafka_producer: KafkaProducer | None = None,
+        kafka_consumer: KafkaConsumer | None = None,
     ):
         """Initialize a new KafkaEntitiesDataHandler instance with the specified
         execution context, logger, and producer instances.

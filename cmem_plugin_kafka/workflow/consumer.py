@@ -1,6 +1,6 @@
 """Kafka consumer plugin module"""
 from collections.abc import Sequence
-from typing import Any, Optional
+from typing import Any
 
 from cmem.cmempy.api import request
 from cmem.cmempy.workspace.projects.datasets.dataset import get_dataset_file_uri
@@ -186,13 +186,13 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.disable_commit = bool(disable_commit)
         self._kafka_stats: dict = {}
 
-    def metrics_callback(self, json: str):
+    def metrics_callback(self, json: str) -> None:
         """Sends producer metrics to server"""
         self._kafka_stats = get_kafka_statistics(json_data=json)
         for key, value in self._kafka_stats.items():
             self.log.info(f"kafka-stats: {key:10} - {value:10}")
 
-    def error_callback(self, err: KafkaError):
+    def error_callback(self, err: KafkaError) -> None:
         """Error callback"""
         self.log.info(f"kafka-error:{err}")
         if err.code() == -193:  # -193 -> _RESOLVE
@@ -223,11 +223,11 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             )
         return config
 
-    def validate(self):
+    def validate(self) -> None:
         """Validate parameters"""
         validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
 
-    def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> Optional[Entities]:
+    def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> Entities | None:
         self.log.info("Kafka Consumer Started")
         self.validate()
 
@@ -275,7 +275,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         return None
 
 
-def write_to_dataset(dataset_id: str, file_resource=None, context: Optional[UserContext] = None):
+def write_to_dataset(dataset_id: str, file_resource=None, context: UserContext | None = None):
     """Write to a dataset.
 
     Args:
@@ -323,10 +323,9 @@ def post_resource(project_id, dataset_id, file_resource=None):
     endpoint = get_dataset_file_uri().format(project_id, dataset_id)
 
     with file_resource as file:
-        response = request(
+        return request(
             endpoint,
             method="PUT",
             stream=True,
             data=file,
         )
-    return response

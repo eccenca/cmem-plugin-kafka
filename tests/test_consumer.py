@@ -40,7 +40,7 @@ DEFAULT_RESET = "latest"
 
 
 @pytest.fixture()
-def project(request):
+def project(request) -> None:
     """Provides the DI build project incl. assets."""
     with suppress(Exception):
         delete_project(PROJECT_NAME)
