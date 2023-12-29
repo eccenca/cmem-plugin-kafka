@@ -29,7 +29,7 @@ needs_kafka: MarkDecorator = pytest.mark.skipif(
 )
 
 
-def get_kafka_config():
+def get_kafka_config() -> dict:
     """To get the kafka configuration from environment variables"""
     return {
         "bootstrap_server": os.environ.get("KAFKA_BOOTSTRAP_SERVER", ""),
@@ -107,7 +107,7 @@ class XMLUtils:
         return len(tree.findall("./"))
 
     @staticmethod
-    def get_elements_len_from_stream(content) -> int:
+    def get_elements_len_from_stream(content: str) -> int:
         """Return elements len of xml file"""
 
         class MessageHandler(ContentHandler):
@@ -116,7 +116,9 @@ class XMLUtils:
             def __init__(self):
                 self.count = 0
 
-            def startElement(self, name, attrs) -> None:
+            def startElement(self, name: str, attrs: list) -> None:  # noqa: N802
+                _ = attrs
+
                 if name == "Message":
                     self.count += 1
 

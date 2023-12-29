@@ -1,5 +1,6 @@
 """Plugin tests."""
 from contextlib import suppress
+from pathlib import Path
 
 import pytest
 import requests
@@ -23,8 +24,8 @@ DEFAULT_TOPIC = "eccenca_kafka_workflow"
 
 
 @pytest.fixture()
-def project(request) -> None:
-    """Provides the DI build project incl. assets."""
+def project() -> str:
+    """Provide the DI build project incl. assets."""
     with suppress(Exception):
         delete_project(PROJECT_NAME)
     make_new_project(PROJECT_NAME)
@@ -35,19 +36,21 @@ def project(request) -> None:
         parameters={"file": RESOURCE_NAME},
         autoconfigure=False,
     )
-    with open("tests/sample-test.xml", "rb") as response_file:
+    with Path("tests/sample-test.xml").open("rb") as response_file:
         create_resource(
             project_name=PROJECT_NAME,
             resource_name=RESOURCE_NAME,
             file_resource=response_file,
             replace=True,
         )
-    request.addfinalizer(lambda: delete_project(PROJECT_NAME))
+
+    yield PROJECT_NAME
+    delete_project(PROJECT_NAME)
 
 
 @needs_cmem
 @needs_kafka
-def test_execution_plain_kafka(project, topic) -> None:
+def test_execution_plain_kafka(project: str, topic: str) -> None:
     """Test plugin execution for Plain Kafka"""
     KafkaProducerPlugin(
         message_dataset=DATASET_ID,
@@ -57,12 +60,13 @@ def test_execution_plain_kafka(project, topic) -> None:
         sasl_username=KAFKA_CONFIG["sasl_username"],
         sasl_password=KAFKA_CONFIG["sasl_password"],
         kafka_topic=topic,
-    ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
+    ).execute(None, TestExecutionContext(project_id=project))
 
 
 @needs_cmem
 @needs_kafka
-def test_validate_invalid_inputs(project, topic) -> None:
+def test_validate_invalid_inputs(project: str, topic: str) -> None:
+    """Test producer plugin validation with invalid inputs"""
     # Invalid Dataset
     with pytest.raises(requests.exceptions.HTTPError):
         KafkaProducerPlugin(
@@ -73,7 +77,7 @@ def test_validate_invalid_inputs(project, topic) -> None:
             sasl_username=KAFKA_CONFIG["sasl_username"],
             sasl_password=KAFKA_CONFIG["sasl_password"],
             kafka_topic=topic,
-        ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
+        ).execute(None, TestExecutionContext(project_id=project))
 
     # Invalid SECURITY PROTOCOL
     with pytest.raises(cimpl.KafkaException):

@@ -1,6 +1,7 @@
-import os
+"""Tests for producer/consumer plugin with big datasets."""
 import shutil
 from contextlib import suppress
+from pathlib import Path
 
 import json_stream.requests
 import pytest
@@ -46,15 +47,17 @@ JSON_PROJECT_LINK = "https://download.eccenca.com/cmem-plugin-kafka/kafka_json_p
 
 
 @pytest.fixture()
-def xml_dataset_project():
-    """Provides the DI build project incl. assets."""
+def xml_dataset_project() -> str:
+    """Provide the DI build project incl. assets."""
     setup_cmempy_user_access(context=TestUserContext())
     with suppress(Exception):
         delete_project(PROJECT_NAME)
 
-    with requests.get(url=XML_PROJECT_LINK, timeout=10, stream=True) as response:
-        with open("kafka_performance_project.zip", "wb") as project_file:
-            shutil.copyfileobj(response.raw, project_file)
+    with (
+        requests.get(url=XML_PROJECT_LINK, timeout=10, stream=True) as response,
+        Path("kafka_performance_project.zip").open("wb") as project_file,
+    ):
+        shutil.copyfileobj(response.raw, project_file)
 
     validation_response = upload_project("kafka_performance_project.zip")
     import_id = validation_response["projectImportId"]
@@ -73,16 +76,16 @@ def xml_dataset_project():
         parameters={"file": CONSUMER_RESOURCE_NAME},
         autoconfigure=False,
     )
-    yield None
+    yield PROJECT_NAME
     with suppress(Exception):
         setup_cmempy_user_access(context=TestUserContext())
-        os.remove("kafka_performance_project.zip")
+        Path("kafka_performance_project.zip").unlink()
         delete_project(PROJECT_NAME)
 
 
 @pytest.fixture()
-def entities_project():
-    """Provides the DI build project incl. assets."""
+def entities_project() -> str:
+    """Provide the DI build project incl. assets."""
     setup_cmempy_user_access(context=TestUserContext())
     project_name = "kafka_entities_perf_project"
     with suppress(Exception):
@@ -94,17 +97,19 @@ def entities_project():
 
 
 @pytest.fixture()
-def json_dataset_project():
-    """Provides the DI build project incl. assets."""
+def json_dataset_project() -> str:
+    """Provide the DI build project incl. assets."""
     setup_cmempy_user_access(context=TestUserContext())
 
     project_name = "kafka_json_perf_project"
     with suppress(Exception):
         delete_project(project_name)
 
-    with requests.get(url=JSON_PROJECT_LINK, timeout=10, stream=True) as response:
-        with open("kafka_json_perf_project.zip", "wb") as project_file:
-            shutil.copyfileobj(response.raw, project_file)
+    with (
+        requests.get(url=JSON_PROJECT_LINK, timeout=10, stream=True) as response,
+        Path("kafka_json_perf_project.zip").open("wb") as project_file,
+    ):
+        shutil.copyfileobj(response.raw, project_file)
 
     validation_response = upload_project("kafka_json_perf_project.zip")
     import_id = validation_response["projectImportId"]
@@ -126,13 +131,13 @@ def json_dataset_project():
     yield project_id
     with suppress(Exception):
         setup_cmempy_user_access(context=TestUserContext())
-        os.remove("kafka_json_perf_project.zip")
+        Path("kafka_json_perf_project.zip").unlink()
         delete_project(project_id)
 
 
 @needs_cmem
 @needs_kafka
-def test_perf_kafka_producer_consumer_xml_dataset(xml_dataset_project, topic) -> None:
+def test_perf_kafka_producer_consumer_xml_dataset(xml_dataset_project: str, topic: str) -> None:
     """Test plugin execution for Plain Kafka"""
     # Producer
     KafkaProducerPlugin(
@@ -144,7 +149,7 @@ def test_perf_kafka_producer_consumer_xml_dataset(xml_dataset_project, topic) ->
         sasl_password=KAFKA_CONFIG["sasl_password"],
         kafka_topic=topic,
         client_id="",
-    ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
+    ).execute([], TestExecutionContext(project_id=xml_dataset_project))
 
     # Consumer
     KafkaConsumerPlugin(
@@ -167,12 +172,12 @@ def test_perf_kafka_producer_consumer_xml_dataset(xml_dataset_project, topic) ->
     )
     with resource as consumer_file:
         consumer_file.raw.decode_content = True
-        assert XMLUtils.get_elements_len_from_stream(consumer_file.raw) == 286918
+        assert XMLUtils.get_elements_len_from_stream(consumer_file.raw) == 286918  # noqa: PLR2004
 
 
 @needs_cmem
 @needs_kafka
-def test_perf_kafka_producer_consumer_with_entities(entities_project, topic) -> None:
+def test_perf_kafka_producer_consumer_with_entities(entities_project: str, topic: str) -> None:
     """Test plugin execution for Plain Kafka"""
     no_of_entities = 1000000
     entities = RandomValues(
@@ -208,7 +213,7 @@ def test_perf_kafka_producer_consumer_with_entities(entities_project, topic) -> 
         consumer_entities.schema.type_uri
         == "https://github.com/eccenca/cmem-plugin-kafka#PlainMessage"
     )
-    assert len(consumer_entities.schema.paths) == 5
+    assert len(consumer_entities.schema.paths) == 5  # noqa: PLR2004
     for _ in consumer_entities.entities:
         count += 1
 
@@ -217,7 +222,9 @@ def test_perf_kafka_producer_consumer_with_entities(entities_project, topic) -> 
 
 @needs_cmem
 @needs_kafka
-def test_perf_kafka_producer_consumer_with_json_dataset(json_dataset_project, topic) -> None:
+def test_perf_kafka_producer_consumer_with_json_dataset(
+    json_dataset_project: str, topic: str
+) -> None:
     """Test plugin execution for Plain Kafka"""
     producer_dataset = "huge_json_dataset"
     consumer_dataset = "json_dataset_result"
@@ -257,4 +264,4 @@ def test_perf_kafka_producer_consumer_with_json_dataset(json_dataset_project, to
         data = json_stream.requests.load(json_file)
         for _ in data:
             count += 1
-        assert count == 1000000
+        assert count == 1000000  # noqa: PLR2004

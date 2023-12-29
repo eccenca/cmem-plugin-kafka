@@ -1,5 +1,7 @@
+"""Tests for `kafka_handlers` package."""
 from contextlib import suppress
 from dataclasses import dataclass
+from pathlib import Path
 
 import json_stream
 import json_stream.requests
@@ -26,8 +28,8 @@ DEFAULT_GROUP = "workflow"
 
 
 @pytest.fixture()
-def project():
-    """Provides the DI build project incl. assets."""
+def project() -> dataclass:
+    """Provide the DI build project incl. assets."""
     with suppress(Exception):
         delete_project(PROJECT_NAME)
     make_new_project(PROJECT_NAME)
@@ -38,7 +40,7 @@ def project():
         parameters={"file": RESOURCE_NAME},
         autoconfigure=False,
     )
-    with open("tests/sample-test.json", "rb") as response_file:
+    with Path("tests/sample-test.json").open("rb") as response_file:
         create_resource(
             project_name=PROJECT_NAME,
             resource_name=RESOURCE_NAME,
@@ -59,7 +61,7 @@ def project():
 
 
 @needs_cmem
-def test_kafka_json_data_handler(project, topic) -> None:
+def test_kafka_json_data_handler(project: dataclass, topic: str) -> None:
     """Validate KafkaJSONDataHandler"""
     kafka_service = KAFKA_CONFIG["bootstrap_server"]
     KafkaProducerPlugin(
@@ -90,7 +92,7 @@ def test_kafka_json_data_handler(project, topic) -> None:
         context=TestUserContext(),
     )
     assert len(resource.content) > 0, "JSON Content is empty"
-    with open("tests/sample-test.json", "rb") as response_file:
+    with Path("tests/sample-test.json").open("rb") as response_file:
         data = json_stream.to_standard_types(json_stream.load(response_file))
     with resource as consumer_dataset_file:
         consumer_data = json_stream.to_standard_types(
