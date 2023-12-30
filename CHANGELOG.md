@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/)
 
+## [3.1.0] 2023-12-30
+
+### Changed
+
+- Upgrade template to V6.0.1
+- upgrades to use cmem-plugin-base 4.3.0 (for CMEM 23.3)
+- SASL Password parameter type from StringParameterType to PasswordParameterType 
+
 ## [3.0.0] 2023-09-08
 
 ### Fixes

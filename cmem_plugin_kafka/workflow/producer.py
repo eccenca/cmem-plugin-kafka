@@ -9,6 +9,7 @@ from cmem_plugin_base.dataintegration.context import (
 from cmem_plugin_base.dataintegration.description import Plugin, PluginParameter
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
+from cmem_plugin_base.dataintegration.parameter.password import Password, PasswordParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.types import IntParameterType
 from confluent_kafka import KafkaError
@@ -122,6 +123,7 @@ on configuration.
         PluginParameter(
             name="sasl_password",
             label="SASL Password",
+            param_type=PasswordParameterType(),
             advanced=True,
             default_value="",
             description=SASL_PASSWORD_DESCRIPTION,
@@ -161,7 +163,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
         security_protocol: str,
         sasl_mechanisms: str,
         sasl_username: str,
-        sasl_password: str,
+        sasl_password: str | Password,
         kafka_topic: str,
         client_id: str = "",
         message_max_bytes: str = "1048576",
@@ -174,7 +176,9 @@ class KafkaProducerPlugin(WorkflowPlugin):
         self.security_protocol = security_protocol
         self.sasl_mechanisms = sasl_mechanisms
         self.sasl_username = sasl_username
-        self.sasl_password = sasl_password
+        self.sasl_password = (
+            sasl_password if isinstance(sasl_password, str) else sasl_password.decrypt()
+        )
         self.kafka_topic = kafka_topic
         self.client_id = client_id
         self.message_max_bytes = message_max_bytes
