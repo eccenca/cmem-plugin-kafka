@@ -1,9 +1,11 @@
 """Kafka utils modules"""
 import json
 import re
-from typing import Dict, Any, Iterator, Optional
+from collections.abc import Iterator
+from typing import Any
 from urllib.parse import urlparse
 
+import confluent_kafka
 from cmem.cmempy.config import get_cmem_base_uri
 from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
 from cmem.cmempy.workspace.search import list_items
@@ -11,8 +13,8 @@ from cmem.cmempy.workspace.tasks import get_task
 from cmem_plugin_base.dataintegration.context import (
     ExecutionContext,
     ExecutionReport,
-    UserContext,
     PluginContext,
+    UserContext,
 )
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
 from cmem_plugin_base.dataintegration.types import Autocompletion, StringParameterType
@@ -20,17 +22,16 @@ from cmem_plugin_base.dataintegration.utils import (
     setup_cmempy_user_access,
     split_task_id,
 )
-from confluent_kafka import Producer, Consumer, KafkaException, KafkaError
-from confluent_kafka.admin import AdminClient, TopicMetadata, ClusterMetadata
+from confluent_kafka import Consumer, KafkaError, KafkaException, Producer
+from confluent_kafka.admin import AdminClient, ClusterMetadata, TopicMetadata
 from defusedxml import ElementTree
+from requests import Response
 
-from cmem_plugin_kafka.constants import KAFKA_TIMEOUT
+from cmem_plugin_kafka.constants import KAFKA_RETRY_COUNT, KAFKA_TIMEOUT
 
 
-# pylint: disable-msg=too-few-public-methods
 class KafkaMessage:
-    """
-    A class used to represent/hold a Kafka Message key and value
+    """A class used to represent/hold a Kafka Message key and value
 
     ...
 
@@ -42,17 +43,17 @@ class KafkaMessage:
         Kafka message payload
     """
 
-    def __init__(
-            self,
-            key: Optional[str] = None,
-            headers: Optional[dict] = None,
-            value: str = "",
-            offset: Optional[int] = None,
-            timestamp: Optional[int] = None
+    def __init__(  # noqa: PLR0913
+        self,
+        key: str | None = None,
+        headers: dict | None = None,
+        value: str = "",
+        offset: int | None = None,
+        timestamp: int | None = None,
     ):
         self.value: str = value
-        self.key: Optional[str] = key
-        self.headers: Optional[dict] = headers
+        self.key: str | None = key
+        self.headers: dict | None = headers
         self.offset = offset
         self.timestamp = timestamp
 
@@ -65,34 +66,31 @@ class KafkaProducer:
         self._producer = Producer(config)
         self._topic = topic
         self._no_of_success_messages: int = 0
-        self.compression_type = config.get("compression.type", 'none')
+        self.compression_type = config.get("compression.type", "none")
 
-    def process(self, message: KafkaMessage):
+    def process(self, message: KafkaMessage) -> None:
         """Produce message to topic."""
-        # self._no_of_success_messages += 1
         headers = message.headers if message.headers else {}
         self._producer.produce(
             self._topic,
-            value=message.value.encode('utf-8'),
+            value=message.value.encode("utf-8"),
             key=message.key,
             headers=headers,
-            on_delivery=self.on_delivery
+            on_delivery=self.on_delivery,
         )
 
-    def on_delivery(self, err, msg):
-        """
-        Callback method executed after a message is delivered to the Kafka broker.
-        """
+    def on_delivery(self, err: confluent_kafka.KafkaError, msg: confluent_kafka.Message) -> None:
+        """Execute after a message is delivered to the Kafka broker."""
         _ = msg
         if err:
             raise KafkaException(err)
         self._no_of_success_messages += 1
 
-    def poll(self, timeout):
-        """Polls the producer for events and calls the corresponding callbacks"""
+    def poll(self, timeout: int) -> None:
+        """Poll the producer for events and calls the corresponding callbacks"""
         self._producer.poll(timeout)
 
-    def flush(self, timeout=KAFKA_TIMEOUT):
+    def flush(self, timeout: int = KAFKA_TIMEOUT) -> None:
         """Wait for all messages in the Producer queue to be delivered."""
         prev = 0
         while True:
@@ -109,14 +107,13 @@ class KafkaProducer:
 class KafkaConsumer:
     """Kafka consumer wrapper over confluent consumer"""
 
-    # pylint: disable=too-many-instance-attributes
-    def __init__(
-            self,
-            config: dict,
-            commit_offset: bool,
-            topic: str,
-            log: PluginLogger,
-            context: ExecutionContext
+    def __init__(  # noqa: PLR0913
+        self,
+        config: dict,
+        commit_offset: bool,  # noqa: FBT001
+        topic: str,
+        log: PluginLogger,
+        context: ExecutionContext,
     ):
         """Create consumer instance"""
         self._consumer = Consumer(config)
@@ -125,23 +122,23 @@ class KafkaConsumer:
         self._topic = topic
         self._log = log
         self._no_of_success_messages = 0
-        self._first_message: Optional[KafkaMessage] = None
+        self._first_message: KafkaMessage | None = None
         self.fetch_limit = -1
 
     def get_success_messages_count(self) -> int:
         """Return count of the successful messages"""
         return self._no_of_success_messages
 
-    def commit(self):
+    def commit(self) -> None:
         """Commit the latest offset"""
         if self._commit_offset:
             self._consumer.commit()
 
-    def subscribe(self):
-        """Subscribes to a topic to consume messages"""
+    def subscribe(self) -> None:
+        """Subscribe to a topic to consume messages"""
         self._consumer.subscribe(topics=[self._topic])
 
-    def get_first_message(self):
+    def get_first_message(self) -> KafkaMessage | None:
         """Get the first message from kafka subscribed topic"""
         if self._first_message:
             return self._first_message
@@ -149,7 +146,7 @@ class KafkaConsumer:
         while True:
             msg = self._consumer.poll(timeout=KAFKA_TIMEOUT)
             count += 1
-            if msg or count > 3:
+            if msg or count > KAFKA_RETRY_COUNT:
                 break
 
         if msg is None:
@@ -168,7 +165,7 @@ class KafkaConsumer:
         return self._first_message
 
     def poll(self) -> Iterator[KafkaMessage]:
-        """Polls the consumer for events and calls the corresponding callbacks"""
+        """Poll the consumer for events and calls the corresponding callbacks"""
         while True:
             if 0 <= self.fetch_limit == self._no_of_success_messages:
                 self._log.info("Message fetch fetch_limit reached")
@@ -204,24 +201,22 @@ class KafkaConsumer:
                 )
             yield kafka_message
 
-    def close(self):
-        """Closes the consumer once all messages were received."""
+    def close(self) -> None:
+        """Close the consumer once all messages were received."""
         self._consumer.close()
 
 
-def get_default_client_id(project_id: str, task_id: str):
-    """return dns:projectId:taskId when client id is empty"""
+def get_default_client_id(project_id: str, task_id: str) -> str:
+    """Return dns:projectId:taskId when client id is empty"""
     base_url = get_cmem_base_uri()
     dns = urlparse(base_url).netloc
     return f"{dns}:{project_id}:{task_id}"
 
 
-def validate_kafka_config(config: Dict[str, Any], topic: str, log: PluginLogger):
+def validate_kafka_config(config: dict[str, Any], topic: str, log: PluginLogger) -> None:
     """Validate kafka configuration"""
     admin_client = AdminClient(config)
-    cluster_metadata: ClusterMetadata = admin_client.list_topics(
-        topic=topic, timeout=KAFKA_TIMEOUT
-    )
+    cluster_metadata: ClusterMetadata = admin_client.list_topics(topic=topic, timeout=KAFKA_TIMEOUT)
 
     topic_meta: TopicMetadata = cluster_metadata.topics[topic]
     kafka_error: KafkaError = topic_meta.error
@@ -236,7 +231,7 @@ def validate_kafka_config(config: Dict[str, Any], topic: str, log: PluginLogger)
     log.info("Connection details are valid")
 
 
-def get_resource_from_dataset(dataset_id: str, context: UserContext):
+def get_resource_from_dataset(dataset_id: str, context: UserContext) -> tuple[Response, dict]:
     """Get resource from dataset"""
     project_id, task_id = split_task_id(dataset_id)
     task_meta_data = get_task_metadata(project_id, task_id, context)
@@ -245,11 +240,10 @@ def get_resource_from_dataset(dataset_id: str, context: UserContext):
     return get_resource_response(project_id, resource_name), task_meta_data
 
 
-def get_task_metadata(project: str, task: str, context: UserContext):
-    """get metadata information of a task"""
+def get_task_metadata(project: str, task: str, context: UserContext) -> dict:
+    """Get metadata information of a task"""
     setup_cmempy_user_access(context=context)
-    task_meta_data = get_task(project=project, task=task)
-    return task_meta_data
+    return dict(get_task(project=project, task=task))
 
 
 def get_message_with_xml_wrapper(message: KafkaMessage) -> str:
@@ -258,7 +252,6 @@ def get_message_with_xml_wrapper(message: KafkaMessage) -> str:
     # strip xml metadata
     regex_pattern = "<\\?xml.*\\?>"
     msg_with_wrapper = f'<Message key="{message.key}">'
-    # TODO Efficient way to remove xml doc string
     msg_with_wrapper += re.sub(regex_pattern, "", message.value)
     msg_with_wrapper += "</Message>\n"
     return msg_with_wrapper
@@ -267,18 +260,16 @@ def get_message_with_xml_wrapper(message: KafkaMessage) -> str:
 class BytesEncoder(json.JSONEncoder):
     """JSON Bytes Encoder"""
 
-    def default(self, o):
+    def default(self, o: str | bytes) -> str:
+        """Return the serializable object of o"""
         if isinstance(o, bytes):
             return o.decode("utf-8")
-        return json.JSONEncoder.default(self, o)
+        return json.JSONEncoder.default(self, o)  # type: ignore[no-any-return]
 
 
 def get_message_with_json_wrapper(message: KafkaMessage) -> str:
     """Wrap kafka message around Message tags"""
-
-    msg_with_wrapper = {
-        "message": {"key": message.key, "content": json.loads(message.value)}
-    }
+    msg_with_wrapper = {"message": {"key": message.key, "content": json.loads(message.value)}}
     if message.headers:
         msg_with_wrapper["message"]["headers"] = {
             header[0]: header[1] for header in message.headers
@@ -299,14 +290,12 @@ def get_kafka_statistics(json_data: str) -> dict:
     ]
     stats = json.loads(json_data)
     return {
-        key: ",".join(stats[key].keys())
-        if isinstance(stats[key], dict)
-        else f"{stats[key]}"
+        key: ",".join(stats[key].keys()) if isinstance(stats[key], dict) else f"{stats[key]}"
         for key in interested_keys
     }
 
 
-def is_xml(value: str):
+def is_xml(value: str) -> None:
     """Check value is xml string or not"""
     try:
         ElementTree.fromstring(value)
@@ -314,7 +303,7 @@ def is_xml(value: str):
         raise ValueError(f"Kafka message({value}) is not in Valid XML format") from exc
 
 
-def is_json(value: str):
+def is_json(value: str) -> bool:
     """Check value is json string or not"""
     try:
         json.loads(value)
@@ -330,7 +319,7 @@ class DatasetParameterType(StringParameterType):
 
     autocomplete_value_with_labels: bool = True
 
-    dataset_type: Optional[str] = None
+    dataset_type: str | None = None
 
     def __init__(self, dataset_type: str = ""):
         """Dataset parameter type."""
@@ -338,12 +327,11 @@ class DatasetParameterType(StringParameterType):
 
     def label(
         self, value: str, depend_on_parameter_values: list[Any], context: PluginContext
-    ) -> Optional[str]:
-        """Returns the label for the given dataset."""
+    ) -> str | None:
+        """Return the label for the given dataset."""
+        _ = depend_on_parameter_values
         setup_cmempy_user_access(context.user)
-        task_label = str(
-            get_task(project=context.project_id, task=value)["metadata"]["label"]
-        )
+        task_label = str(get_task(project=context.project_id, task=value)["metadata"]["label"])
         return f"{task_label}"
 
     def autocomplete(
@@ -352,10 +340,10 @@ class DatasetParameterType(StringParameterType):
         depend_on_parameter_values: list[Any],
         context: PluginContext,
     ) -> list[Autocompletion]:
+        """Autocompletion request. Returns all results that match ALL provided query terms."""
+        _ = depend_on_parameter_values
         setup_cmempy_user_access(context.user)
-        datasets = list_items(item_type="dataset", project=context.project_id)[
-            "results"
-        ]
+        datasets = list_items(item_type="dataset", project=context.project_id)["results"]
 
         result = []
         dataset_types = []
@@ -369,11 +357,16 @@ class DatasetParameterType(StringParameterType):
             if dataset_types and _["pluginId"] not in dataset_types:
                 # Ignore datasets of other types
                 continue
-            for term in query_terms:
-                if term.lower() in label.lower():
-                    result.append(Autocompletion(value=identifier, label=label))
+
+            result.extend(
+                [
+                    Autocompletion(value=identifier, label=label)
+                    for term in query_terms
+                    if term.lower() in label.lower()
+                ]
+            )
             if len(query_terms) == 0:
                 # add any dataset to list if no search terms are given
                 result.append(Autocompletion(value=identifier, label=label))
-        result.sort(key=lambda x: x.label)  # type: ignore
+        result.sort(key=lambda x: x.label)
         return list(set(result))

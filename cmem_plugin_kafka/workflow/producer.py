@@ -1,11 +1,12 @@
 """Kafka producer plugin module"""
-from typing import Sequence, Dict, Any
+from collections.abc import Sequence
+from typing import Any
 
 from cmem_plugin_base.dataintegration.context import (
     ExecutionContext,
     ExecutionReport,
 )
-from cmem_plugin_base.dataintegration.description import PluginParameter, Plugin
+from cmem_plugin_base.dataintegration.description import Plugin, PluginParameter
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
@@ -13,29 +14,32 @@ from cmem_plugin_base.dataintegration.types import IntParameterType
 from confluent_kafka import KafkaError
 
 from cmem_plugin_kafka.constants import (
-    SECURITY_PROTOCOLS,
-    SASL_MECHANISMS,
     BOOTSTRAP_SERVERS_DESCRIPTION,
-    SECURITY_PROTOCOL_DESCRIPTION,
-    SASL_ACCOUNT_DESCRIPTION,
-    SASL_PASSWORD_DESCRIPTION,
     CLIENT_ID_DESCRIPTION,
+    COMPRESSION_TYPE_DESCRIPTION,
+    COMPRESSION_TYPES,
+    JSON_SAMPLE,
+    MESSAGE_MAX_SIZE_DESCRIPTION,
+    SASL_ACCOUNT_DESCRIPTION,
+    SASL_MECHANISMS,
+    SASL_PASSWORD_DESCRIPTION,
+    SECURITY_PROTOCOL_DESCRIPTION,
+    SECURITY_PROTOCOLS,
     XML_SAMPLE,
-    JSON_SAMPLE, COMPRESSION_TYPES, COMPRESSION_TYPE_DESCRIPTION,
-    MESSAGE_MAX_SIZE_DESCRIPTION, )
+)
 from cmem_plugin_kafka.kafka_handlers import (
+    KafkaDataHandler,
+    KafkaEntitiesDataHandler,
     KafkaJSONDataHandler,
     KafkaXMLDataHandler,
-    KafkaEntitiesDataHandler,
-    KafkaDataHandler,
 )
 from cmem_plugin_kafka.utils import (
-    KafkaProducer,
-    validate_kafka_config,
-    get_resource_from_dataset,
-    get_kafka_statistics,
-    get_default_client_id,
     DatasetParameterType,
+    KafkaProducer,
+    get_default_client_id,
+    get_kafka_statistics,
+    get_resource_from_dataset,
+    validate_kafka_config,
 )
 
 TOPIC_DESCRIPTION = """
@@ -50,8 +54,7 @@ This is especially true for a kafka cluster hosted at
 @Plugin(
     label="Kafka Producer (Send Messages)",
     plugin_id="cmem_plugin_kafka-SendMessages",
-    description="Reads a messages dataset and sends records to a"
-    " Kafka topic (Producer).",
+    description="Reads a messages dataset and sends records to a" " Kafka topic (Producer).",
     documentation=f"""This workflow operator uses the Kafka Producer API to send
 messages to a [Apache Kafka](https://kafka.apache.org/).
 
@@ -101,9 +104,7 @@ on configuration.
             param_type=ChoiceParameterType(SECURITY_PROTOCOLS),
             default_value="PLAINTEXT",
         ),
-        PluginParameter(
-            name="kafka_topic", label="Topic", description=TOPIC_DESCRIPTION
-        ),
+        PluginParameter(name="kafka_topic", label="Topic", description=TOPIC_DESCRIPTION),
         PluginParameter(
             name="sasl_mechanisms",
             label="SASL Mechanisms",
@@ -150,11 +151,10 @@ on configuration.
         ),
     ],
 )
-# pylint: disable-msg=too-many-instance-attributes
 class KafkaProducerPlugin(WorkflowPlugin):
     """Kafka Producer Plugin"""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         message_dataset: str,
         bootstrap_servers: str,
@@ -165,10 +165,10 @@ class KafkaProducerPlugin(WorkflowPlugin):
         kafka_topic: str,
         client_id: str = "",
         message_max_bytes: str = "1048576",
-        compression_type: str = "none"
+        compression_type: str = "none",
     ) -> None:
         if not isinstance(bootstrap_servers, str):
-            raise ValueError("Specified server id is invalid")
+            raise TypeError("Specified server id is invalid")
         self.message_dataset = message_dataset
         self.bootstrap_servers = bootstrap_servers
         self.security_protocol = security_protocol
@@ -181,20 +181,20 @@ class KafkaProducerPlugin(WorkflowPlugin):
         self.compression_type = compression_type
         self._kafka_stats: dict = {}
 
-    def metrics_callback(self, json: str):
-        """sends producer metrics to server"""
+    def metrics_callback(self, json: str) -> None:
+        """Send producer metrics to server"""
         self._kafka_stats = get_kafka_statistics(json_data=json)
         for key, value in self._kafka_stats.items():
             self.log.info(f"kafka-stats: {key:10} - {value:10}")
 
-    def error_callback(self, err: KafkaError):
+    def error_callback(self, err: KafkaError) -> None:
         """Error callback"""
         self.log.info(f"kafka-error:{err}")
-        if err.code() == -193:  # -193 -> _RESOLVE
+        if err.code() == -193:  # noqa: PLR2004 # -193 -> _RESOLVE
             raise err
 
-    def get_config(self, project_id: str = "", task_id: str = "") -> Dict[str, Any]:
-        """construct and return kafka connection configuration"""
+    def get_config(self, project_id: str = "", task_id: str = "") -> dict[str, Any]:
+        """Construct and return kafka connection configuration"""
         config = {
             "bootstrap.servers": self.bootstrap_servers,
             "security.protocol": self.security_protocol,
@@ -217,11 +217,12 @@ class KafkaProducerPlugin(WorkflowPlugin):
             )
         return config
 
-    def validate(self):
+    def validate(self) -> None:
         """Validate parameters"""
         validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
 
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
+        """Execute the workflow plugin on a given collection of entities."""
         self.log.info("Start Kafka Plugin")
         self.validate()
 
@@ -234,9 +235,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
         )
 
         context.report.update(
-            ExecutionReport(
-                entity_count=0, operation="wait", operation_desc="messages sent"
-            )
+            ExecutionReport(entity_count=0, operation="wait", operation_desc="messages sent")
         )
 
         if self.message_dataset:

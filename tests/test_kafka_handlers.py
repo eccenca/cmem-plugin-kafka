@@ -1,5 +1,7 @@
+"""Tests for `kafka_handlers` package."""
 from contextlib import suppress
 from dataclasses import dataclass
+from pathlib import Path
 
 import json_stream
 import json_stream.requests
@@ -11,7 +13,8 @@ from cmem.cmempy.workspace.projects.resources.resource import create_resource
 from cmem_plugin_kafka.utils import get_resource_from_dataset
 from cmem_plugin_kafka.workflow.consumer import KafkaConsumerPlugin
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
-from .utils import get_kafka_config, needs_cmem, TestExecutionContext, TestUserContext
+
+from .utils import TestExecutionContext, TestUserContext, get_kafka_config, needs_cmem
 
 PROJECT_NAME = "kafka_handler_test_project"
 DATASET_NAME = "sample-test"
@@ -24,9 +27,9 @@ DEFAULT_TOPIC = "eccenca_kafka_handler_workflow"
 DEFAULT_GROUP = "workflow"
 
 
-@pytest.fixture
-def project():
-    """Provides the DI build project incl. assets."""
+@pytest.fixture()
+def project():  # noqa: ANN201
+    """Provide the DI build project incl. assets."""
     with suppress(Exception):
         delete_project(PROJECT_NAME)
     make_new_project(PROJECT_NAME)
@@ -37,7 +40,7 @@ def project():
         parameters={"file": RESOURCE_NAME},
         autoconfigure=False,
     )
-    with open("tests/sample-test.json", "rb") as response_file:
+    with Path("tests/sample-test.json").open("rb") as response_file:
         create_resource(
             project_name=PROJECT_NAME,
             resource_name=RESOURCE_NAME,
@@ -58,28 +61,28 @@ def project():
 
 
 @needs_cmem
-def test_kafka_json_data_handler(project, topic):
+def test_kafka_json_data_handler(project, topic: str) -> None:  # noqa: ANN001
     """Validate KafkaJSONDataHandler"""
     kafka_service = KAFKA_CONFIG["bootstrap_server"]
     KafkaProducerPlugin(
         message_dataset=project.dataset,
         bootstrap_servers=kafka_service,
         security_protocol="PLAINTEXT",
-        sasl_mechanisms=None,
-        sasl_username=None,
-        sasl_password=None,
+        sasl_mechanisms="",
+        sasl_username="",
+        sasl_password="",
         kafka_topic=topic,
-    ).execute(None, TestExecutionContext(project_id=project.project))
+    ).execute([], TestExecutionContext(project_id=project.project))
     # Consumer
     KafkaConsumerPlugin(
         message_dataset=project.dataset,
         bootstrap_servers=kafka_service,
         security_protocol="PLAINTEXT",
-        sasl_mechanisms=None,
-        sasl_username=None,
-        sasl_password=None,
+        sasl_mechanisms="",
+        sasl_username="",
+        sasl_password="",
         kafka_topic=topic,
-        group_id=None,
+        group_id="",
         auto_offset_reset="earliest",
     ).execute([], TestExecutionContext(project_id=project.project))
 
@@ -89,7 +92,7 @@ def test_kafka_json_data_handler(project, topic):
         context=TestUserContext(),
     )
     assert len(resource.content) > 0, "JSON Content is empty"
-    with open("tests/sample-test.json", "rb") as response_file:
+    with Path("tests/sample-test.json").open("rb") as response_file:
         data = json_stream.to_standard_types(json_stream.load(response_file))
     with resource as consumer_dataset_file:
         consumer_data = json_stream.to_standard_types(

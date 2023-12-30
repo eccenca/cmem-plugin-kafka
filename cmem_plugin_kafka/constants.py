@@ -2,6 +2,7 @@
 import collections
 
 KAFKA_TIMEOUT = 5
+KAFKA_RETRY_COUNT = 3
 
 # Security Protocols
 SECURITY_PROTOCOLS = collections.OrderedDict(
@@ -17,13 +18,7 @@ SASL_MECHANISMS = collections.OrderedDict(
 
 # Compression Types
 COMPRESSION_TYPES = collections.OrderedDict(
-    {
-        "none": "None",
-        "gzip": "gzip",
-        "snappy": "Snappy",
-        "lz4": "LZ4",
-        "zstd": "Zstandard"
-    }
+    {"none": "None", "gzip": "gzip", "snappy": "Snappy", "lz4": "LZ4", "zstd": "Zstandard"}
 )
 
 # Auto Offset Resets
@@ -60,7 +55,7 @@ SASL_ACCOUNT_DESCRIPTION = (
 
 
 SASL_PASSWORD_DESCRIPTION = (
-    "The credentials for the SASL Account. "  # nosec
+    "The credentials for the SASL Account. "  # noqa: S105
     "\n\n"
     "In case you are using a [confluent.cloud](https://confluent.cloud) cluster, "
     "this is the API secret."
@@ -222,4 +217,4 @@ In this case, a sample response from the consumer will appear as follows:
   <summary>Sample XML Response</summary>
 {XML_SAMPLE}
 </details>
-"""  # noqa: E501
+"""

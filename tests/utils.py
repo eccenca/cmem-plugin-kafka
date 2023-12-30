@@ -1,22 +1,23 @@
 """Testing utilities."""
 import os
-from defusedxml import sax
+from typing import ClassVar
+from xml.sax.expatreader import AttributesImpl
 from xml.sax.handler import ContentHandler
 
-from cmem.cmempy.config import get_oauth_default_credentials
-from defusedxml import ElementTree
 import pytest
 
 # check for cmem environment and skip if not present
 from _pytest.mark import MarkDecorator
 from cmem.cmempy.api import get_token
+from cmem.cmempy.config import get_oauth_default_credentials
 from cmem_plugin_base.dataintegration.context import (
     ExecutionContext,
+    PluginContext,
     ReportContext,
     TaskContext,
     UserContext,
-    PluginContext,
 )
+from defusedxml import ElementTree, sax
 
 needs_cmem: MarkDecorator = pytest.mark.skipif(
     "CMEM_BASE_URI" not in os.environ, reason="Needs CMEM configuration"
@@ -29,7 +30,7 @@ needs_kafka: MarkDecorator = pytest.mark.skipif(
 )
 
 
-def get_kafka_config():
+def get_kafka_config() -> dict:
     """To get the kafka configuration from environment variables"""
     return {
         "bootstrap_server": os.environ.get("KAFKA_BOOTSTRAP_SERVER", ""),
@@ -44,7 +45,7 @@ class TestUserContext(UserContext):
     """dummy user context that can be used in tests"""
 
     __test__ = False
-    default_credential: dict = {}
+    default_credential: ClassVar[dict] = {}
 
     def __init__(self):
         # get access token from default service account
@@ -107,7 +108,7 @@ class XMLUtils:
         return len(tree.findall("./"))
 
     @staticmethod
-    def get_elements_len_from_stream(content) -> int:
+    def get_elements_len_from_stream(content: str) -> int:
         """Return elements len of xml file"""
 
         class MessageHandler(ContentHandler):
@@ -116,7 +117,9 @@ class XMLUtils:
             def __init__(self):
                 self.count = 0
 
-            def startElement(self, name, attrs):
+            def startElement(self, name: str, attrs: AttributesImpl) -> None:  # noqa: N802
+                _ = attrs
+
                 if name == "Message":
                     self.count += 1
 
