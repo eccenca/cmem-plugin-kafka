@@ -9,6 +9,7 @@ from cmem_plugin_base.dataintegration.context import ExecutionContext, Execution
 from cmem_plugin_base.dataintegration.description import Plugin, PluginParameter
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
+from cmem_plugin_base.dataintegration.parameter.password import Password, PasswordParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.types import BoolParameterType, IntParameterType
 from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access, split_task_id
@@ -98,6 +99,7 @@ from cmem_plugin_kafka.utils import (
         PluginParameter(
             name="sasl_password",
             label="SASL Password",
+            param_type=PasswordParameterType(),
             advanced=True,
             default_value="",
             description=SASL_PASSWORD_DESCRIPTION,
@@ -160,7 +162,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         security_protocol: str,
         sasl_mechanisms: str,
         sasl_username: str,
-        sasl_password: str,
+        sasl_password: str | Password,
         kafka_topic: str,
         auto_offset_reset: str,
         group_id: str = "",
@@ -176,7 +178,9 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.security_protocol = security_protocol
         self.sasl_mechanisms = sasl_mechanisms
         self.sasl_username = sasl_username
-        self.sasl_password = sasl_password
+        self.sasl_password = (
+            sasl_password if isinstance(sasl_password, str) else sasl_password.decrypt()
+        )
         self.kafka_topic = kafka_topic
         self.group_id = group_id
         self.auto_offset_reset = auto_offset_reset
