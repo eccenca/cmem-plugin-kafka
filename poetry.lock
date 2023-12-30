@@ -157,6 +157,20 @@ files = [
 cmem-cmempy = ">=23.3.0"
 
 [[package]]
+name = "cmem-plugin-examples"
+version = "0.3.0"
+description = "Example plugins for eccenca Corporate Memory."
+optional = false
+python-versions = ">=3.11,<4.0"
+files = [
+    {file = "cmem_plugin_examples-0.3.0-py3-none-any.whl", hash = "sha256:595e73ba2373ff85278fb7997f385cf550271b6d466920c271667f3fc2b9c3c8"},
+    {file = "cmem_plugin_examples-0.3.0.tar.gz", hash = "sha256:68152b478ed58217769cd60106d6411c104e5e7874bb373e42564874950fb772"},
+]
+
+[package.dependencies]
+cmem-plugin-base = ">=4.0.0,<5.0.0"
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -1156,7 +1170,18 @@ brotli = ["brotli (>=1.0.9)", "brotlicffi (>=0.8.0)"]
 socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
 zstd = ["zstandard (>=0.18.0)"]
 
+[[package]]
+name = "xmltodict"
+version = "0.13.0"
+description = "Makes working with XML feel like you are working with JSON"
+optional = false
+python-versions = ">=3.4"
+files = [
+    {file = "xmltodict-0.13.0-py2.py3-none-any.whl", hash = "sha256:aa89e8fd76320154a40d19a0df04a4695fb9dc5ba977cbb68ab3e4eb225e7852"},
+    {file = "xmltodict-0.13.0.tar.gz", hash = "sha256:341595a488e3e01a85a9d8911d8912fd922ede5fecc4dce437eb4b6c8d037e56"},
+]
+
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "b62a5ac333687afcdb8c60f16bebefc4d4dece270edfc90bd56a7e0aa9004dd6"
+content-hash = "62a42b8698d2d6a354f63fa8cb54c169f3e97ad4885d4b69c09435c22f4e54ca"

@@ -1,6 +1,7 @@
 """test configuration module"""
 import logging
 import secrets
+from collections.abc import Generator
 
 import pytest
 from confluent_kafka.admin import AdminClient
@@ -13,7 +14,7 @@ TOPIC_PREFIX = "cmem"
 
 
 @pytest.fixture()
-def topic() -> str:
+def topic() -> Generator:
     """Create a test topic"""
     kafka_service = KAFKA_CONFIG["bootstrap_server"]
     a = AdminClient({"bootstrap.servers": kafka_service})

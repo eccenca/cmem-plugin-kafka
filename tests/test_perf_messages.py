@@ -1,5 +1,6 @@
 """Tests for producer/consumer plugin with big datasets."""
 import shutil
+from collections.abc import Generator
 from contextlib import suppress
 from pathlib import Path
 
@@ -39,7 +40,7 @@ PRODUCER_DATASET_ID = f"{PRODUCER_DATASET_NAME}"
 CONSUMER_DATASET_ID = f"{CONSUMER_DATASET_NAME}"
 
 KAFKA_CONFIG = get_kafka_config()
-DEFAULT_GROUP = None
+DEFAULT_GROUP = ""
 DEFAULT_TOPIC = "eccenca_kafka_workflow"
 DEFAULT_RESET = "earliest"
 XML_PROJECT_LINK = "https://download.eccenca.com/cmem-plugin-kafka/kafka_performance_project.zip"
@@ -47,7 +48,7 @@ JSON_PROJECT_LINK = "https://download.eccenca.com/cmem-plugin-kafka/kafka_json_p
 
 
 @pytest.fixture()
-def xml_dataset_project() -> str:
+def xml_dataset_project() -> Generator:
     """Provide the DI build project incl. assets."""
     setup_cmempy_user_access(context=TestUserContext())
     with suppress(Exception):
@@ -84,7 +85,7 @@ def xml_dataset_project() -> str:
 
 
 @pytest.fixture()
-def entities_project() -> str:
+def entities_project() -> Generator:
     """Provide the DI build project incl. assets."""
     setup_cmempy_user_access(context=TestUserContext())
     project_name = "kafka_entities_perf_project"
@@ -97,7 +98,7 @@ def entities_project() -> str:
 
 
 @pytest.fixture()
-def json_dataset_project() -> str:
+def json_dataset_project() -> Generator:
     """Provide the DI build project incl. assets."""
     setup_cmempy_user_access(context=TestUserContext())
 
@@ -185,7 +186,7 @@ def test_perf_kafka_producer_consumer_with_entities(entities_project: str, topic
     ).execute(context=TestExecutionContext())
     # Producer
     KafkaProducerPlugin(
-        message_dataset=None,
+        message_dataset="",
         bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
         security_protocol=KAFKA_CONFIG["security_protocol"],
         sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
@@ -196,7 +197,7 @@ def test_perf_kafka_producer_consumer_with_entities(entities_project: str, topic
 
     # Consumer
     consumer_entities = KafkaConsumerPlugin(
-        message_dataset=None,
+        message_dataset="",
         bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
         security_protocol=KAFKA_CONFIG["security_protocol"],
         sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
@@ -209,6 +210,7 @@ def test_perf_kafka_producer_consumer_with_entities(entities_project: str, topic
     ).execute([], TestExecutionContext(project_id=entities_project))
 
     count = 0
+    assert consumer_entities is not None
     assert (
         consumer_entities.schema.type_uri
         == "https://github.com/eccenca/cmem-plugin-kafka#PlainMessage"

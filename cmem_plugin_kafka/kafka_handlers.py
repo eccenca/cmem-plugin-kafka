@@ -1,15 +1,14 @@
-"""The `kafka_handlers` module provides a base class `KafkaDataHandler` for producing
-messages from data to/from a Kafka topic.
-"""
+"""Module provides a base class for producing messages from data to/from a Kafka topic."""
 import hashlib
 import json
 import re
 from abc import ABC
-from datetime import datetime
+from collections.abc import Generator
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
+from xml.etree.ElementTree import Element
 from xml.sax.saxutils import escape  # nosec B406
 
-import defusedxml.ElementTree as ET
 import json_stream
 import json_stream.requests
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
@@ -20,6 +19,8 @@ from cmem_plugin_base.dataintegration.entity import (
     EntitySchema,
 )
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
+from defusedxml import ElementTree
+from requests import Response
 
 from cmem_plugin_kafka.utils import (
     KafkaConsumer,
@@ -53,22 +54,23 @@ class KafkaDataHandler:
         kafka_producer: KafkaProducer | None = None,
         kafka_consumer: KafkaConsumer | None = None,
     ):
-        """Initialize a new KafkaDataHandler instance with the specified
-        execution context, logger, and producer instances.
-        """
+        """Initialize a new KafkaDataHandler instance."""
         self._kafka_producer = kafka_producer
         self._kafka_consumer = kafka_consumer
         self._context: ExecutionContext = context
         self._log: PluginLogger = plugin_logger
 
-    def send_messages(self, data) -> None:
+    def send_messages(self, data: Response) -> None:
         """Send messages to the Kafka topic from the input data.
+
         This method splits the input data into individual messages, then sends each
         message as a separate Kafka record.
 
         :param data: The input data to produce messages from.
         :type data: any
         """
+        if not self._kafka_producer:
+            return
         messages = self._split_data(data)
         count = 0
         for message in messages:
@@ -79,8 +81,9 @@ class KafkaDataHandler:
                 self.update_report()
         self._kafka_producer.flush()
 
-    def _split_data(self, data) -> None:
+    def _split_data(self, data: Response) -> Generator[KafkaMessage, KafkaMessage, KafkaMessage]:
         """Split the input data into individual messages.
+
         This method should be implemented by subclasses to handle the specific
         data format.
 
@@ -91,17 +94,20 @@ class KafkaDataHandler:
         """
         raise NotImplementedError("Subclass must implement _split_data method")
 
-    def consume_messages(self):
+    def consume_messages(self) -> Generator | None:
         """Consume messages from the Kafka topic and aggregate them into a single object.
 
         :return: The aggregated object of all consumed messages.
         :rtype: any
         """
+        if not self._kafka_consumer:
+            return None
         self._kafka_consumer.subscribe()
         return self._aggregate_data()
 
-    def _aggregate_data(self) -> None:
+    def _aggregate_data(self) -> Generator:
         """Aggregate the input data into a single object.
+
         This method should be implemented by subclasses to handle
         the specific data format.
 
@@ -117,6 +123,8 @@ class KafkaDataHandler:
         with the current status of the Kafka producer, including the number of
         successfully sent messages.
         """
+        if not self._kafka_producer:
+            return
         self._context.report.update(
             ExecutionReport(
                 entity_count=self._kafka_producer.get_success_messages_count(),
@@ -130,9 +138,11 @@ class KafkaDatasetHandler(KafkaDataHandler, ABC):
     """A Base class for producing messages from Dataset to a Kafka topic."""
 
     def __enter__(self):
+        """Enter the context"""
         return self.consume_messages()
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb):  # noqa: ANN001
+        """Commit and close the Kafka consumer"""
         if not exc_val:
             self._kafka_consumer.commit()
         self._kafka_consumer.close()
@@ -158,22 +168,22 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
         kafka_producer: KafkaProducer | None = None,
         kafka_consumer: KafkaConsumer | None = None,
     ):
-        """Initialize a new KafkaJSONDataHandler instance with the specified
-        execution context, logger, and producer instances.
-        """
+        """Initialize a new KafkaJSONDataHandler instance."""
         plugin_logger.info("Initialize KafkaJSONDataHandler")
         super().__init__(context, plugin_logger, kafka_producer, kafka_consumer)
 
-    def _split_data(self, data):
+    def _split_data(self, data: Response) -> Generator:
         for message in json_stream.requests.load(data):
-            message = json_stream.to_standard_types(message["message"])
-            key = message["key"] if "key" in message else None
-            headers = message["headers"] if "headers" in message else {}
-            content = message["content"]
+            _message = json_stream.to_standard_types(message["message"])
+            key = _message["key"] if "key" in _message else None
+            headers = _message["headers"] if "headers" in _message else {}
+            content = _message["content"]
             yield KafkaMessage(key=key, value=json.dumps(content), headers=headers)
 
-    def _aggregate_data(self):
+    def _aggregate_data(self) -> Generator:
         """Generate json file with kafka messages"""
+        if not self._kafka_consumer:
+            raise ValueError("Kafka consumer is None")
         try:
             yield b"["
             count = 0
@@ -207,17 +217,17 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
         kafka_producer: KafkaProducer | None = None,
         kafka_consumer: KafkaConsumer | None = None,
     ):
-        """Initialize a new KafkaXMLDataHandler instance with the specified
-        execution context, logger, and producer instances.
-        """
+        """Initialize a new KafkaXMLDataHandler instance."""
         self._level: int = 0
         self._no_of_children: int = 0
         self._message: KafkaMessage = KafkaMessage()
         plugin_logger.info("Initialize KafkaJSONDataHandler")
         super().__init__(context, plugin_logger, kafka_producer, kafka_consumer)
 
-    def _aggregate_data(self):
+    def _aggregate_data(self) -> Generator:
         """Generate xml file with kafka messages"""
+        if not self._kafka_consumer:
+            raise ValueError("Kafka consumer is None")
         yield b'<?xml version="1.0" encoding="UTF-8"?>\n'
         yield b"<KafkaMessages>"
         for message in self._kafka_consumer.poll():
@@ -225,11 +235,11 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
 
         yield b"</KafkaMessages>"
 
-    def _split_data(self, data):
+    def _split_data(self, data: Response) -> Generator:
         data.raw.decode_content = True
-        context = ET.iterparse(data.raw, events=("start", "end"))
+        context = ElementTree.iterparse(data.raw, events=("start", "end"))
         # get the root element
-        event, root = next(context, None)
+        event, root = next(context, None)  # type: ignore[misc]
         if not event:
             return
         for event, element in context:
@@ -242,23 +252,21 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
                     yield message
 
     @staticmethod
-    def attrs_s(attrs):
-        """This generates the XML attributes from an element attribute list"""
+    def attrs_s(attrs: dict) -> str:
+        """Generate the XML attributes from an element attribute list"""
         attribute_list = [""]
-        for item in attrs.items():
-            attribute_list.append(f'{item[0]}="{escape(item[1])}"')
-
+        attribute_list.extend([f'{item[0]}="{escape(item[1])}"' for item in attrs.items()])
         return " ".join(attribute_list)
 
     @staticmethod
-    def get_key(attrs):
+    def get_key(attrs: dict) -> str | None:
         """Get message key attribute from element attributes list"""
         for item in attrs.items():
             if item[0] == "key":
                 return escape(item[1])
         return None
 
-    def start_element(self, element) -> None:
+    def start_element(self, element: Element) -> None:
         """Call when an element starts"""
         name = element.tag
         attrs = element.attrib
@@ -272,13 +280,13 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
             self._message.value += open_tag
 
         # Number of child for Message tag
-        if self._level == 2:
+        if self._level == 2:  # noqa: PLR2004
             self._no_of_children += 1
 
         if text:
             self._message.value += text
 
-    def end_element(self, element):
+    def end_element(self, element: Element) -> KafkaMessage | None:
         """Call when an elements end"""
         name = element.tag
         if name == "Message" and self._level == 1:
@@ -303,7 +311,7 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
         self._level -= 1
         return None
 
-    def rest_for_next_message(self, attrs) -> None:
+    def rest_for_next_message(self, attrs: dict) -> None:
         """To reset _message"""
         value = '<?xml version="1.0" encoding="UTF-8"?>'
         key = self.get_key(attrs)
@@ -331,14 +339,12 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
         kafka_producer: KafkaProducer | None = None,
         kafka_consumer: KafkaConsumer | None = None,
     ):
-        """Initialize a new KafkaEntitiesDataHandler instance with the specified
-        execution context, logger, and producer instances.
-        """
+        """Initialize a new KafkaEntitiesDataHandler instance"""
         plugin_logger.info("Initialize KafkaEntitiesDataHandler")
         super().__init__(context, plugin_logger, kafka_producer, kafka_consumer)
         self._schema: EntitySchema = None
 
-    def _split_data(self, data: Entities):
+    def _split_data(self, data: Entities) -> Generator:
         self._log.info("Generate dict from entities")
         paths = data.schema.paths
         type_uri = data.schema.type_uri
@@ -351,12 +357,12 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
             kafka_payload = json.dumps(result, indent=4)
             yield KafkaMessage(key=None, value=kafka_payload)
 
-    def _aggregate_data(self):
+    def _aggregate_data(self) -> Entities:
         schema = self.get_schema()
         entities = self.get_entities()
         return Entities(entities=entities, schema=schema)
 
-    def get_schema(self):
+    def get_schema(self) -> EntitySchema:
         """Return kafka message schema paths"""
         schema_paths = [
             EntityPath(path="key"),
@@ -371,12 +377,15 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
         )
         return self._schema
 
-    def _get_paths(self, values: dict):
+    def _get_paths(self, values: dict) -> list:
         self._log.info(f"_get_paths: Values dict {values}")
         return list(values.keys())
 
-    def get_entities(self):
+    def get_entities(self) -> Generator:
         """Generate the entities from kafka messages"""
+        if not self._kafka_consumer:
+            raise ValueError("Kafka consumer is None")
+
         for message in self._kafka_consumer.poll():
             yield self._get_entity(message)
 
@@ -384,7 +393,7 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
         self._kafka_consumer.close()
 
     @staticmethod
-    def _get_entity(message: KafkaMessage):
+    def _get_entity(message: KafkaMessage) -> Entity:
         sha256 = hashlib.sha256(message.key.encode() if message.key else b"").hexdigest()
         entity_uri = f"urn:hash::sha256:{sha256}"
         values = [
@@ -392,6 +401,6 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
             [message.value],
             [f"{message.offset}"],
             [f"{message.timestamp}"],
-            [f"{int(round(datetime.now().timestamp() * 1000))}"],
+            [f"{int(round(datetime.now(tz=UTC).timestamp() * 1000))}"],
         ]
         return Entity(uri=entity_uri, values=values)

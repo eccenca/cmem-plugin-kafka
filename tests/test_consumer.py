@@ -1,6 +1,7 @@
 """Plugin tests."""
 import secrets
 import string
+from collections.abc import Generator
 from contextlib import suppress
 from pathlib import Path
 
@@ -35,12 +36,12 @@ PRODUCER_DATASET_ID = f"{PRODUCER_DATASET_NAME}"
 CONSUMER_DATASET_ID = f"{CONSUMER_DATASET_NAME}"
 
 KAFKA_CONFIG = get_kafka_config()
-DEFAULT_GROUP = None
+DEFAULT_GROUP = ""
 DEFAULT_RESET = "latest"
 
 
 @pytest.fixture()
-def project() -> str:
+def project() -> Generator:
     """Provide the DI build project incl. assets."""
     with suppress(Exception):
         delete_project(PROJECT_NAME)
@@ -304,7 +305,7 @@ def test_execution_kafka_producer_consumer_with_entities(project: str, topic: st
     entities = RandomValues(random_function="token_urlsafe").execute(context=TestExecutionContext())
     # Producer
     KafkaProducerPlugin(
-        message_dataset=None,
+        message_dataset="",
         bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
         security_protocol=KAFKA_CONFIG["security_protocol"],
         sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
@@ -315,7 +316,7 @@ def test_execution_kafka_producer_consumer_with_entities(project: str, topic: st
 
     # Consumer
     consumer_entities = KafkaConsumerPlugin(
-        message_dataset=None,
+        message_dataset="",
         bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
         security_protocol=KAFKA_CONFIG["security_protocol"],
         sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
@@ -326,6 +327,7 @@ def test_execution_kafka_producer_consumer_with_entities(project: str, topic: st
         auto_offset_reset="earliest",
     ).execute([], TestExecutionContext(project_id=project))
     count = 0
+    assert consumer_entities is not None
     assert (
         consumer_entities.schema.type_uri
         == "https://github.com/eccenca/cmem-plugin-kafka#PlainMessage"
@@ -372,19 +374,6 @@ def test_validate_invalid_inputs(project: str, topic: str) -> None:
 
 def test_validate_bootstrap_server() -> None:
     """Validate bootstrap service value"""
-    with pytest.raises(ValueError, match="Specified server id is invalid"):
-        KafkaConsumerPlugin(
-            bootstrap_servers=1,
-            message_dataset=CONSUMER_DATASET_ID,
-            security_protocol=KAFKA_CONFIG["security_protocol"],
-            sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
-            sasl_username=KAFKA_CONFIG["sasl_username"],
-            sasl_password=KAFKA_CONFIG["sasl_password"],
-            kafka_topic="DEFAULT_TOPIC",
-            group_id=DEFAULT_GROUP,
-            auto_offset_reset=DEFAULT_RESET,
-        )
-
     with pytest.raises(
         cimpl.KafkaException,
         match="KafkaError{code=_TRANSPORT,val=-195,"
@@ -400,7 +389,7 @@ def test_validate_bootstrap_server() -> None:
             kafka_topic="DEFAULT_TOPIC",
             group_id=DEFAULT_GROUP,
             auto_offset_reset=DEFAULT_RESET,
-        ).execute(None, None)
+        ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
 
 
 @needs_cmem

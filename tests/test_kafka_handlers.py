@@ -28,7 +28,7 @@ DEFAULT_GROUP = "workflow"
 
 
 @pytest.fixture()
-def project() -> dataclass:
+def project():  # noqa: ANN201
     """Provide the DI build project incl. assets."""
     with suppress(Exception):
         delete_project(PROJECT_NAME)
@@ -61,28 +61,28 @@ def project() -> dataclass:
 
 
 @needs_cmem
-def test_kafka_json_data_handler(project: dataclass, topic: str) -> None:
+def test_kafka_json_data_handler(project, topic: str) -> None:  # noqa: ANN001
     """Validate KafkaJSONDataHandler"""
     kafka_service = KAFKA_CONFIG["bootstrap_server"]
     KafkaProducerPlugin(
         message_dataset=project.dataset,
         bootstrap_servers=kafka_service,
         security_protocol="PLAINTEXT",
-        sasl_mechanisms=None,
-        sasl_username=None,
-        sasl_password=None,
+        sasl_mechanisms="",
+        sasl_username="",
+        sasl_password="",
         kafka_topic=topic,
-    ).execute(None, TestExecutionContext(project_id=project.project))
+    ).execute([], TestExecutionContext(project_id=project.project))
     # Consumer
     KafkaConsumerPlugin(
         message_dataset=project.dataset,
         bootstrap_servers=kafka_service,
         security_protocol="PLAINTEXT",
-        sasl_mechanisms=None,
-        sasl_username=None,
-        sasl_password=None,
+        sasl_mechanisms="",
+        sasl_username="",
+        sasl_password="",
         kafka_topic=topic,
-        group_id=None,
+        group_id="",
         auto_offset_reset="earliest",
     ).execute([], TestExecutionContext(project_id=project.project))
 

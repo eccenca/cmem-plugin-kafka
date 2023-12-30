@@ -1,6 +1,6 @@
 """Kafka consumer plugin module"""
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, BinaryIO
 
 from cmem.cmempy.api import request
 from cmem.cmempy.workspace.projects.datasets.dataset import get_dataset_file_uri
@@ -13,6 +13,7 @@ from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.types import BoolParameterType, IntParameterType
 from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access, split_task_id
 from confluent_kafka import KafkaError
+from requests import Response
 
 from cmem_plugin_kafka.constants import (
     AUTO_OFFSET_RESET,
@@ -152,8 +153,7 @@ from cmem_plugin_kafka.utils import (
 class KafkaConsumerPlugin(WorkflowPlugin):
     """Kafka Consumer Plugin"""
 
-    # pylint: disable=too-many-instance-attributes
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         message_dataset: str,
         bootstrap_servers: str,
@@ -167,10 +167,10 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         client_id: str = "",
         local_consumer_queue_size: int = 5000,
         message_limit: int = 100000,
-        disable_commit: bool = False,
+        disable_commit: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         if not isinstance(bootstrap_servers, str):
-            raise ValueError("Specified server id is invalid")
+            raise TypeError("Specified server id is invalid")
         self.message_dataset = message_dataset
         self.bootstrap_servers = bootstrap_servers
         self.security_protocol = security_protocol
@@ -187,7 +187,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self._kafka_stats: dict = {}
 
     def metrics_callback(self, json: str) -> None:
-        """Sends producer metrics to server"""
+        """Send producer metrics to server"""
         self._kafka_stats = get_kafka_statistics(json_data=json)
         for key, value in self._kafka_stats.items():
             self.log.info(f"kafka-stats: {key:10} - {value:10}")
@@ -195,7 +195,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
     def error_callback(self, err: KafkaError) -> None:
         """Error callback"""
         self.log.info(f"kafka-error:{err}")
-        if err.code() == -193:  # -193 -> _RESOLVE
+        if err.code() == -193:  # noqa: PLR2004 # -193 -> _RESOLVE
             raise err
 
     def get_config(self, project_id: str = "", task_id: str = "") -> dict[str, Any]:
@@ -210,7 +210,6 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             "client.id": self.client_id if self.client_id else default_client_id,
             "statistics.interval.ms": "1000",
             "queued.max.messages.kbytes": self.local_consumer_queue_size,
-            # "stats_cb": self.metrics_callback,
             "error_cb": self.error_callback,
         }
         if self.security_protocol.startswith("SASL"):
@@ -228,6 +227,8 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
 
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> Entities | None:
+        """Execute the workflow plugin on a given collection of entities."""
+        _ = inputs
         self.log.info("Kafka Consumer Started")
         self.validate()
 
@@ -260,7 +261,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
         write_to_dataset(
             dataset_id=self.message_dataset,
-            file_resource=handler,
+            file_resource=handler,  # type: ignore[arg-type]
             context=context.user,
         )
         context.report.update(
@@ -275,7 +276,9 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         return None
 
 
-def write_to_dataset(dataset_id: str, file_resource=None, context: UserContext | None = None):
+def write_to_dataset(
+    dataset_id: str, file_resource: BinaryIO, context: UserContext | None = None
+) -> Response:
     """Write to a dataset.
 
     Args:
@@ -304,7 +307,7 @@ def write_to_dataset(dataset_id: str, file_resource=None, context: UserContext |
     )
 
 
-def post_resource(project_id, dataset_id, file_resource=None):
+def post_resource(project_id: str, dataset_id: str, file_resource: BinaryIO) -> Response:
     """Post a resource to a dataset.
 
     If the dataset resource already exists, posting a new resource will replace it.
@@ -323,7 +326,7 @@ def post_resource(project_id, dataset_id, file_resource=None):
     endpoint = get_dataset_file_uri().format(project_id, dataset_id)
 
     with file_resource as file:
-        return request(
+        return request(  # type: ignore[no-any-return]
             endpoint,
             method="PUT",
             stream=True,

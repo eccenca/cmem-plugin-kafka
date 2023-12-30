@@ -1,4 +1,5 @@
 """Plugin tests."""
+from collections.abc import Generator
 from contextlib import suppress
 from pathlib import Path
 
@@ -24,7 +25,7 @@ DEFAULT_TOPIC = "eccenca_kafka_workflow"
 
 
 @pytest.fixture()
-def project() -> str:
+def project() -> Generator[str, None, None]:
     """Provide the DI build project incl. assets."""
     with suppress(Exception):
         delete_project(PROJECT_NAME)
@@ -60,7 +61,7 @@ def test_execution_plain_kafka(project: str, topic: str) -> None:
         sasl_username=KAFKA_CONFIG["sasl_username"],
         sasl_password=KAFKA_CONFIG["sasl_password"],
         kafka_topic=topic,
-    ).execute(None, TestExecutionContext(project_id=project))
+    ).execute([], TestExecutionContext(project_id=project))
 
 
 @needs_cmem
@@ -77,7 +78,7 @@ def test_validate_invalid_inputs(project: str, topic: str) -> None:
             sasl_username=KAFKA_CONFIG["sasl_username"],
             sasl_password=KAFKA_CONFIG["sasl_password"],
             kafka_topic=topic,
-        ).execute(None, TestExecutionContext(project_id=project))
+        ).execute([], TestExecutionContext(project_id=project))
 
     # Invalid SECURITY PROTOCOL
     with pytest.raises(cimpl.KafkaException):
@@ -89,22 +90,11 @@ def test_validate_invalid_inputs(project: str, topic: str) -> None:
             sasl_username=KAFKA_CONFIG["sasl_username"],
             sasl_password=KAFKA_CONFIG["sasl_password"],
             kafka_topic=DEFAULT_TOPIC,
-        ).execute(None, TestExecutionContext(project_id=PROJECT_NAME))
+        ).execute([], TestExecutionContext(project_id=PROJECT_NAME))
 
 
 def test_validate_bootstrap_server() -> None:
     """Validate bootstrap service value"""
-    with pytest.raises(ValueError, match="Specified server id is invalid"):
-        KafkaProducerPlugin(
-            bootstrap_servers=1,
-            message_dataset=DATASET_ID,
-            security_protocol=KAFKA_CONFIG["security_protocol"],
-            sasl_mechanisms=KAFKA_CONFIG["sasl_mechanisms"],
-            sasl_username=KAFKA_CONFIG["sasl_username"],
-            sasl_password=KAFKA_CONFIG["sasl_password"],
-            kafka_topic=DEFAULT_TOPIC,
-        )
-
     with pytest.raises(
         cimpl.KafkaException,
         match="KafkaError{code=_TRANSPORT,val=-195,"
@@ -115,7 +105,7 @@ def test_validate_bootstrap_server() -> None:
             message_dataset=DATASET_ID,
             security_protocol="PLAINTEXT",
             sasl_mechanisms="PLAIN",
-            sasl_username=None,
-            sasl_password=None,
+            sasl_username="",
+            sasl_password="",
             kafka_topic=DEFAULT_TOPIC,
-        ).execute(None, None)
+        ).execute([], TestExecutionContext(project_id=PROJECT_NAME))

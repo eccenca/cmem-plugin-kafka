@@ -5,6 +5,7 @@ from collections.abc import Iterator
 from typing import Any
 from urllib.parse import urlparse
 
+import confluent_kafka
 from cmem.cmempy.config import get_cmem_base_uri
 from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
 from cmem.cmempy.workspace.search import list_items
@@ -24,11 +25,11 @@ from cmem_plugin_base.dataintegration.utils import (
 from confluent_kafka import Consumer, KafkaError, KafkaException, Producer
 from confluent_kafka.admin import AdminClient, ClusterMetadata, TopicMetadata
 from defusedxml import ElementTree
+from requests import Response
 
-from cmem_plugin_kafka.constants import KAFKA_TIMEOUT
+from cmem_plugin_kafka.constants import KAFKA_RETRY_COUNT, KAFKA_TIMEOUT
 
 
-# pylint: disable-msg=too-few-public-methods
 class KafkaMessage:
     """A class used to represent/hold a Kafka Message key and value
 
@@ -42,7 +43,7 @@ class KafkaMessage:
         Kafka message payload
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         key: str | None = None,
         headers: dict | None = None,
@@ -69,7 +70,6 @@ class KafkaProducer:
 
     def process(self, message: KafkaMessage) -> None:
         """Produce message to topic."""
-        # self._no_of_success_messages += 1
         headers = message.headers if message.headers else {}
         self._producer.produce(
             self._topic,
@@ -79,18 +79,18 @@ class KafkaProducer:
             on_delivery=self.on_delivery,
         )
 
-    def on_delivery(self, err, msg) -> None:
-        """Callback method executed after a message is delivered to the Kafka broker."""
+    def on_delivery(self, err: confluent_kafka.KafkaError, msg: confluent_kafka.Message) -> None:
+        """Execute after a message is delivered to the Kafka broker."""
         _ = msg
         if err:
             raise KafkaException(err)
         self._no_of_success_messages += 1
 
-    def poll(self, timeout) -> None:
-        """Polls the producer for events and calls the corresponding callbacks"""
+    def poll(self, timeout: int) -> None:
+        """Poll the producer for events and calls the corresponding callbacks"""
         self._producer.poll(timeout)
 
-    def flush(self, timeout=KAFKA_TIMEOUT) -> None:
+    def flush(self, timeout: int = KAFKA_TIMEOUT) -> None:
         """Wait for all messages in the Producer queue to be delivered."""
         prev = 0
         while True:
@@ -107,11 +107,10 @@ class KafkaProducer:
 class KafkaConsumer:
     """Kafka consumer wrapper over confluent consumer"""
 
-    # pylint: disable=too-many-instance-attributes
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         config: dict,
-        commit_offset: bool,
+        commit_offset: bool,  # noqa: FBT001
         topic: str,
         log: PluginLogger,
         context: ExecutionContext,
@@ -136,10 +135,10 @@ class KafkaConsumer:
             self._consumer.commit()
 
     def subscribe(self) -> None:
-        """Subscribes to a topic to consume messages"""
+        """Subscribe to a topic to consume messages"""
         self._consumer.subscribe(topics=[self._topic])
 
-    def get_first_message(self):
+    def get_first_message(self) -> KafkaMessage | None:
         """Get the first message from kafka subscribed topic"""
         if self._first_message:
             return self._first_message
@@ -147,7 +146,7 @@ class KafkaConsumer:
         while True:
             msg = self._consumer.poll(timeout=KAFKA_TIMEOUT)
             count += 1
-            if msg or count > 3:
+            if msg or count > KAFKA_RETRY_COUNT:
                 break
 
         if msg is None:
@@ -166,7 +165,7 @@ class KafkaConsumer:
         return self._first_message
 
     def poll(self) -> Iterator[KafkaMessage]:
-        """Polls the consumer for events and calls the corresponding callbacks"""
+        """Poll the consumer for events and calls the corresponding callbacks"""
         while True:
             if 0 <= self.fetch_limit == self._no_of_success_messages:
                 self._log.info("Message fetch fetch_limit reached")
@@ -203,7 +202,7 @@ class KafkaConsumer:
             yield kafka_message
 
     def close(self) -> None:
-        """Closes the consumer once all messages were received."""
+        """Close the consumer once all messages were received."""
         self._consumer.close()
 
 
@@ -232,7 +231,7 @@ def validate_kafka_config(config: dict[str, Any], topic: str, log: PluginLogger)
     log.info("Connection details are valid")
 
 
-def get_resource_from_dataset(dataset_id: str, context: UserContext):
+def get_resource_from_dataset(dataset_id: str, context: UserContext) -> tuple[Response, dict]:
     """Get resource from dataset"""
     project_id, task_id = split_task_id(dataset_id)
     task_meta_data = get_task_metadata(project_id, task_id, context)
@@ -241,10 +240,10 @@ def get_resource_from_dataset(dataset_id: str, context: UserContext):
     return get_resource_response(project_id, resource_name), task_meta_data
 
 
-def get_task_metadata(project: str, task: str, context: UserContext):
+def get_task_metadata(project: str, task: str, context: UserContext) -> dict:
     """Get metadata information of a task"""
     setup_cmempy_user_access(context=context)
-    return get_task(project=project, task=task)
+    return dict(get_task(project=project, task=task))
 
 
 def get_message_with_xml_wrapper(message: KafkaMessage) -> str:
@@ -253,7 +252,6 @@ def get_message_with_xml_wrapper(message: KafkaMessage) -> str:
     # strip xml metadata
     regex_pattern = "<\\?xml.*\\?>"
     msg_with_wrapper = f'<Message key="{message.key}">'
-    # TODO Efficient way to remove xml doc string
     msg_with_wrapper += re.sub(regex_pattern, "", message.value)
     msg_with_wrapper += "</Message>\n"
     return msg_with_wrapper
@@ -262,10 +260,11 @@ def get_message_with_xml_wrapper(message: KafkaMessage) -> str:
 class BytesEncoder(json.JSONEncoder):
     """JSON Bytes Encoder"""
 
-    def default(self, o):
+    def default(self, o: str | bytes) -> str:
+        """Return the serializable object of o"""
         if isinstance(o, bytes):
             return o.decode("utf-8")
-        return json.JSONEncoder.default(self, o)
+        return json.JSONEncoder.default(self, o)  # type: ignore[no-any-return]
 
 
 def get_message_with_json_wrapper(message: KafkaMessage) -> str:
@@ -329,7 +328,8 @@ class DatasetParameterType(StringParameterType):
     def label(
         self, value: str, depend_on_parameter_values: list[Any], context: PluginContext
     ) -> str | None:
-        """Returns the label for the given dataset."""
+        """Return the label for the given dataset."""
+        _ = depend_on_parameter_values
         setup_cmempy_user_access(context.user)
         task_label = str(get_task(project=context.project_id, task=value)["metadata"]["label"])
         return f"{task_label}"
@@ -340,6 +340,8 @@ class DatasetParameterType(StringParameterType):
         depend_on_parameter_values: list[Any],
         context: PluginContext,
     ) -> list[Autocompletion]:
+        """Autocompletion request. Returns all results that match ALL provided query terms."""
+        _ = depend_on_parameter_values
         setup_cmempy_user_access(context.user)
         datasets = list_items(item_type="dataset", project=context.project_id)["results"]
 
@@ -355,11 +357,16 @@ class DatasetParameterType(StringParameterType):
             if dataset_types and _["pluginId"] not in dataset_types:
                 # Ignore datasets of other types
                 continue
-            for term in query_terms:
-                if term.lower() in label.lower():
-                    result.append(Autocompletion(value=identifier, label=label))
+
+            result.extend(
+                [
+                    Autocompletion(value=identifier, label=label)
+                    for term in query_terms
+                    if term.lower() in label.lower()
+                ]
+            )
             if len(query_terms) == 0:
                 # add any dataset to list if no search terms are given
                 result.append(Autocompletion(value=identifier, label=label))
-        result.sort(key=lambda x: x.label)  # type: ignore
+        result.sort(key=lambda x: x.label)
         return list(set(result))

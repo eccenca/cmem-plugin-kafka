@@ -2,6 +2,7 @@
 import collections
 
 KAFKA_TIMEOUT = 5
+KAFKA_RETRY_COUNT = 3
 
 # Security Protocols
 SECURITY_PROTOCOLS = collections.OrderedDict(
@@ -54,7 +55,7 @@ SASL_ACCOUNT_DESCRIPTION = (
 
 
 SASL_PASSWORD_DESCRIPTION = (
-    "The credentials for the SASL Account. "  # nosec
+    "The credentials for the SASL Account. "  # noqa: S105
     "\n\n"
     "In case you are using a [confluent.cloud](https://confluent.cloud) cluster, "
     "this is the API secret."

@@ -151,11 +151,10 @@ on configuration.
         ),
     ],
 )
-# pylint: disable-msg=too-many-instance-attributes
 class KafkaProducerPlugin(WorkflowPlugin):
     """Kafka Producer Plugin"""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         message_dataset: str,
         bootstrap_servers: str,
@@ -169,7 +168,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
         compression_type: str = "none",
     ) -> None:
         if not isinstance(bootstrap_servers, str):
-            raise ValueError("Specified server id is invalid")
+            raise TypeError("Specified server id is invalid")
         self.message_dataset = message_dataset
         self.bootstrap_servers = bootstrap_servers
         self.security_protocol = security_protocol
@@ -183,7 +182,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
         self._kafka_stats: dict = {}
 
     def metrics_callback(self, json: str) -> None:
-        """Sends producer metrics to server"""
+        """Send producer metrics to server"""
         self._kafka_stats = get_kafka_statistics(json_data=json)
         for key, value in self._kafka_stats.items():
             self.log.info(f"kafka-stats: {key:10} - {value:10}")
@@ -191,7 +190,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
     def error_callback(self, err: KafkaError) -> None:
         """Error callback"""
         self.log.info(f"kafka-error:{err}")
-        if err.code() == -193:  # -193 -> _RESOLVE
+        if err.code() == -193:  # noqa: PLR2004 # -193 -> _RESOLVE
             raise err
 
     def get_config(self, project_id: str = "", task_id: str = "") -> dict[str, Any]:
@@ -223,6 +222,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
         validate_kafka_config(self.get_config(), self.kafka_topic, self.log)
 
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
+        """Execute the workflow plugin on a given collection of entities."""
         self.log.info("Start Kafka Plugin")
         self.validate()
 

@@ -18,7 +18,7 @@ def test_get_kafka_statistics() -> None:
     }
     filtered_output = get_kafka_statistics(json.dumps(_input))
     assert filtered_output.get("extra_key") is None
-    assert ",".join(_input["topics"].keys()) == filtered_output["topics"]
+    assert ",".join(_input["topics"].keys()) == filtered_output["topics"]  # type: ignore[attr-defined]
 
     del _input["extra_key"]
     del _input["topics"]

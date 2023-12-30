@@ -1,6 +1,7 @@
 """Testing utilities."""
 import os
 from typing import ClassVar
+from xml.sax.expatreader import AttributesImpl
 from xml.sax.handler import ContentHandler
 
 import pytest
@@ -116,7 +117,7 @@ class XMLUtils:
             def __init__(self):
                 self.count = 0
 
-            def startElement(self, name: str, attrs: list) -> None:  # noqa: N802
+            def startElement(self, name: str, attrs: AttributesImpl) -> None:  # noqa: N802
                 _ = attrs
 
                 if name == "Message":
