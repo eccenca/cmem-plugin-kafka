@@ -11,7 +11,7 @@ from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.parameter.password import Password, PasswordParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
-from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
+from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs, FixedSchemaPort
 from cmem_plugin_base.dataintegration.types import BoolParameterType, IntParameterType
 from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access, split_task_id
 from confluent_kafka import KafkaError
@@ -198,6 +198,11 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         # no output port if dataset is selected
         if self.message_dataset:
             self.output_port = None
+        else:
+            # output port with fixed schema
+            self.output_port = FixedSchemaPort(
+                schema=KafkaEntitiesDataHandler.get_schema()
+            )
 
     def metrics_callback(self, json: str) -> None:
         """Send producer metrics to server"""

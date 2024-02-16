@@ -358,11 +358,12 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
             yield KafkaMessage(key=None, value=kafka_payload)
 
     def _aggregate_data(self) -> Entities:
-        schema = self.get_schema()
+        self._schema = self.get_schema()
         entities = self.get_entities()
-        return Entities(entities=entities, schema=schema)
+        return Entities(entities=entities, schema=self._schema)
 
-    def get_schema(self) -> EntitySchema:
+    @staticmethod
+    def get_schema() -> EntitySchema:
         """Return kafka message schema paths"""
         schema_paths = [
             EntityPath(path="key"),
@@ -371,11 +372,10 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
             EntityPath(path="ts-production"),
             EntityPath(path="ts-consumption"),
         ]
-        self._schema = EntitySchema(
+        return EntitySchema(
             type_uri="https://github.com/eccenca/cmem-plugin-kafka#PlainMessage",
             paths=schema_paths,
         )
-        return self._schema
 
     def _get_paths(self, values: dict) -> list:
         self._log.info(f"_get_paths: Values dict {values}")
