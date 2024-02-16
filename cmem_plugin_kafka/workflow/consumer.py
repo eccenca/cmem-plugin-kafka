@@ -195,6 +195,9 @@ class KafkaConsumerPlugin(WorkflowPlugin):
     def _set_ports(self) -> None:
         """Define input/output ports based on the configuration"""
         self.input_ports = FixedNumberOfInputs([])
+        # no output port if dataset is selected
+        if self.message_dataset:
+            self.output_port = None
 
     def metrics_callback(self, json: str) -> None:
         """Send producer metrics to server"""
