@@ -11,6 +11,7 @@ from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.parameter.password import Password, PasswordParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
+from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
 from cmem_plugin_base.dataintegration.types import BoolParameterType, IntParameterType
 from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access, split_task_id
 from confluent_kafka import KafkaError
@@ -189,6 +190,11 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.message_limit = int(message_limit)
         self.disable_commit = bool(disable_commit)
         self._kafka_stats: dict = {}
+        self._set_ports()
+
+    def _set_ports(self) -> None:
+        """Define input/output ports based on the configuration"""
+        self.input_ports = FixedNumberOfInputs([])
 
     def metrics_callback(self, json: str) -> None:
         """Send producer metrics to server"""
