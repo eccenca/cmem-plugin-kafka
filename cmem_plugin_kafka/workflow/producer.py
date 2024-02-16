@@ -184,6 +184,11 @@ class KafkaProducerPlugin(WorkflowPlugin):
         self.message_max_bytes = message_max_bytes
         self.compression_type = compression_type
         self._kafka_stats: dict = {}
+        self._set_ports()
+
+    def _set_ports(self) -> None:
+        """Define input/output ports based on the configuration"""
+        self.output_port = None
 
     def metrics_callback(self, json: str) -> None:
         """Send producer metrics to server"""
