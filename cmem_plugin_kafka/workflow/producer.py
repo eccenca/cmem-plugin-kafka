@@ -11,6 +11,7 @@ from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.parameter.password import Password, PasswordParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
+from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
 from cmem_plugin_base.dataintegration.types import IntParameterType
 from confluent_kafka import KafkaError
 
@@ -189,6 +190,9 @@ class KafkaProducerPlugin(WorkflowPlugin):
     def _set_ports(self) -> None:
         """Define input/output ports based on the configuration"""
         self.output_port = None
+        # no input port if dataset is selected
+        if self.message_dataset:
+            self.input_ports = FixedNumberOfInputs([])
 
     def metrics_callback(self, json: str) -> None:
         """Send producer metrics to server"""
