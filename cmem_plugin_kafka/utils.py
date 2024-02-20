@@ -73,7 +73,7 @@ class KafkaProducer:
         headers = message.headers if message.headers else {}
         self._producer.produce(
             self._topic,
-            value=message.value.encode("utf-8"),
+            value=message.value.encode("utf-8") if message.value else None,
             key=message.key,
             headers=headers,
             on_delivery=self.on_delivery,

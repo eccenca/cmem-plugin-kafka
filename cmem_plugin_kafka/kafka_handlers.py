@@ -290,6 +290,10 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
         """Call when an elements end"""
         name = element.tag
         if name == "Message" and self._level == 1:
+            if self._no_of_children == 0:
+                self._message.value = ""
+                self._level -= 1
+                return self._message
             # If number of children are more than 1,
             # We can not construct proper kafka xml message.
             # So, log the error message
