@@ -179,9 +179,7 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
             headers = _message["headers"] if "headers" in _message else {}
             content = _message["content"]
             yield KafkaMessage(
-                key=key,
-                value=json.dumps(content) if content else "",
-                headers=headers
+                key=key, value=json.dumps(content) if content else "", headers=headers
             )
 
     def _aggregate_data(self) -> Generator:

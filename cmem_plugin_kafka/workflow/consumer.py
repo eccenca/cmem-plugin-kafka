@@ -200,9 +200,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             self.output_port = None
         else:
             # output port with fixed schema
-            self.output_port = FixedSchemaPort(
-                schema=KafkaEntitiesDataHandler.get_schema()
-            )
+            self.output_port = FixedSchemaPort(schema=KafkaEntitiesDataHandler.get_schema())
 
     def metrics_callback(self, json: str) -> None:
         """Send producer metrics to server"""
@@ -314,6 +312,7 @@ def write_to_dataset(
     ------
         ValueError: in case the task ID is not splittable
         ValueError: missing parameter
+
     """
     setup_cmempy_user_access(context=context)
     project_id, task_id = split_task_id(dataset_id)

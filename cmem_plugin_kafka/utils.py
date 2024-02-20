@@ -41,6 +41,7 @@ class KafkaMessage:
         Kafka message key
     value : str
         Kafka message payload
+
     """
 
     def __init__(  # noqa: PLR0913
