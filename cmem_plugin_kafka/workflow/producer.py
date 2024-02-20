@@ -93,6 +93,7 @@ on configuration.
             " the correct type (XML/JSON) and build project).",
             param_type=DatasetParameterType(dataset_type="xml,json"),
             default_value="",
+            advanced=True
         ),
         PluginParameter(
             name="bootstrap_servers",
