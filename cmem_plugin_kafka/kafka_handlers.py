@@ -178,7 +178,11 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
             key = _message["key"] if "key" in _message else None
             headers = _message["headers"] if "headers" in _message else {}
             content = _message["content"]
-            yield KafkaMessage(key=key, value=json.dumps(content), headers=headers)
+            yield KafkaMessage(
+                key=key,
+                value=json.dumps(content) if content else "",
+                headers=headers
+            )
 
     def _aggregate_data(self) -> Generator:
         """Generate json file with kafka messages"""
