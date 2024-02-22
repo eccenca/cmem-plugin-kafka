@@ -90,7 +90,8 @@ on configuration.
             description="Where do you want to retrieve the messages from?"
             " The dropdown lists usable datasets from the current"
             " project only. In case you miss your dataset, check for"
-            " the correct type (XML/JSON) and build project).",
+            " the correct type (XML/JSON) and build project)."
+            " The messages will be retrieved from the entities if no dataset is provided.",
             param_type=DatasetParameterType(dataset_type="xml,json"),
             default_value="",
             advanced=True,
