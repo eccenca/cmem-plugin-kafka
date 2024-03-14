@@ -111,7 +111,7 @@ class KafkaConsumer:
     def __init__(  # noqa: PLR0913
         self,
         config: dict,
-        commit_offset: bool,  # noqa: FBT001
+        commit_offset: bool,
         topic: str,
         log: PluginLogger,
         context: ExecutionContext,

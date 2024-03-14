@@ -170,7 +170,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         client_id: str = "",
         local_consumer_queue_size: int = 5000,
         message_limit: int = 100000,
-        disable_commit: bool = False,  # noqa: FBT001, FBT002
+        disable_commit: bool = False,
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise TypeError("Specified server id is invalid")
