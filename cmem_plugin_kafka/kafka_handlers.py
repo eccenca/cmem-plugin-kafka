@@ -175,12 +175,13 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
     def _split_data(self, data: Response) -> Generator:
         for message in json_stream.requests.load(data):
             _message = json_stream.to_standard_types(message["message"])
-            key = _message["key"] if "key" in _message else None
-            headers = _message["headers"] if "headers" in _message else {}
-            content = _message["content"]
-            yield KafkaMessage(
-                key=key, value=json.dumps(content) if content else "", headers=headers
-            )
+            key = _message.get("key")
+            headers = _message.get("headers", {})
+            tombstone = _message.get("tombstone", False)
+            content = None
+            if not tombstone:
+                content = json.dumps(_message["content"])
+            yield KafkaMessage(key=key, value=content, headers=headers, tombstone=tombstone)
 
     def _aggregate_data(self) -> Generator:
         """Generate json file with kafka messages"""
@@ -261,10 +262,10 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
         return " ".join(attribute_list)
 
     @staticmethod
-    def get_key(attrs: dict) -> str | None:
+    def get_attribute_value(attrs: dict, name: str) -> str | None:
         """Get message key attribute from element attributes list"""
         for item in attrs.items():
-            if item[0] == "key":
+            if item[0] == name:
                 return escape(item[1])
         return None
 
@@ -276,7 +277,7 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
         self._level += 1
 
         if name == "Message" and self._level == 1:
-            self.rest_for_next_message(attrs)
+            self.reset_for_next_message(attrs)
         else:
             open_tag = f"<{name}{self.attrs_s(attrs)}>"
             self._message.value += open_tag
@@ -317,11 +318,12 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
         self._level -= 1
         return None
 
-    def rest_for_next_message(self, attrs: dict) -> None:
+    def reset_for_next_message(self, attrs: dict) -> None:
         """To reset _message"""
         value = '<?xml version="1.0" encoding="UTF-8"?>'
-        key = self.get_key(attrs)
-        self._message = KafkaMessage(key=key, value=value)
+        key = self.get_attribute_value(attrs, "key")
+        tombstone = self.get_attribute_value(attrs, "tombstone")
+        self._message = KafkaMessage(key=key, value=value, tombstone=bool(tombstone))
         self._no_of_children = 0
 
 

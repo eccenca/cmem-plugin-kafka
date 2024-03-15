@@ -48,15 +48,17 @@ class KafkaMessage:
         self,
         key: str | None = None,
         headers: dict | None = None,
-        value: str = "",
+        value: str | None = None,
         offset: int | None = None,
         timestamp: int | None = None,
+        tombstone: bool = False,
     ):
         self.value: str = value
         self.key: str | None = key
         self.headers: dict | None = headers
         self.offset = offset
         self.timestamp = timestamp
+        self.tombstone: bool = tombstone
 
 
 class KafkaProducer:
@@ -72,9 +74,12 @@ class KafkaProducer:
     def process(self, message: KafkaMessage) -> None:
         """Produce message to topic."""
         headers = message.headers if message.headers else {}
+        value = None
+        if not message.tombstone or message.value:
+            value = message.value.encode("utf-8")
         self._producer.produce(
             self._topic,
-            value=message.value.encode("utf-8") if message.value else None,
+            value=value,
             key=message.key,
             headers=headers,
             on_delivery=self.on_delivery,
