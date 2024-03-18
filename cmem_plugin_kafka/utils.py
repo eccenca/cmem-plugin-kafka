@@ -53,7 +53,7 @@ class KafkaMessage:
         timestamp: int | None = None,
         tombstone: bool = False,
     ):
-        self.value: str = value
+        self.value: str = value if value else ""
         self.key: str | None = key
         self.headers: dict | None = headers
         self.offset = offset
