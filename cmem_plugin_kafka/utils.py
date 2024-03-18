@@ -75,8 +75,11 @@ class KafkaProducer:
         """Produce message to topic."""
         headers = message.headers if message.headers else {}
         value = None
-        if not message.tombstone or message.value:
+        if message.tombstone:
+            value = None
+        elif message.value:
             value = message.value.encode("utf-8")
+
         self._producer.produce(
             self._topic,
             value=value,

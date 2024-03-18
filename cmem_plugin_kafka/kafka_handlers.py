@@ -180,7 +180,8 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
             tombstone = _message.get("tombstone", False)
             content = None
             if not tombstone:
-                content = json.dumps(_message.get("content"))
+                _content = _message.get("content")
+                content = json.dumps(_content) if _content else None
             yield KafkaMessage(key=key, value=content, headers=headers, tombstone=tombstone)
 
     def _aggregate_data(self) -> Generator:
