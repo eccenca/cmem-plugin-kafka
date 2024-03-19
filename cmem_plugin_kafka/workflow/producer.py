@@ -94,7 +94,6 @@ on configuration.
             " The messages will be retrieved from the entities if no dataset is provided.",
             param_type=DatasetParameterType(dataset_type="xml,json"),
             default_value="",
-            advanced=True,
         ),
         PluginParameter(
             name="bootstrap_servers",

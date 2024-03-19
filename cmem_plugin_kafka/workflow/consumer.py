@@ -81,7 +81,6 @@ from cmem_plugin_kafka.utils import (
             " the correct type (XML/JSON) and build project.",
             param_type=DatasetParameterType(dataset_type="xml,json"),
             default_value="",
-            advanced=True,
         ),
         PluginParameter(
             name="sasl_mechanisms",
