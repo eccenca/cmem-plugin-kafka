@@ -120,6 +120,7 @@ XML_SAMPLE = """
             </ShipTo>
         </PurchaseOrder>
         </Message>
+        <Message key="TestKey" tombstone="true">will be ignored</Message>
     </KafkaMessages>
 ```
 """
@@ -150,6 +151,19 @@ JSON_SAMPLE = """
       },
       "content": {
         "comments": "We can pass any json payload here."
+      }
+    }
+  },
+  {
+    "message": {
+      "key": "TestKey",
+      "tombstone": true,
+      "headers": {
+        "h1": "v1",
+        "h2": "v2"
+      },
+      "content": {
+        "will_be_ignored": "..."
       }
     }
   }
