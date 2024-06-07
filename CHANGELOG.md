@@ -4,11 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/)
 
-## []
+## [3.2.0] 2024-06-07
 
 ### Added
 
 - support for sending tombstone message from kafka producer plugin
+    - https://medium.com/@damienthomlutz/deleting-records-in-kafka-aka-tombstones-651114655a16
+
 
 ## [3.1.0] 2023-12-30
 
@@ -17,6 +19,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - Upgrade template to V6.0.1
 - upgrades to use cmem-plugin-base 4.3.0 (for CMEM 23.3)
 - SASL Password parameter type from StringParameterType to PasswordParameterType 
+
 
 ## [3.0.0] 2023-09-08
 
@@ -27,6 +30,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### Changed
 
 - upgrades to use cmem-plugin-base 4.1.0 (for CMEM 23.2, python 3.11)
+
 
 ## [2.0.0] 2023-08-01
 
@@ -51,6 +55,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - resolved endless loop caused by improper kafka server configuration
 - generate entities with "message as plain value"
 
+
 ## [1.1.0] 2022-10-21
 
 ### Added
@@ -65,11 +70,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 - upgrade to confluent-kafka 1.9.2
 
+
 ## [1.0.2] 2022-10-13
 
 ### Fixed
 
 - use requests response stream for xml parsing (avoid out of memory)
+
 
 ## [1.0.1] 2022-08-26
 
@@ -77,8 +84,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 - small docu issues
 
+
 ## [1.0.0] 2022-08-26
 
 ### Added
 
 - initial version of a kafka producer plugin
+
