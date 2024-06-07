@@ -73,10 +73,8 @@ class KafkaDataHandler:
         if not self._kafka_producer:
             return
         messages = self._split_data(data)
-        count = 0
-        for message in messages:
+        for count, message in enumerate(messages):
             self._kafka_producer.process(message)
-            count += 1
             if count % 10 == 0:
                 self._kafka_producer.poll(0)
                 self.update_report()
@@ -191,12 +189,10 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
             raise ValueError("Kafka consumer is None")
         try:
             yield b"["
-            count = 0
-            for message in self._kafka_consumer.poll():
+            for count, message in enumerate(self._kafka_consumer.poll()):
                 if count > 0:
                     yield b","
                 yield get_message_with_json_wrapper(message).encode()
-                count += 1
             yield b"]"
         except json.decoder.JSONDecodeError as ex:
             raise ValueError("Kafka Message is not in expected format ") from ex
