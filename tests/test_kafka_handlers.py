@@ -1,4 +1,5 @@
 """Tests for `kafka_handlers` package."""
+
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path

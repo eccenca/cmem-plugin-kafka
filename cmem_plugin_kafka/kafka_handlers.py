@@ -1,4 +1,5 @@
 """Module provides a base class for producing messages from data to/from a Kafka topic."""
+
 import hashlib
 import json
 import re
@@ -72,10 +73,8 @@ class KafkaDataHandler:
         if not self._kafka_producer:
             return
         messages = self._split_data(data)
-        count = 0
-        for message in messages:
+        for count, message in enumerate(messages):
             self._kafka_producer.process(message)
-            count += 1
             if count % 10 == 0:
                 self._kafka_producer.poll(0)
                 self.update_report()
@@ -175,10 +174,14 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
     def _split_data(self, data: Response) -> Generator:
         for message in json_stream.requests.load(data):
             _message = json_stream.to_standard_types(message["message"])
-            key = _message["key"] if "key" in _message else None
-            headers = _message["headers"] if "headers" in _message else {}
-            content = _message["content"]
-            yield KafkaMessage(key=key, value=json.dumps(content), headers=headers)
+            key = _message.get("key")
+            headers = _message.get("headers", {})
+            tombstone = _message.get("tombstone", False)
+            content = None
+            if not tombstone:
+                _content = _message.get("content")
+                content = json.dumps(_content) if _content else None
+            yield KafkaMessage(key=key, value=content, headers=headers, tombstone=tombstone)
 
     def _aggregate_data(self) -> Generator:
         """Generate json file with kafka messages"""
@@ -186,12 +189,10 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
             raise ValueError("Kafka consumer is None")
         try:
             yield b"["
-            count = 0
-            for message in self._kafka_consumer.poll():
+            for count, message in enumerate(self._kafka_consumer.poll()):
                 if count > 0:
                     yield b","
                 yield get_message_with_json_wrapper(message).encode()
-                count += 1
             yield b"]"
         except json.decoder.JSONDecodeError as ex:
             raise ValueError("Kafka Message is not in expected format ") from ex
@@ -259,10 +260,10 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
         return " ".join(attribute_list)
 
     @staticmethod
-    def get_key(attrs: dict) -> str | None:
+    def get_attribute_value(attrs: dict, name: str) -> str | None:
         """Get message key attribute from element attributes list"""
         for item in attrs.items():
-            if item[0] == "key":
+            if item[0] == name:
                 return escape(item[1])
         return None
 
@@ -274,7 +275,7 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
         self._level += 1
 
         if name == "Message" and self._level == 1:
-            self.rest_for_next_message(attrs)
+            self.reset_for_next_message(attrs)
         else:
             open_tag = f"<{name}{self.attrs_s(attrs)}>"
             self._message.value += open_tag
@@ -290,6 +291,10 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
         """Call when an elements end"""
         name = element.tag
         if name == "Message" and self._level == 1:
+            if self._no_of_children == 0:
+                self._message.value = ""
+                self._level -= 1
+                return self._message
             # If number of children are more than 1,
             # We can not construct proper kafka xml message.
             # So, log the error message
@@ -311,11 +316,12 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
         self._level -= 1
         return None
 
-    def rest_for_next_message(self, attrs: dict) -> None:
+    def reset_for_next_message(self, attrs: dict) -> None:
         """To reset _message"""
         value = '<?xml version="1.0" encoding="UTF-8"?>'
-        key = self.get_key(attrs)
-        self._message = KafkaMessage(key=key, value=value)
+        key = self.get_attribute_value(attrs, "key")
+        tombstone = self.get_attribute_value(attrs, "tombstone")
+        self._message = KafkaMessage(key=key, value=value, tombstone=bool(tombstone))
         self._no_of_children = 0
 
 
@@ -358,11 +364,12 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
             yield KafkaMessage(key=None, value=kafka_payload)
 
     def _aggregate_data(self) -> Entities:
-        schema = self.get_schema()
+        self._schema = self.get_schema()
         entities = self.get_entities()
-        return Entities(entities=entities, schema=schema)
+        return Entities(entities=entities, schema=self._schema)
 
-    def get_schema(self) -> EntitySchema:
+    @staticmethod
+    def get_schema() -> EntitySchema:
         """Return kafka message schema paths"""
         schema_paths = [
             EntityPath(path="key"),
@@ -371,11 +378,10 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
             EntityPath(path="ts-production"),
             EntityPath(path="ts-consumption"),
         ]
-        self._schema = EntitySchema(
+        return EntitySchema(
             type_uri="https://github.com/eccenca/cmem-plugin-kafka#PlainMessage",
             paths=schema_paths,
         )
-        return self._schema
 
     def _get_paths(self, values: dict) -> list:
         self._log.info(f"_get_paths: Values dict {values}")

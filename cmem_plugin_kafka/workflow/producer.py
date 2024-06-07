@@ -1,4 +1,5 @@
 """Kafka producer plugin module"""
+
 from collections.abc import Sequence
 from typing import Any
 
@@ -11,6 +12,7 @@ from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.parameter.password import Password, PasswordParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
+from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
 from cmem_plugin_base.dataintegration.types import IntParameterType
 from confluent_kafka import KafkaError
 
@@ -89,7 +91,8 @@ on configuration.
             description="Where do you want to retrieve the messages from?"
             " The dropdown lists usable datasets from the current"
             " project only. In case you miss your dataset, check for"
-            " the correct type (XML/JSON) and build project).",
+            " the correct type (XML/JSON) and build project)."
+            " The messages will be retrieved from the entities if no dataset is provided.",
             param_type=DatasetParameterType(dataset_type="xml,json"),
             default_value="",
         ),
@@ -184,6 +187,14 @@ class KafkaProducerPlugin(WorkflowPlugin):
         self.message_max_bytes = message_max_bytes
         self.compression_type = compression_type
         self._kafka_stats: dict = {}
+        self._set_ports()
+
+    def _set_ports(self) -> None:
+        """Define input/output ports based on the configuration"""
+        self.output_port = None
+        # no input port if dataset is selected
+        if self.message_dataset:
+            self.input_ports = FixedNumberOfInputs([])
 
     def metrics_callback(self, json: str) -> None:
         """Send producer metrics to server"""

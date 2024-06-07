@@ -1,4 +1,5 @@
 """Plugin tests."""
+
 import secrets
 import string
 from collections.abc import Generator

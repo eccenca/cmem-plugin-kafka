@@ -1,4 +1,5 @@
 """Kafka consumer plugin module"""
+
 from collections.abc import Sequence
 from typing import Any, BinaryIO
 
@@ -11,6 +12,7 @@ from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.parameter.password import Password, PasswordParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
+from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs, FixedSchemaPort
 from cmem_plugin_base.dataintegration.types import BoolParameterType, IntParameterType
 from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access, split_task_id
 from confluent_kafka import KafkaError
@@ -80,7 +82,6 @@ from cmem_plugin_kafka.utils import (
             " the correct type (XML/JSON) and build project.",
             param_type=DatasetParameterType(dataset_type="xml,json"),
             default_value="",
-            advanced=True,
         ),
         PluginParameter(
             name="sasl_mechanisms",
@@ -169,7 +170,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         client_id: str = "",
         local_consumer_queue_size: int = 5000,
         message_limit: int = 100000,
-        disable_commit: bool = False,  # noqa: FBT001, FBT002
+        disable_commit: bool = False,
     ) -> None:
         if not isinstance(bootstrap_servers, str):
             raise TypeError("Specified server id is invalid")
@@ -189,6 +190,17 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         self.message_limit = int(message_limit)
         self.disable_commit = bool(disable_commit)
         self._kafka_stats: dict = {}
+        self._set_ports()
+
+    def _set_ports(self) -> None:
+        """Define input/output ports based on the configuration"""
+        self.input_ports = FixedNumberOfInputs([])
+        # no output port if dataset is selected
+        if self.message_dataset:
+            self.output_port = None
+        else:
+            # output port with fixed schema
+            self.output_port = FixedSchemaPort(schema=KafkaEntitiesDataHandler.get_schema())
 
     def metrics_callback(self, json: str) -> None:
         """Send producer metrics to server"""
@@ -300,6 +312,7 @@ def write_to_dataset(
     ------
         ValueError: in case the task ID is not splittable
         ValueError: missing parameter
+
     """
     setup_cmempy_user_access(context=context)
     project_id, task_id = split_task_id(dataset_id)
