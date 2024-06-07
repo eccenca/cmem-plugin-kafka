@@ -1,4 +1,5 @@
 """test configuration module"""
+
 import logging
 import secrets
 from collections.abc import Generator

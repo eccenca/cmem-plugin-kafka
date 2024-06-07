@@ -1,4 +1,5 @@
 """Tests for `utils` package."""
+
 import json
 
 from cmem_plugin_kafka.utils import get_kafka_statistics

@@ -1,4 +1,5 @@
 """Module provides a base class for producing messages from data to/from a Kafka topic."""
+
 import hashlib
 import json
 import re

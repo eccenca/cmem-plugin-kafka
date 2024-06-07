@@ -1,4 +1,5 @@
 """Tests for producer/consumer plugin with big datasets."""
+
 import shutil
 from collections.abc import Generator
 from contextlib import suppress

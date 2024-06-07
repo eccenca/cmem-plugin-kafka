@@ -1,4 +1,5 @@
 """constants module"""
+
 import collections
 
 KAFKA_TIMEOUT = 5

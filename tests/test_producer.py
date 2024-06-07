@@ -1,4 +1,5 @@
 """Plugin tests."""
+
 from collections.abc import Generator
 from contextlib import suppress
 from pathlib import Path

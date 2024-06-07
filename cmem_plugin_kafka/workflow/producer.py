@@ -1,4 +1,5 @@
 """Kafka producer plugin module"""
+
 from collections.abc import Sequence
 from typing import Any
 

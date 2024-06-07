@@ -1,4 +1,5 @@
 """Kafka consumer plugin module"""
+
 from collections.abc import Sequence
 from typing import Any, BinaryIO
 
