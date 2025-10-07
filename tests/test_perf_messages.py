@@ -48,7 +48,7 @@ XML_PROJECT_LINK = "https://download.eccenca.com/cmem-plugin-kafka/kafka_perform
 JSON_PROJECT_LINK = "https://download.eccenca.com/cmem-plugin-kafka/kafka_json_perf_project.zip"
 
 
-@pytest.fixture()
+@pytest.fixture
 def xml_dataset_project() -> Generator:
     """Provide the DI build project incl. assets."""
     setup_cmempy_user_access(context=TestUserContext())
@@ -85,7 +85,7 @@ def xml_dataset_project() -> Generator:
         delete_project(PROJECT_NAME)
 
 
-@pytest.fixture()
+@pytest.fixture
 def entities_project() -> Generator:
     """Provide the DI build project incl. assets."""
     setup_cmempy_user_access(context=TestUserContext())
@@ -98,7 +98,7 @@ def entities_project() -> Generator:
     delete_project(project_name)
 
 
-@pytest.fixture()
+@pytest.fixture
 def json_dataset_project() -> Generator:
     """Provide the DI build project incl. assets."""
     setup_cmempy_user_access(context=TestUserContext())

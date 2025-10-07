@@ -14,7 +14,7 @@ KAFKA_CONFIG = get_kafka_config()
 TOPIC_PREFIX = "cmem"
 
 
-@pytest.fixture()
+@pytest.fixture
 def topic() -> Generator:
     """Create a test topic"""
     kafka_service = KAFKA_CONFIG["bootstrap_server"]

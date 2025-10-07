@@ -28,7 +28,7 @@ DEFAULT_TOPIC = "eccenca_kafka_handler_workflow"
 DEFAULT_GROUP = "workflow"
 
 
-@pytest.fixture()
+@pytest.fixture
 def project():  # noqa: ANN201
     """Provide the DI build project incl. assets."""
     with suppress(Exception):

@@ -307,7 +307,7 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
                 return self._message
 
             self._log.error(
-                "Not able to process this message. " "Reason: Identified more than one children."
+                "Not able to process this message. Reason: Identified more than one children."
             )
 
         else:
@@ -407,6 +407,6 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
             [message.value],
             [f"{message.offset}"],
             [f"{message.timestamp}"],
-            [f"{int(round(datetime.now(tz=UTC).timestamp() * 1000))}"],
+            [f"{round(datetime.now(tz=UTC).timestamp() * 1000)}"],
         ]
         return Entity(uri=entity_uri, values=values)
