@@ -80,7 +80,7 @@ class KafkaDataHandler:
                 self.update_report()
         self._kafka_producer.flush()
 
-    def _split_data(self, data: Response) -> Generator[KafkaMessage, KafkaMessage, KafkaMessage]:
+    def _split_data(self, data: Response) -> Generator[KafkaMessage]:
         """Split the input data into individual messages.
 
         This method should be implemented by subclasses to handle the specific
@@ -171,7 +171,7 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
         plugin_logger.info("Initialize KafkaJSONDataHandler")
         super().__init__(context, plugin_logger, kafka_producer, kafka_consumer)
 
-    def _split_data(self, data: Response) -> Generator:
+    def _split_data(self, data: Response) -> Generator[KafkaMessage]:
         for message in json_stream.requests.load(data):
             _message = json_stream.to_standard_types(message["message"])
             key = _message.get("key")
@@ -236,7 +236,7 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
 
         yield b"</KafkaMessages>"
 
-    def _split_data(self, data: Response) -> Generator:
+    def _split_data(self, data: Response) -> Generator[KafkaMessage]:
         data.raw.decode_content = True
         context = ElementTree.iterparse(data.raw, events=("start", "end"))
         # get the root element
@@ -350,7 +350,7 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
         super().__init__(context, plugin_logger, kafka_producer, kafka_consumer)
         self._schema: EntitySchema = None
 
-    def _split_data(self, data: Entities) -> Generator:
+    def _split_data(self, data: Entities) -> Generator[KafkaMessage]:
         self._log.info("Generate dict from entities")
         paths = data.schema.paths
         type_uri = data.schema.type_uri

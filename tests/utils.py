@@ -19,6 +19,7 @@ from cmem_plugin_base.dataintegration.context import (
     UserContext,
 )
 from defusedxml import ElementTree, sax
+from urllib3 import HTTPResponse
 
 needs_cmem: MarkDecorator = pytest.mark.skipif(
     "CMEM_BASE_URI" not in os.environ, reason="Needs CMEM configuration"
@@ -109,7 +110,7 @@ class XMLUtils:
         return len(tree.findall("./"))
 
     @staticmethod
-    def get_elements_len_from_stream(content: str) -> int:
+    def get_elements_len_from_stream(content: HTTPResponse) -> int:
         """Return elements len of xml file"""
 
         class MessageHandler(ContentHandler):
