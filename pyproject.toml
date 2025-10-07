@@ -19,7 +19,7 @@ homepage = "https://github.com/eccenca/cmem-plugin-kafka"
 
 [tool.poetry.dependencies]
 # if you need to change python version here, change it also in .python-version
-python = "^3.13"
+python = "^3.11"
 confluent-kafka = "^2.6.0"
 defusedxml = "^0.7.1"
 json-stream = "2.3.0"
