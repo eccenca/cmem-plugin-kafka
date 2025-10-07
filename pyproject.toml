@@ -25,6 +25,7 @@ defusedxml = "^0.7.1"
 json-stream = "2.3.0"
 json-stream-rs-tokenizer = "0.4.17"
 requests = "^2.32.5"
+cmem-cmempy = "^25.3.0"
 
 [tool.poetry.dependencies.cmem-plugin-base]
 version = "^4.12.1"
