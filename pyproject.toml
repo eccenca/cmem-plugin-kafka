@@ -23,7 +23,6 @@ python = "^3.11"
 confluent-kafka = "^2.6.0"
 defusedxml = "^0.7.1"
 json-stream = "2.3.0"
-json-stream-rs-tokenizer = "0.4.17"
 requests = "^2.32.5"
 cmem-cmempy = "^25.3.0"
 
@@ -48,7 +47,7 @@ pytest-memray = { version = "^1.7.0",  markers = "platform_system != 'Windows'" 
 ruff = "^0.12.0"
 safety = "^1.10.3"
 types-requests = "^2.31.0.10"
-xmltodict = "^0.13.0"
+xmltodict = "^0.15.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
