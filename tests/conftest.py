@@ -14,7 +14,7 @@ KAFKA_CONFIG = get_kafka_config()
 TOPIC_PREFIX = "cmem"
 
 
-@pytest.fixture()
+@pytest.fixture
 def topic() -> Generator:
     """Create a test topic"""
     kafka_service = KAFKA_CONFIG["bootstrap_server"]
@@ -27,9 +27,9 @@ def topic() -> Generator:
     for topic, f in fs.items():
         try:
             f.result()  # The result itself is None
-            logging.info(f"Topic {topic} created")
+            logging.getLogger(__name__).info(f"Topic {topic} created")
         except Exception:
-            logging.exception(f"Failed to create topic {topic}")
+            logging.getLogger(__name__).exception(f"Failed to create topic {topic}")
     yield default_topic
     fs = a.delete_topics([default_topic], operation_timeout=30)
 
@@ -37,6 +37,6 @@ def topic() -> Generator:
     for topic, f in fs.items():
         try:
             f.result()  # The result itself is None
-            logging.info(f"Topic {topic} deleted")
+            logging.getLogger(__name__).info(f"Topic {topic} deleted")
         except Exception:
-            logging.exception(f"Failed to delete topic {topic}")
+            logging.getLogger(__name__).exception(f"Failed to delete topic {topic}")

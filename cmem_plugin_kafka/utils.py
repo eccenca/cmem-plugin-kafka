@@ -117,7 +117,7 @@ class KafkaProducer:
 class KafkaConsumer:
     """Kafka consumer wrapper over confluent consumer"""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         config: dict,
         commit_offset: bool,

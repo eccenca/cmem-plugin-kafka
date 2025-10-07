@@ -57,7 +57,7 @@ This is especially true for a kafka cluster hosted at
 @Plugin(
     label="Kafka Producer (Send Messages)",
     plugin_id="cmem_plugin_kafka-SendMessages",
-    description="Reads a messages dataset and sends records to a" " Kafka topic (Producer).",
+    description="Reads a messages dataset and sends records to a Kafka topic (Producer).",
     documentation=f"""This workflow operator uses the Kafka Producer API to send
 messages to a [Apache Kafka](https://kafka.apache.org/).
 

@@ -25,8 +25,8 @@ KAFKA_CONFIG = get_kafka_config()
 DEFAULT_TOPIC = "eccenca_kafka_workflow"
 
 
-@pytest.fixture()
-def project() -> Generator[str, None, None]:
+@pytest.fixture
+def project() -> Generator[str]:
     """Provide the DI build project incl. assets."""
     with suppress(Exception):
         delete_project(PROJECT_NAME)

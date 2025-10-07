@@ -41,7 +41,7 @@ DEFAULT_GROUP = ""
 DEFAULT_RESET = "latest"
 
 
-@pytest.fixture()
+@pytest.fixture
 def project() -> Generator:
     """Provide the DI build project incl. assets."""
     with suppress(Exception):
