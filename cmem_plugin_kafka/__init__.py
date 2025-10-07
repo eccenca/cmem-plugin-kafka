@@ -1,1 +1,1 @@
-"""kafka - main package"""
+"""cmem-plugin-kafka"""
