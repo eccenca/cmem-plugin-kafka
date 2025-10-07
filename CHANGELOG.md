@@ -1,15 +1,26 @@
+<!-- markdownlint-disable MD012 MD013 MD024 MD033 -->
 # Change Log
 
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/)
 
+## [3.3.0] 2025-10-07
+
+### Changed
+
+- dependency upgrades
+
+### Fixes
+
+- linter fixes
+
+
 ## [3.2.0] 2024-06-07
 
 ### Added
 
-- support for sending tombstone message from kafka producer plugin
-    - https://medium.com/@damienthomlutz/deleting-records-in-kafka-aka-tombstones-651114655a16
+- support for sending [tombstone message](https://medium.com/@damienthomlutz/deleting-records-in-kafka-aka-tombstones-651114655a16) from kafka producer plugin
 
 
 ## [3.1.0] 2023-12-30
@@ -18,7 +29,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 - Upgrade template to V6.0.1
 - upgrades to use cmem-plugin-base 4.3.0 (for CMEM 23.3)
-- SASL Password parameter type from StringParameterType to PasswordParameterType 
+- SASL Password parameter type from StringParameterType to PasswordParameterType
 
 
 ## [3.0.0] 2023-09-08
