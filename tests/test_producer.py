@@ -98,7 +98,7 @@ def test_validate_bootstrap_server() -> None:
     """Validate bootstrap service value"""
     with pytest.raises(
         cimpl.KafkaException,
-        match=r"KafkaError{code=_TRANSPORT,val=-195,"
+        match="KafkaError{code=_TRANSPORT,val=-195,"
         'str="Failed to get metadata: Local: Broker transport failure"}',
     ):
         KafkaProducerPlugin(

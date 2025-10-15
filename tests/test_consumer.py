@@ -80,9 +80,9 @@ def test_execution_kafka_producer_new_topic(project: str) -> None:
     with pytest.raises(
         ValueError,
         match=(
-            r"The topic you configured, was just created."
-            r" Save again if this ok for you."
-            r" Otherwise, change the topic name."
+            "The topic you configured, was just created."
+            " Save again if this ok for you."
+            " Otherwise, change the topic name."
         ),
     ):
         KafkaProducerPlugin(
@@ -377,7 +377,7 @@ def test_validate_bootstrap_server() -> None:
     """Validate bootstrap service value"""
     with pytest.raises(
         cimpl.KafkaException,
-        match=r"KafkaError{code=_TRANSPORT,val=-195,"
+        match="KafkaError{code=_TRANSPORT,val=-195,"
         'str="Failed to get metadata: Local: Broker transport failure"}',
     ):
         KafkaConsumerPlugin(
@@ -404,7 +404,7 @@ def test_validate_auto_offset_reset_parameter(project: str, topic: str) -> None:
 
     with pytest.raises(
         KafkaException,
-        match=r"KafkaError{code=_AUTO_OFFSET_RESET,val=-140,"
+        match="KafkaError{code=_AUTO_OFFSET_RESET,val=-140,"
         'str="no previously committed offset available: Local: No offset stored"}',
     ):
         KafkaConsumerPlugin(
