@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/)
 
+## [Unreleased]
+
+### Changed
+
+- yield messages after confirming they were complete to ensure to corrupt data
+
 ## [3.4.0] 2025-10-20
 
 ### Changed

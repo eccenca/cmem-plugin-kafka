@@ -187,15 +187,22 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
         """Generate json file with kafka messages"""
         if not self._kafka_consumer:
             raise ValueError("Kafka consumer is None")
-        try:
-            yield b"["
-            for count, message in enumerate(self._kafka_consumer.poll()):
-                if count > 0:
-                    yield b","
-                yield get_message_with_json_wrapper(message).encode()
-            yield b"]"
-        except json.decoder.JSONDecodeError as ex:
-            raise ValueError("Kafka Message is not in expected format ") from ex
+        yield b"["
+        first = True
+        for message in self._kafka_consumer.poll():
+            try:
+                validated_message = get_message_with_json_wrapper(message)
+                serialized = validated_message.encode("utf-8")
+            except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as ex:
+                raise ValueError(
+                    f"Invalid or incomplete message at offset {message.offset}: {ex}"
+                ) from ex
+
+            if not first:
+                yield b","
+            first = False
+            yield serialized
+        yield b"]"
 
 
 class KafkaXMLDataHandler(KafkaDatasetHandler):
@@ -227,13 +234,17 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
 
     def _aggregate_data(self) -> Generator:
         """Generate xml file with kafka messages"""
-        if not self._kafka_consumer:
-            raise ValueError("Kafka consumer is None")
         yield b'<?xml version="1.0" encoding="UTF-8"?>\n'
         yield b"<KafkaMessages>"
         for message in self._kafka_consumer.poll():
-            yield get_message_with_xml_wrapper(message).encode()
-
+            try:
+                validated_message = get_message_with_xml_wrapper(message)
+                serialized = validated_message.encode("utf-8")
+            except (UnicodeDecodeError, ValueError) as ex:
+                raise ValueError(
+                    f"Invalid or incomplete message at offset {message.offset}: {ex}"
+                ) from ex
+            yield serialized
         yield b"</KafkaMessages>"
 
     def _split_data(self, data: Response) -> Generator[KafkaMessage]:
