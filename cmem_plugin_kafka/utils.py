@@ -54,7 +54,7 @@ class KafkaMessage:
         timestamp: int | None = None,
         tombstone: bool = False,
     ):
-        self.value: str = value if value else ""
+        self.value: str = value or ""
         self.key: str | None = key
         self.headers: dict | None = headers
         self.offset = offset
@@ -74,7 +74,7 @@ class KafkaProducer:
 
     def process(self, message: KafkaMessage) -> None:
         """Produce message to topic."""
-        headers = message.headers if message.headers else {}
+        headers = message.headers or {}
         value = None
         if message.tombstone:
             value = None
@@ -84,12 +84,14 @@ class KafkaProducer:
         self._producer.produce(
             self._topic,
             value=value,
-            key=message.key,
+            key=message.key.encode("utf-8") if message.key else None,
             headers=headers,
             on_delivery=self.on_delivery,
         )
 
-    def on_delivery(self, err: confluent_kafka.KafkaError, msg: confluent_kafka.Message) -> None:
+    def on_delivery(
+        self, err: confluent_kafka.KafkaError | None, msg: confluent_kafka.Message
+    ) -> None:
         """Execute after a message is delivered to the Kafka broker."""
         _ = msg
         if err:
@@ -165,10 +167,13 @@ class KafkaConsumer:
             self._log.error(f"Consumer poll Error:{msg.error()}")
             raise KafkaException(msg.error())
         else:
+            key_bytes = msg.key()
+            value_bytes = msg.value()
+            raw_headers = msg.headers()
             self._first_message = KafkaMessage(
-                key=msg.key().decode("utf-8") if msg.key() else "",
-                headers=msg.headers(),
-                value=msg.value().decode("utf-8"),
+                key=key_bytes.decode("utf-8") if key_bytes else "",
+                headers=dict(raw_headers) if raw_headers else None,
+                value=value_bytes.decode("utf-8") if value_bytes else "",
                 offset=msg.offset(),
                 timestamp=msg.timestamp()[1],
             )
@@ -191,10 +196,13 @@ class KafkaConsumer:
 
             self._no_of_success_messages += 1
 
+            key_bytes = msg.key()
+            value_bytes = msg.value()
+            raw_headers = msg.headers()
             kafka_message = KafkaMessage(
-                key=msg.key().decode("utf-8") if msg.key() else "",
-                headers=msg.headers(),
-                value=msg.value().decode("utf-8"),
+                key=key_bytes.decode("utf-8") if key_bytes else "",
+                headers=dict(raw_headers) if raw_headers else None,
+                value=value_bytes.decode("utf-8") if value_bytes else "",
                 offset=msg.offset(),
                 timestamp=msg.timestamp()[1],
             )
@@ -229,15 +237,15 @@ def validate_kafka_config(config: dict[str, Any], topic: str, log: PluginLogger)
     cluster_metadata: ClusterMetadata = admin_client.list_topics(topic=topic, timeout=KAFKA_TIMEOUT)
 
     topic_meta: TopicMetadata = cluster_metadata.topics[topic]
-    kafka_error: KafkaError = topic_meta.error
+    kafka_error: KafkaError | None = topic_meta.error
 
-    if kafka_error and kafka_error.code() == KafkaError.LEADER_NOT_AVAILABLE:
+    if kafka_error and kafka_error.code() == KafkaError.LEADER_NOT_AVAILABLE:  # type: ignore[attr-defined]
         raise ValueError(
             "The topic you configured, was just created. Save again if this ok for you."
             " Otherwise, change the topic name."
         )
     if kafka_error:
-        raise kafka_error
+        raise KafkaException(kafka_error)
     log.info("Connection details are valid")
 
 
