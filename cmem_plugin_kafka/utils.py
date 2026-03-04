@@ -289,9 +289,7 @@ def get_message_with_json_wrapper(message: KafkaMessage) -> str:
     """Wrap kafka message around Message tags"""
     msg_with_wrapper = {"message": {"key": message.key, "content": json.loads(message.value)}}
     if message.headers:
-        msg_with_wrapper["message"]["headers"] = {
-            key: value for key,value in message.headers.items()
-        }
+        msg_with_wrapper["message"]["headers"] = dict(message.headers.items())
     return json.dumps(msg_with_wrapper, cls=BytesEncoder)
 
 
