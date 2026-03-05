@@ -13,7 +13,7 @@ from confluent_kafka import cimpl
 
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
 
-from .utils import TestExecutionContext, get_kafka_config, needs_cmem, needs_kafka
+from .utils import FIXTURES_DIR, TestExecutionContext, get_kafka_config, needs_cmem, needs_kafka
 
 PROJECT_NAME = "kafka_test_project"
 DATASET_NAME = "sample-test"
@@ -38,7 +38,7 @@ def project() -> Generator[str]:
         parameters={"file": RESOURCE_NAME},
         autoconfigure=False,
     )
-    with Path("tests/sample-test.xml").open("rb") as response_file:
+    with Path(FIXTURES_DIR / "sample-test.xml").open("rb") as response_file:
         create_resource(
             project_name=PROJECT_NAME,
             resource_name=RESOURCE_NAME,
