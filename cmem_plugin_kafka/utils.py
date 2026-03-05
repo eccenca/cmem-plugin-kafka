@@ -190,12 +190,13 @@ class KafkaConsumer:
             if msg is None:
                 self._log.info("Messages are empty")
                 break
-            if msg.error():
-                if msg.error().code() == KafkaError._QUEUE_FULL:  # noqa: SLF001
+            err = msg.error()
+            if err:
+                if err.code() == KafkaError._QUEUE_FULL:  # noqa: SLF001
                     self._log.info("Local consumer queue full, stopping poll")
                     break
-                self._log.error(f"Consumer poll Error:{msg.error()}")
-                raise KafkaException(msg.error())
+                self._log.error(f"Consumer poll Error:{err}")
+                raise KafkaException(err)
 
             self._no_of_success_messages += 1
 
