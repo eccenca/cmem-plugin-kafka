@@ -1,6 +1,7 @@
 """Testing utilities."""
 
 import os
+from pathlib import Path
 from typing import ClassVar
 from xml.sax.expatreader import AttributesImpl
 from xml.sax.handler import ContentHandler
@@ -21,6 +22,8 @@ from cmem_plugin_base.dataintegration.context import (
 from defusedxml import ElementTree, sax
 from urllib3 import HTTPResponse
 
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
 needs_cmem: MarkDecorator = pytest.mark.skipif(
     "CMEM_BASE_URI" not in os.environ, reason="Needs CMEM configuration"
 )
@@ -36,7 +39,7 @@ def get_kafka_config() -> dict:
     """To get the kafka configuration from environment variables"""
     return {
         "bootstrap_server": os.environ.get("KAFKA_BOOTSTRAP_SERVER", ""),
-        "security_protocol": os.environ.get("KAFKA_SECURITY_PROTOCOL", ""),
+        "security_protocol": os.environ.get("KAFKA_SECURITY_PROTOCOL", "PLAINTEXT"),
         "sasl_mechanisms": os.environ.get("KAFKA_SASL_MECHANISMS", ""),
         "sasl_username": os.environ.get("KAFKA_SASL_USERNAME", ""),
         "sasl_password": os.environ.get("KAFKA_SASL_PASSWORD", ""),
