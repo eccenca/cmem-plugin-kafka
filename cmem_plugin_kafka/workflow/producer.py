@@ -14,7 +14,7 @@ from cmem_plugin_base.dataintegration.parameter.password import Password, Passwo
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
 from cmem_plugin_base.dataintegration.types import IntParameterType
-from confluent_kafka import KafkaError
+from confluent_kafka import KafkaError, KafkaException
 
 from cmem_plugin_kafka.constants import (
     BOOTSTRAP_SERVERS_DESCRIPTION,
@@ -206,7 +206,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
         """Error callback"""
         self.log.info(f"kafka-error:{err}")
         if err.code() == -193:  # noqa: PLR2004 # -193 -> _RESOLVE
-            raise err
+            raise KafkaException(err)
 
     def get_config(self, project_id: str = "", task_id: str = "") -> dict[str, Any]:
         """Construct and return kafka connection configuration"""
@@ -214,8 +214,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
             "bootstrap.servers": self.bootstrap_servers,
             "security.protocol": self.security_protocol,
             "client.id": self.client_id
-            if self.client_id
-            else get_default_client_id(project_id=project_id, task_id=task_id),
+            or get_default_client_id(project_id=project_id, task_id=task_id),
             "statistics.interval.ms": "1000",
             "message.max.bytes": int(self.message_max_bytes),
             "compression.type": self.compression_type,

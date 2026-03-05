@@ -15,7 +15,7 @@ from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs, FixedSchemaPort
 from cmem_plugin_base.dataintegration.types import BoolParameterType, IntParameterType
 from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access, split_task_id
-from confluent_kafka import KafkaError
+from confluent_kafka import KafkaError, KafkaException
 from requests import Response
 
 from cmem_plugin_kafka.constants import (
@@ -211,7 +211,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         """Error callback"""
         self.log.info(f"kafka-error:{err}")
         if err.code() == -193:  # noqa: PLR2004 # -193 -> _RESOLVE
-            raise err
+            raise KafkaException(err)
 
     def get_config(self, project_id: str = "", task_id: str = "") -> dict[str, Any]:
         """Construct and return kafka connection configuration"""
@@ -221,8 +221,8 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             "security.protocol": self.security_protocol,
             "enable.auto.commit": False,
             "auto.offset.reset": self.auto_offset_reset,
-            "group.id": self.group_id if self.group_id else default_client_id,
-            "client.id": self.client_id if self.client_id else default_client_id,
+            "group.id": self.group_id or default_client_id,
+            "client.id": self.client_id or default_client_id,
             "statistics.interval.ms": "1000",
             "queued.max.messages.kbytes": self.local_consumer_queue_size,
             "error_cb": self.error_callback,

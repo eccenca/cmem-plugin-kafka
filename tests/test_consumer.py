@@ -20,6 +20,7 @@ from cmem_plugin_kafka.workflow.consumer import KafkaConsumerPlugin
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
 
 from .utils import (
+    FIXTURES_DIR,
     TestExecutionContext,
     TestUserContext,
     get_kafka_config,
@@ -54,7 +55,7 @@ def project() -> Generator:
         parameters={"file": PRODUCER_RESOURCE_NAME},
         autoconfigure=False,
     )
-    with Path("tests/sample-test.xml").open("rb") as response_file:
+    with Path(FIXTURES_DIR / "sample-test.xml").open("rb") as response_file:
         create_resource(
             project_name=PROJECT_NAME,
             resource_name=PRODUCER_RESOURCE_NAME,
@@ -129,7 +130,7 @@ def test_execution_kafka_producer_consumer_with_xml_dataset(project: str, topic:
         dataset_id=f"{project}:{CONSUMER_DATASET_NAME}", context=TestUserContext()
     )
 
-    with Path("tests/sample-test.xml").open() as file:
+    with Path(FIXTURES_DIR / "sample-test.xml").open() as file:
         data = file.read().rstrip()
         data_dict = xmltodict.parse(data)
         messages = data_dict["KafkaMessages"]["Message"]
@@ -174,7 +175,7 @@ def test_validate_compression(project: str, topic: str, compression_type: str) -
         dataset_id=f"{project}:{CONSUMER_DATASET_NAME}", context=TestUserContext()
     )
 
-    with Path("tests/sample-test.xml").open() as file:
+    with Path(FIXTURES_DIR / "sample-test.xml").open() as file:
         data = file.read().rstrip()
         data_dict = xmltodict.parse(data)
         messages = data_dict["KafkaMessages"]["Message"]

@@ -187,15 +187,16 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
         """Generate json file with kafka messages"""
         if not self._kafka_consumer:
             raise ValueError("Kafka consumer is None")
-        try:
-            yield b"["
-            for count, message in enumerate(self._kafka_consumer.poll()):
-                if count > 0:
-                    yield b","
-                yield get_message_with_json_wrapper(message).encode()
-            yield b"]"
-        except json.decoder.JSONDecodeError as ex:
-            raise ValueError("Kafka Message is not in expected format ") from ex
+        yield b"["
+        sep = b""
+        for message in self._kafka_consumer.poll():
+            try:
+                chunk = get_message_with_json_wrapper(message).encode()
+            except json.decoder.JSONDecodeError as ex:
+                raise ValueError("Kafka Message is not in expected format ") from ex
+            yield sep + chunk
+            sep = b","
+        yield b"]"
 
 
 class KafkaXMLDataHandler(KafkaDatasetHandler):
@@ -391,12 +392,12 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
         """Generate the entities from kafka messages"""
         if not self._kafka_consumer:
             raise ValueError("Kafka consumer is None")
-
-        for message in self._kafka_consumer.poll():
-            yield self._get_entity(message)
-
-        self._kafka_consumer.commit()
-        self._kafka_consumer.close()
+        try:
+            for message in self._kafka_consumer.poll():
+                yield self._get_entity(message)
+            self._kafka_consumer.commit()
+        finally:
+            self._kafka_consumer.close()
 
     @staticmethod
     def _get_entity(message: KafkaMessage) -> Entity:

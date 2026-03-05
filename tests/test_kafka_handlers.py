@@ -15,7 +15,7 @@ from cmem_plugin_kafka.utils import get_resource_from_dataset
 from cmem_plugin_kafka.workflow.consumer import KafkaConsumerPlugin
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
 
-from .utils import TestExecutionContext, TestUserContext, get_kafka_config, needs_cmem
+from .utils import FIXTURES_DIR, TestExecutionContext, TestUserContext, get_kafka_config, needs_cmem
 
 PROJECT_NAME = "kafka_handler_test_project"
 DATASET_NAME = "sample-test"
@@ -41,7 +41,7 @@ def project():  # noqa: ANN201
         parameters={"file": RESOURCE_NAME},
         autoconfigure=False,
     )
-    with Path("tests/sample-test.json").open("rb") as response_file:
+    with Path(FIXTURES_DIR / "sample-test.json").open("rb") as response_file:
         create_resource(
             project_name=PROJECT_NAME,
             resource_name=RESOURCE_NAME,
@@ -93,7 +93,7 @@ def test_kafka_json_data_handler(project, topic: str) -> None:  # noqa: ANN001
         context=TestUserContext(),
     )
     assert len(resource.content) > 0, "JSON Content is empty"
-    with Path("tests/sample-test.json").open("rb") as response_file:
+    with Path(FIXTURES_DIR / "sample-test.json").open("rb") as response_file:
         data = json_stream.to_standard_types(json_stream.load(response_file))
     with resource as consumer_dataset_file:
         consumer_data = json_stream.to_standard_types(
