@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/)
 
+## [Unreleased] 
+
+### Changed 
+
+- Upgrade template to v8.3.2
+- Upgrade confluent-kafka to 2.13
+
+### Fixed
+
+- Fix partial/invalid output when local consumer queue limit is reached (`_QUEUE_FULL`)
+- Always close Kafka consumer in `KafkaEntitiesDataHandler` on error
+
 ## [3.4.0] 2025-10-20
 
 ### Changed
