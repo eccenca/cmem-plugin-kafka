@@ -192,13 +192,11 @@ not exist any more on the server (e.g. because that data has been deleted).
 """
 
 PARSE_JSON_LINK = (
-    "https://documentation.eccenca.com/latest/"
-    "deploy-and-configure/configuration/dataintegration/plugin-reference/#parse-json"
+    "JsonParserOperator.md"
 )
 
 PARSE_XML_LINK = (
-    "https://documentation.eccenca.com/latest/"
-    "deploy-and-configure/configuration/dataintegration/plugin-reference/#parse-xml"
+    "XmlParserOperator.md"
 )
 
 PLUGIN_DOCUMENTATION = f"""
