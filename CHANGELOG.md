@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/)
 
+## [3.4.2] 2026-05-13
+
+### Security
+
+- updated dependencies for vulnerability issues
+
+### Fixed
+
+- fixed documentation links
+
 ## [3.4.1] 2026-03-05 
 
 ### Changed 
