@@ -191,13 +191,9 @@ not exist any more on the server (e.g. because that data has been deleted).
 - `latest` will receive nothing but will get any new records on the next run.
 """
 
-PARSE_JSON_LINK = (
-    "JsonParserOperator.md"
-)
+PARSE_JSON_LINK = "JsonParserOperator.md"
 
-PARSE_XML_LINK = (
-    "XmlParserOperator.md"
-)
+PARSE_XML_LINK = "XmlParserOperator.md"
 
 PLUGIN_DOCUMENTATION = f"""
 This workflow operator uses the Kafka Consumer API
