@@ -2,25 +2,26 @@
 
 import os
 from pathlib import Path
-from typing import ClassVar
-from xml.sax.expatreader import AttributesImpl
-from xml.sax.handler import ContentHandler
 
 import pytest
 
 # check for cmem environment and skip if not present
 from _pytest.mark import MarkDecorator
-from cmem.cmempy.api import get_token
-from cmem.cmempy.config import get_oauth_default_credentials
-from cmem_plugin_base.dataintegration.context import (
-    ExecutionContext,
-    PluginContext,
-    ReportContext,
-    TaskContext,
-    UserContext,
-)
-from defusedxml import ElementTree, sax
-from urllib3 import HTTPResponse
+from cmem_client.client import Client
+from cmem_plugin_base.testing import TestExecutionContext, TestPluginContext, TestUserContext
+from defusedxml import ElementTree
+
+__all__ = [
+    "FIXTURES_DIR",
+    "TestExecutionContext",
+    "TestPluginContext",
+    "TestUserContext",
+    "XMLUtils",
+    "get_client",
+    "get_kafka_config",
+    "needs_cmem",
+    "needs_kafka",
+]
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -46,54 +47,14 @@ def get_kafka_config() -> dict:
     }
 
 
-class TestUserContext(UserContext):
-    """dummy user context that can be used in tests"""
+def get_client(project_id: str = "dummyProject") -> Client:
+    """Get a fresh client
 
-    __test__ = False
-    default_credential: ClassVar[dict] = {}
-
-    def __init__(self):
-        # get access token from default service account
-        if not TestUserContext.default_credential:
-            TestUserContext.default_credential = get_oauth_default_credentials()
-        access_token = get_token(_oauth_credentials=TestUserContext.default_credential)[
-            "access_token"
-        ]
-        self.token = lambda: access_token
-
-
-class TestPluginContext(PluginContext):
-    """dummy plugin context that can be used in tests"""
-
-    __test__ = False
-
-    def __init__(
-        self,
-        project_id: str = "dummyProject",
-    ):
-        self.project_id = project_id
-        self.user = TestUserContext()
-
-
-class TestTaskContext(TaskContext):
-    """dummy Task context that can be used in tests"""
-
-    __test__ = False
-
-    def __init__(self, project_id: str = "dummyProject", task_id: str = "dummyTask"):
-        self.project_id = lambda: project_id
-        self.task_id = lambda: task_id
-
-
-class TestExecutionContext(ExecutionContext):
-    """dummy execution context that can be used in tests"""
-
-    __test__ = False
-
-    def __init__(self, project_id: str = "dummyProject", task_id: str = "dummyTask"):
-        self.report = ReportContext()
-        self.task = TestTaskContext(project_id=project_id, task_id=task_id)
-        self.user = TestUserContext()
+    Clients are created per operation on purpose: a client keeps its HTTP connections
+    alive in a pool, and a connection which idles while messages are produced or
+    consumed is closed by the server before it is used again.
+    """
+    return Client.from_context(context=TestExecutionContext(project_id=project_id))
 
 
 class XMLUtils:
@@ -111,25 +72,3 @@ class XMLUtils:
         """Return elements len of xml file"""
         tree = ElementTree.parse(path).getroot()
         return len(tree.findall("./"))
-
-    @staticmethod
-    def get_elements_len_from_stream(content: HTTPResponse) -> int:
-        """Return elements len of xml file"""
-
-        class MessageHandler(ContentHandler):
-            """Message Handler"""
-
-            def __init__(self):
-                self.count = 0
-
-            def startElement(self, name: str, attrs: AttributesImpl) -> None:  # noqa: N802
-                _ = attrs
-
-                if name == "Message":
-                    self.count += 1
-
-        handler = MessageHandler()
-        parser = sax.make_parser()
-        parser.setContentHandler(handler)
-        parser.parse(content)
-        return int(handler.count)

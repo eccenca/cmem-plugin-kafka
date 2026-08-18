@@ -3,6 +3,7 @@
 from collections.abc import Sequence
 from typing import Any
 
+from cmem_client.client import Client
 from cmem_plugin_base.dataintegration.context import (
     ExecutionContext,
     ExecutionReport,
@@ -159,6 +160,8 @@ on configuration.
 class KafkaProducerPlugin(WorkflowPlugin):
     """Kafka Producer Plugin"""
 
+    client: Client
+
     def __init__(  # noqa: PLR0913
         self,
         message_dataset: str,
@@ -214,7 +217,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
             "bootstrap.servers": self.bootstrap_servers,
             "security.protocol": self.security_protocol,
             "client.id": self.client_id
-            or get_default_client_id(project_id=project_id, task_id=task_id),
+            or get_default_client_id(client=self.client, project_id=project_id, task_id=task_id),
             "statistics.interval.ms": "1000",
             "message.max.bytes": int(self.message_max_bytes),
             "compression.type": self.compression_type,
@@ -238,6 +241,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
         """Execute the workflow plugin on a given collection of entities."""
         self.log.info("Start Kafka Plugin")
+        self.client = Client.from_context(context=context)
         self.validate()
 
         # override the default ContextHandler
@@ -256,10 +260,10 @@ class KafkaProducerPlugin(WorkflowPlugin):
             # Prefix project id to dataset name
             self.message_dataset = f"{context.task.project_id()}:{self.message_dataset}"
 
-            resource, _ = get_resource_from_dataset(
-                dataset_id=self.message_dataset, context=context.user
+            resource, dataset = get_resource_from_dataset(
+                dataset_id=self.message_dataset, client=self.client
             )
-            if _["data"]["type"] == "json":
+            if dataset.data.type == "json":
                 handler: KafkaDataHandler = KafkaJSONDataHandler(
                     context=context, plugin_logger=self.log, kafka_producer=producer
                 )
@@ -268,6 +272,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
                     context=context, plugin_logger=self.log, kafka_producer=producer
                 )
             with resource as response:
+                response.raise_for_status()
                 handler.send_messages(response)
         else:
             entities_handler = KafkaEntitiesDataHandler(
