@@ -3,29 +3,28 @@
 import secrets
 import string
 from collections.abc import Generator
-from contextlib import suppress
 from pathlib import Path
 
+import httpx
 import pytest
-import requests
 import xmltodict
-from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
-from cmem.cmempy.workspace.projects.project import delete_project, make_new_project
-from cmem.cmempy.workspace.projects.resources.resource import create_resource
 from cmem_plugin_examples.workflow.random_values import RandomValues
 from confluent_kafka import KafkaException, cimpl
 
-from cmem_plugin_kafka.utils import get_resource_from_dataset
 from cmem_plugin_kafka.workflow.consumer import KafkaConsumerPlugin
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
 
 from .utils import (
     FIXTURES_DIR,
     TestExecutionContext,
-    TestUserContext,
+    get_client,
     get_kafka_config,
+    make_dataset,
+    make_project,
     needs_cmem,
     needs_kafka,
+    read_dataset_resource,
+    upload_resource,
 )
 
 PROJECT_NAME = "kafka_consumer_project"
@@ -45,32 +44,14 @@ DEFAULT_RESET = "latest"
 @pytest.fixture
 def project() -> Generator:
     """Provide the DI build project incl. assets."""
-    with suppress(Exception):
-        delete_project(PROJECT_NAME)
-    make_new_project(PROJECT_NAME)
-    make_new_dataset(
-        project_name=PROJECT_NAME,
-        dataset_name=PRODUCER_DATASET_NAME,
-        dataset_type=DATASET_TYPE,
-        parameters={"file": PRODUCER_RESOURCE_NAME},
-        autoconfigure=False,
+    client = make_project(PROJECT_NAME)
+    make_dataset(client, PROJECT_NAME, PRODUCER_DATASET_NAME, DATASET_TYPE, PRODUCER_RESOURCE_NAME)
+    upload_resource(
+        client, PROJECT_NAME, PRODUCER_RESOURCE_NAME, Path(FIXTURES_DIR / "sample-test.xml")
     )
-    with Path(FIXTURES_DIR / "sample-test.xml").open("rb") as response_file:
-        create_resource(
-            project_name=PROJECT_NAME,
-            resource_name=PRODUCER_RESOURCE_NAME,
-            file_resource=response_file,
-            replace=True,
-        )
-    make_new_dataset(
-        project_name=PROJECT_NAME,
-        dataset_name=CONSUMER_DATASET_NAME,
-        dataset_type=DATASET_TYPE,
-        parameters={"file": CONSUMER_RESOURCE_NAME},
-        autoconfigure=False,
-    )
+    make_dataset(client, PROJECT_NAME, CONSUMER_DATASET_NAME, DATASET_TYPE, CONSUMER_RESOURCE_NAME)
     yield PROJECT_NAME
-    delete_project(PROJECT_NAME)
+    get_client(PROJECT_NAME).projects.delete_item(PROJECT_NAME)
 
 
 @needs_cmem
@@ -126,9 +107,7 @@ def test_execution_kafka_producer_consumer_with_xml_dataset(project: str, topic:
     ).execute([], TestExecutionContext(project_id=project))
 
     # Ensure producer and consumer are working properly
-    resource, _ = get_resource_from_dataset(
-        dataset_id=f"{project}:{CONSUMER_DATASET_NAME}", context=TestUserContext()
-    )
+    resource = read_dataset_resource(project, CONSUMER_DATASET_NAME)
 
     with Path(FIXTURES_DIR / "sample-test.xml").open() as file:
         data = file.read().rstrip()
@@ -137,7 +116,7 @@ def test_execution_kafka_producer_consumer_with_xml_dataset(project: str, topic:
         for message in messages:
             if "@key" not in message:
                 message["@key"] = ""
-        assert xmltodict.parse(resource.text) == data_dict
+        assert xmltodict.parse(resource) == data_dict
 
 
 @needs_cmem
@@ -171,9 +150,7 @@ def test_validate_compression(project: str, topic: str, compression_type: str) -
     ).execute([], TestExecutionContext(project_id=project))
 
     # Ensure producer and consumer are working properly
-    resource, _ = get_resource_from_dataset(
-        dataset_id=f"{project}:{CONSUMER_DATASET_NAME}", context=TestUserContext()
-    )
+    resource = read_dataset_resource(project, CONSUMER_DATASET_NAME)
 
     with Path(FIXTURES_DIR / "sample-test.xml").open() as file:
         data = file.read().rstrip()
@@ -182,7 +159,7 @@ def test_validate_compression(project: str, topic: str, compression_type: str) -
         for message in messages:
             if "@key" not in message:
                 message["@key"] = ""
-        assert xmltodict.parse(resource.text) == data_dict
+        assert xmltodict.parse(resource) == data_dict
 
 
 @needs_cmem
@@ -215,10 +192,8 @@ def test_validate_message_limit_parameter(project: str, topic: str) -> None:
     ).execute([], TestExecutionContext(project_id=project))
 
     # Ensure producer and consumer are working properly
-    resource, _ = get_resource_from_dataset(
-        dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}", context=TestUserContext()
-    )
-    data_dict = xmltodict.parse(resource.text)
+    resource = read_dataset_resource(PROJECT_NAME, CONSUMER_DATASET_NAME)
+    data_dict = xmltodict.parse(resource)
     assert len(data_dict["KafkaMessages"]["Message"]) == 2  # noqa: PLR2004
 
 
@@ -252,10 +227,8 @@ def test_validate_disable_commit_parameter(project: str, topic: str) -> None:
     ).execute([], TestExecutionContext(project_id=project))
 
     # Ensure producer and consumer are working properly
-    resource, _ = get_resource_from_dataset(
-        dataset_id=f"{project}:{CONSUMER_DATASET_NAME}", context=TestUserContext()
-    )
-    data_dict = xmltodict.parse(resource.text)
+    resource = read_dataset_resource(project, CONSUMER_DATASET_NAME)
+    data_dict = xmltodict.parse(resource)
     assert len(data_dict["KafkaMessages"]["Message"]) == 3  # noqa: PLR2004
 
     # Consumer
@@ -273,10 +246,8 @@ def test_validate_disable_commit_parameter(project: str, topic: str) -> None:
     ).execute([], TestExecutionContext(project_id=project))
 
     # Ensure producer and consumer are working properly
-    resource, _ = get_resource_from_dataset(
-        dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}", context=TestUserContext()
-    )
-    data_dict = xmltodict.parse(resource.text)
+    resource = read_dataset_resource(PROJECT_NAME, CONSUMER_DATASET_NAME)
+    data_dict = xmltodict.parse(resource)
     assert len(data_dict["KafkaMessages"]["Message"]) == 3  # noqa: PLR2004
     # Consumer
     KafkaConsumerPlugin(
@@ -293,10 +264,8 @@ def test_validate_disable_commit_parameter(project: str, topic: str) -> None:
     ).execute([], TestExecutionContext(project_id=project))
 
     # Ensure producer and consumer are working properly
-    resource, _ = get_resource_from_dataset(
-        dataset_id=f"{project}:{CONSUMER_DATASET_NAME}", context=TestUserContext()
-    )
-    data_dict = xmltodict.parse(resource.text)
+    resource = read_dataset_resource(project, CONSUMER_DATASET_NAME)
+    data_dict = xmltodict.parse(resource)
     assert not data_dict["KafkaMessages"]
 
 
@@ -346,7 +315,7 @@ def test_execution_kafka_producer_consumer_with_entities(project: str, topic: st
 def test_validate_invalid_inputs(project: str, topic: str) -> None:
     """Validate Invalid Inputs"""
     # Invalid Dataset
-    with pytest.raises(requests.exceptions.HTTPError):
+    with pytest.raises(httpx.HTTPStatusError):
         KafkaConsumerPlugin(
             message_dataset="sample",
             bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],

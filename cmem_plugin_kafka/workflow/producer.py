@@ -162,7 +162,7 @@ class KafkaProducerPlugin(WorkflowPlugin):
 
     client: Client
 
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913 PLR0917
         self,
         message_dataset: str,
         bootstrap_servers: str,

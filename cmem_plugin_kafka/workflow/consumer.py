@@ -156,7 +156,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
 
     client: Client
 
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913 PLR0917
         self,
         message_dataset: str,
         bootstrap_servers: str,
@@ -356,6 +356,6 @@ def post_resource(
     url = url / dataset_id / "file"
 
     with file_resource as chunks:  # type: ignore[attr-defined]
-        response = client.http.put(url, content=chunks)
+        response: httpx.Response = client.http.put(url, content=chunks)
     response.raise_for_status()
     return response

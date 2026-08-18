@@ -41,7 +41,7 @@ class KafkaMessage:
 
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913 PLR0917
         self,
         key: str | None = None,
         headers: dict | None = None,
@@ -243,7 +243,7 @@ class ChunkReader(io.RawIOBase):
         self._buffer = b""
 
     def readable(self) -> bool:
-        """This object is readable"""
+        """Report this object as readable"""
         return True
 
     def readinto(self, buffer: memoryview) -> int:  # type: ignore[override]

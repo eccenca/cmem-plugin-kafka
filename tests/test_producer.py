@@ -1,19 +1,25 @@
 """Plugin tests."""
 
 from collections.abc import Generator
-from contextlib import suppress
 from pathlib import Path
 
+import httpx
 import pytest
-import requests
-from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
-from cmem.cmempy.workspace.projects.project import delete_project, make_new_project
-from cmem.cmempy.workspace.projects.resources.resource import create_resource
 from confluent_kafka import cimpl
 
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
 
-from .utils import FIXTURES_DIR, TestExecutionContext, get_kafka_config, needs_cmem, needs_kafka
+from .utils import (
+    FIXTURES_DIR,
+    TestExecutionContext,
+    get_client,
+    get_kafka_config,
+    make_dataset,
+    make_project,
+    needs_cmem,
+    needs_kafka,
+    upload_resource,
+)
 
 PROJECT_NAME = "kafka_test_project"
 DATASET_NAME = "sample-test"
@@ -28,26 +34,12 @@ DEFAULT_TOPIC = "eccenca_kafka_workflow"
 @pytest.fixture
 def project() -> Generator[str]:
     """Provide the DI build project incl. assets."""
-    with suppress(Exception):
-        delete_project(PROJECT_NAME)
-    make_new_project(PROJECT_NAME)
-    make_new_dataset(
-        project_name=PROJECT_NAME,
-        dataset_name=DATASET_NAME,
-        dataset_type=DATASET_TYPE,
-        parameters={"file": RESOURCE_NAME},
-        autoconfigure=False,
-    )
-    with Path(FIXTURES_DIR / "sample-test.xml").open("rb") as response_file:
-        create_resource(
-            project_name=PROJECT_NAME,
-            resource_name=RESOURCE_NAME,
-            file_resource=response_file,
-            replace=True,
-        )
+    client = make_project(PROJECT_NAME)
+    make_dataset(client, PROJECT_NAME, DATASET_NAME, DATASET_TYPE, RESOURCE_NAME)
+    upload_resource(client, PROJECT_NAME, RESOURCE_NAME, Path(FIXTURES_DIR / "sample-test.xml"))
 
     yield PROJECT_NAME
-    delete_project(PROJECT_NAME)
+    get_client(PROJECT_NAME).projects.delete_item(PROJECT_NAME)
 
 
 @needs_cmem
@@ -70,7 +62,7 @@ def test_execution_plain_kafka(project: str, topic: str) -> None:
 def test_validate_invalid_inputs(project: str, topic: str) -> None:
     """Test producer plugin validation with invalid inputs"""
     # Invalid Dataset
-    with pytest.raises(requests.exceptions.HTTPError):
+    with pytest.raises(httpx.HTTPStatusError):
         KafkaProducerPlugin(
             message_dataset="sample",
             bootstrap_servers=KAFKA_CONFIG["bootstrap_server"],
