@@ -1,11 +1,13 @@
 """Testing utilities."""
 
 import os
+from http import HTTPStatus
 from pathlib import Path
 from typing import IO
 from xml.sax.expatreader import AttributesImpl
 from xml.sax.handler import ContentHandler
 
+import httpx
 import pytest
 
 # check for cmem environment and skip if not present
@@ -80,15 +82,23 @@ def make_project(project_id: str) -> Client:
 def make_dataset(
     client: Client, project_id: str, dataset_id: str, dataset_type: str, file_name: str
 ) -> None:
-    """Create a file based dataset in a project"""
-    client.datasets.create_item(
-        Dataset(
-            id=dataset_id,
-            project=project_id,
-            data=DatasetData(type=dataset_type, parameters={"file": file_name}),
-            metadata=DatasetMetadata(label=dataset_id),
-        )
+    """Create or replace a file based dataset in a project
+
+    Replacing matters for projects which are imported from an archive and already
+    bring the dataset with them.
+    """
+    dataset = Dataset(
+        id=dataset_id,
+        project=project_id,
+        data=DatasetData(type=dataset_type, parameters={"file": file_name}),
+        metadata=DatasetMetadata(label=dataset_id),
     )
+    try:
+        client.datasets.create_item(dataset)
+    except httpx.HTTPStatusError as error:
+        if error.response.status_code != HTTPStatus.CONFLICT:
+            raise
+        client.datasets.update_item(dataset)
 
 
 def upload_resource(client: Client, project_id: str, file_name: str, path: Path) -> None:
