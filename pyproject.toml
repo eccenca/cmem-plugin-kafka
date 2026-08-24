@@ -17,36 +17,40 @@ keywords = [
 ]
 homepage = "https://github.com/eccenca/cmem-plugin-kafka"
 
+[tool.poetry.requires-plugins]
+poetry-plugin-export = "^1.10.0"
+poetry-plugin-shell = "^1.0.1"
+poetry-dynamic-versioning = "^1.10.0"
+
 [tool.poetry.dependencies]# if you need to change python version here, change it also in .python-version
 python = "^3.13"
 confluent-kafka = "^2.13.0"
 defusedxml = "^0.7.1"
 json-stream = "^2.4.1"
-requests = "^2.32.5"
-cmem-cmempy = "^25.3.0"
+cmem-client = "^1.0.0"
+httpx = "*"
 
 [tool.poetry.dependencies.cmem-plugin-base]
-version = "^4.15.0"
+version = "^4.19.0"
 allow-prereleases = false
 
 [tool.poetry.group.dev.dependencies.cmem-cmemc]
 version = "^25.3.0"
 
 [tool.poetry.group.dev.dependencies]
+deptry = "^0.25.1"
 cmem-plugin-examples = "^0.3.0"
-deptry = "^0.24.0"
 genbadge = {extras = ["coverage"], version = "^1.1.3"}
-mypy = "^1.19.1"
+mypy = "^2.3.0"
 pip = "^26"
-pytest = "^9.0.2"
-pytest-cov = "^7.0.0"
+pytest = "^9.1.1"
+pytest-cov = "^7.1.0"
 pytest-dotenv = "^0.5.2"
 pytest-html = "^4.2.0"
-pytest-memray = { version = "^1.8.0",  markers = "platform_system != 'Windows'" }
-ruff = "^0.15.0"
-trivy-py-ecc = "^0.69"
-types-requests = "^2.32.4"
 xmltodict = "^1.0.3"
+pytest-memray = { version = "^1.10.0",  markers = "platform_system != 'Windows'" }
+ruff = "^0.16.2"
+trivy-py-ecc = "^0.73.0.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
@@ -79,7 +83,7 @@ exclude_also = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py313"
 
 [tool.ruff.format]
 line-ending = "lf" # Use `\n` line endings for all files
@@ -103,4 +107,5 @@ ignore = [
     "PD",      # opinionated linting for pandas code
     "S101",    # use of assert detected
     "TRY003",  # Avoid specifying long messages outside the exception class
+    "CPY001",  # Missing copyright notice
 ]

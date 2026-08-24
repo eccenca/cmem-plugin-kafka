@@ -1,26 +1,41 @@
 """Testing utilities."""
 
 import os
+from http import HTTPStatus
 from pathlib import Path
-from typing import ClassVar
+from typing import IO
 from xml.sax.expatreader import AttributesImpl
 from xml.sax.handler import ContentHandler
 
+import httpx
 import pytest
 
 # check for cmem environment and skip if not present
 from _pytest.mark import MarkDecorator
-from cmem.cmempy.api import get_token
-from cmem.cmempy.config import get_oauth_default_credentials
-from cmem_plugin_base.dataintegration.context import (
-    ExecutionContext,
-    PluginContext,
-    ReportContext,
-    TaskContext,
-    UserContext,
-)
+from cmem_client.client import Client
+from cmem_client.models.dataset import Dataset, DatasetData, DatasetMetadata
+from cmem_client.models.project import Project
+from cmem_client.repositories.protocols.import_item import ImportConflictPolicy
+from cmem_plugin_base.testing import TestExecutionContext, TestPluginContext, TestUserContext
 from defusedxml import ElementTree, sax
-from urllib3 import HTTPResponse
+
+from cmem_plugin_kafka.utils import get_dataset, get_resource_name
+
+__all__ = [
+    "FIXTURES_DIR",
+    "TestExecutionContext",
+    "TestPluginContext",
+    "TestUserContext",
+    "XMLUtils",
+    "get_client",
+    "get_kafka_config",
+    "make_dataset",
+    "make_project",
+    "needs_cmem",
+    "needs_kafka",
+    "read_dataset_resource",
+    "upload_resource",
+]
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -46,54 +61,61 @@ def get_kafka_config() -> dict:
     }
 
 
-class TestUserContext(UserContext):
-    """dummy user context that can be used in tests"""
+def get_client(project_id: str = "dummyProject") -> Client:
+    """Get a fresh client
 
-    __test__ = False
-    default_credential: ClassVar[dict] = {}
-
-    def __init__(self):
-        # get access token from default service account
-        if not TestUserContext.default_credential:
-            TestUserContext.default_credential = get_oauth_default_credentials()
-        access_token = get_token(_oauth_credentials=TestUserContext.default_credential)[
-            "access_token"
-        ]
-        self.token = lambda: access_token
+    Clients are created per operation on purpose: a client keeps its HTTP connections
+    alive in a pool, and a connection which idles while messages are produced or
+    consumed is closed by the server before it is used again.
+    """
+    return Client.from_context(context=TestExecutionContext(project_id=project_id))
 
 
-class TestPluginContext(PluginContext):
-    """dummy plugin context that can be used in tests"""
-
-    __test__ = False
-
-    def __init__(
-        self,
-        project_id: str = "dummyProject",
-    ):
-        self.project_id = project_id
-        self.user = TestUserContext()
+def make_project(project_id: str) -> Client:
+    """(Re-)create an empty project and provide a client for it"""
+    client = get_client(project_id)
+    client.projects.delete_item(project_id, skip_if_missing=True)
+    client.projects.create_item(Project(name=project_id))
+    return client
 
 
-class TestTaskContext(TaskContext):
-    """dummy Task context that can be used in tests"""
+def make_dataset(
+    client: Client, project_id: str, dataset_id: str, dataset_type: str, file_name: str
+) -> None:
+    """Create or replace a file based dataset in a project
 
-    __test__ = False
+    Replacing matters for projects which are imported from an archive and already
+    bring the dataset with them.
+    """
+    dataset = Dataset(
+        id=dataset_id,
+        project=project_id,
+        data=DatasetData(type=dataset_type, parameters={"file": file_name}),
+        metadata=DatasetMetadata(label=dataset_id),
+    )
+    try:
+        client.datasets.create_item(dataset)
+    except httpx.HTTPStatusError as error:
+        if error.response.status_code != HTTPStatus.CONFLICT:
+            raise
+        client.datasets.update_item(dataset)
 
-    def __init__(self, project_id: str = "dummyProject", task_id: str = "dummyTask"):
-        self.project_id = lambda: project_id
-        self.task_id = lambda: task_id
+
+def upload_resource(client: Client, project_id: str, file_name: str, path: Path) -> None:
+    """Upload a local file as a project resource"""
+    client.files.import_item(
+        path=path,
+        key=f"{project_id}:{file_name}",
+        on_conflict=ImportConflictPolicy.REPLACE,
+    )
 
 
-class TestExecutionContext(ExecutionContext):
-    """dummy execution context that can be used in tests"""
-
-    __test__ = False
-
-    def __init__(self, project_id: str = "dummyProject", task_id: str = "dummyTask"):
-        self.report = ReportContext()
-        self.task = TestTaskContext(project_id=project_id, task_id=task_id)
-        self.user = TestUserContext()
+def read_dataset_resource(project_id: str, dataset_id: str) -> bytes:
+    """Read the file resource a dataset is based on into memory"""
+    client = get_client(project_id)
+    dataset = get_dataset(project_id=project_id, dataset_id=dataset_id, client=client)
+    content: bytes = client.files.read(f"{project_id}:{get_resource_name(dataset)}")
+    return content
 
 
 class XMLUtils:
@@ -113,8 +135,8 @@ class XMLUtils:
         return len(tree.findall("./"))
 
     @staticmethod
-    def get_elements_len_from_stream(content: HTTPResponse) -> int:
-        """Return elements len of xml file"""
+    def get_message_count_from_stream(content: IO[bytes]) -> int:
+        """Count the Message elements of an xml file without reading it as a whole"""
 
         class MessageHandler(ContentHandler):
             """Message Handler"""

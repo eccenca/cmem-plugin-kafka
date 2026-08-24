@@ -11,7 +11,7 @@ from xml.etree.ElementTree import Element
 from xml.sax.saxutils import escape  # nosec B406
 
 import json_stream
-import json_stream.requests
+import json_stream.httpx
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.entity import (
     Entities,
@@ -21,12 +21,13 @@ from cmem_plugin_base.dataintegration.entity import (
 )
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
 from defusedxml import ElementTree
-from requests import Response
+from httpx import Response
 
 from cmem_plugin_kafka.utils import (
     KafkaConsumer,
     KafkaMessage,
     KafkaProducer,
+    as_file_object,
     get_message_with_json_wrapper,
     get_message_with_xml_wrapper,
 )
@@ -172,7 +173,7 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
         super().__init__(context, plugin_logger, kafka_producer, kafka_consumer)
 
     def _split_data(self, data: Response) -> Generator[KafkaMessage]:
-        for message in json_stream.requests.load(data):
+        for message in json_stream.httpx.load(data):
             _message = json_stream.to_standard_types(message["message"])
             key = _message.get("key")
             headers = _message.get("headers", {})
@@ -238,8 +239,7 @@ class KafkaXMLDataHandler(KafkaDatasetHandler):
         yield b"</KafkaMessages>"
 
     def _split_data(self, data: Response) -> Generator[KafkaMessage]:
-        data.raw.decode_content = True
-        context = ElementTree.iterparse(data.raw, events=("start", "end"))
+        context = ElementTree.iterparse(as_file_object(data), events=("start", "end"))
         # get the root element
         event, root = next(context, None)  # type: ignore[misc]
         if not event:

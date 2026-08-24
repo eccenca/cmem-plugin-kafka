@@ -1,32 +1,28 @@
 """Kafka utils modules"""
 
+import io
 import json
 import re
 from collections.abc import Iterator
+from contextlib import AbstractContextManager
 from typing import Any
 from urllib.parse import urlparse
 
 import confluent_kafka
-from cmem.cmempy.config import get_cmem_base_uri
-from cmem.cmempy.workspace.projects.resources.resource import get_resource_response
-from cmem.cmempy.workspace.search import list_items
-from cmem.cmempy.workspace.tasks import get_task
+import httpx
+from cmem_client.client import Client
+from cmem_client.models.dataset import Dataset
 from cmem_plugin_base.dataintegration.context import (
     ExecutionContext,
     ExecutionReport,
     PluginContext,
-    UserContext,
 )
 from cmem_plugin_base.dataintegration.plugins import PluginLogger
 from cmem_plugin_base.dataintegration.types import Autocompletion, StringParameterType
-from cmem_plugin_base.dataintegration.utils import (
-    setup_cmempy_user_access,
-    split_task_id,
-)
+from cmem_plugin_base.dataintegration.utils import split_task_id
 from confluent_kafka import Consumer, KafkaError, KafkaException, Producer
 from confluent_kafka.admin import AdminClient, ClusterMetadata, TopicMetadata
 from defusedxml import ElementTree
-from requests import Response
 
 from cmem_plugin_kafka.constants import KAFKA_RETRY_COUNT, KAFKA_TIMEOUT
 
@@ -45,7 +41,7 @@ class KafkaMessage:
 
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913 PLR0917
         self,
         key: str | None = None,
         headers: dict | None = None,
@@ -228,11 +224,47 @@ class KafkaConsumer:
         self._consumer.close()
 
 
-def get_default_client_id(project_id: str, task_id: str) -> str:
+def get_default_client_id(client: Client, project_id: str, task_id: str) -> str:
     """Return dns:projectId:taskId when client id is empty"""
-    base_url = get_cmem_base_uri()
-    dns = urlparse(base_url).netloc
+    dns = urlparse(str(client.config.url_base)).netloc
     return f"{dns}:{project_id}:{task_id}"
+
+
+class ChunkReader(io.RawIOBase):
+    """A readable file-like object over an iterator of byte chunks
+
+    Parsers such as ``ElementTree.iterparse`` want a file object to read from, while
+    an httpx streaming response only hands out an iterator of chunks. Use
+    ``as_file_object()`` to get a buffered reader over a streaming response.
+    """
+
+    def __init__(self, chunks: Iterator[bytes]) -> None:
+        self._chunks = chunks
+        self._buffer = b""
+
+    def readable(self) -> bool:
+        """Report this object as readable"""
+        return True
+
+    def readinto(self, buffer: memoryview) -> int:  # type: ignore[override]
+        """Read the next chunk into a pre-allocated, writable buffer"""
+        while not self._buffer:
+            self._buffer = next(self._chunks, b"")
+            if not self._buffer:
+                # exhausted iterator - signal EOF
+                return 0
+        size = min(len(buffer), len(self._buffer))
+        buffer[:size] = self._buffer[:size]
+        self._buffer = self._buffer[size:]
+        return size
+
+
+def as_file_object(response: httpx.Response) -> io.BufferedReader:
+    """Provide a streaming response as a buffered, readable file object
+
+    Content encodings such as gzip are decoded on the fly by ``iter_bytes``.
+    """
+    return io.BufferedReader(ChunkReader(response.iter_bytes()))  # type: ignore[arg-type]
 
 
 def validate_kafka_config(config: dict[str, Any], topic: str, log: PluginLogger) -> None:
@@ -253,19 +285,30 @@ def validate_kafka_config(config: dict[str, Any], topic: str, log: PluginLogger)
     log.info("Connection details are valid")
 
 
-def get_resource_from_dataset(dataset_id: str, context: UserContext) -> tuple[Response, dict]:
-    """Get resource from dataset"""
+def get_resource_from_dataset(
+    dataset_id: str, client: Client
+) -> tuple[AbstractContextManager[httpx.Response], Dataset]:
+    """Get the file resource of a dataset as a streaming response
+
+    The response is not read yet - enter the returned context manager and consume it
+    with ``iter_bytes()`` or ``as_file_object()``.
+    """
     project_id, task_id = split_task_id(dataset_id)
-    task_meta_data = get_task_metadata(project_id, task_id, context)
-    resource_name = str(task_meta_data["data"]["parameters"]["file"]["value"])
+    dataset = get_dataset(project_id=project_id, dataset_id=task_id, client=client)
+    resource_name = get_resource_name(dataset)
+    return client.datasets.get_file_resource(
+        project_id=project_id, file_name=resource_name
+    ), dataset
 
-    return get_resource_response(project_id, resource_name), task_meta_data
+
+def get_dataset(project_id: str, dataset_id: str, client: Client) -> Dataset:
+    """Get the description of a dataset"""
+    return client.datasets.get_item(project_id=project_id, dataset_id=dataset_id)
 
 
-def get_task_metadata(project: str, task: str, context: UserContext) -> dict:
-    """Get metadata information of a task"""
-    setup_cmempy_user_access(context=context)
-    return dict(get_task(project=project, task=task))
+def get_resource_name(dataset: Dataset) -> str:
+    """Get the name of the file resource a dataset is based on"""
+    return str(dataset.data.parameters["file"])
 
 
 def get_message_with_xml_wrapper(message: KafkaMessage) -> str:
@@ -350,9 +393,12 @@ class DatasetParameterType(StringParameterType):
     ) -> str | None:
         """Return the label for the given dataset."""
         _ = depend_on_parameter_values
-        setup_cmempy_user_access(context.user)
-        task_label = str(get_task(project=context.project_id, task=value)["metadata"]["label"])
-        return f"{task_label}"
+        dataset = get_dataset(
+            project_id=context.project_id,
+            dataset_id=value,
+            client=Client.from_context(context=context),
+        )
+        return f"{dataset.metadata.get('label', '')}"
 
     def autocomplete(
         self,
@@ -362,8 +408,8 @@ class DatasetParameterType(StringParameterType):
     ) -> list[Autocompletion]:
         """Autocompletion request. Returns all results that match ALL provided query terms."""
         _ = depend_on_parameter_values
-        setup_cmempy_user_access(context.user)
-        datasets = list_items(item_type="dataset", project=context.project_id)["results"]
+        client = Client.from_context(context=context)
+        datasets = [_ for _ in client.datasets.values() if _.project_id == context.project_id]
 
         result = []
         dataset_types = []
@@ -371,10 +417,10 @@ class DatasetParameterType(StringParameterType):
             dataset_types = self.dataset_type.split(",")
 
         for _ in datasets:
-            identifier = _["id"]
-            title = _["label"]
+            identifier = _.id
+            title = _.metadata.get("label", "")
             label = f"{title} ({identifier})"
-            if dataset_types and _["pluginId"] not in dataset_types:
+            if dataset_types and _.data.type not in dataset_types:
                 # Ignore datasets of other types
                 continue
 

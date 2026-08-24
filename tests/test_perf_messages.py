@@ -1,32 +1,27 @@
 """Tests for producer/consumer plugin with big datasets."""
 
-import shutil
 from collections.abc import Generator
 from contextlib import suppress
 from pathlib import Path
 
-import json_stream.requests
+import httpx
+import json_stream
+import json_stream.httpx
 import pytest
-import requests
-from cmem.cmempy.workspace.projects.datasets.dataset import make_new_dataset
-from cmem.cmempy.workspace.projects.import_ import (
-    import_from_upload_start,
-    import_from_upload_status,
-    upload_project,
-)
-from cmem.cmempy.workspace.projects.project import delete_project, make_new_project
-from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access
+from cmem_client.repositories.protocols.import_item import ImportConflictPolicy
 from cmem_plugin_examples.workflow.random_values import RandomValues
 
-from cmem_plugin_kafka.utils import get_resource_from_dataset
+from cmem_plugin_kafka.utils import as_file_object, get_resource_from_dataset
 from cmem_plugin_kafka.workflow.consumer import KafkaConsumerPlugin
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
 
 from .utils import (
     TestExecutionContext,
-    TestUserContext,
     XMLUtils,
+    get_client,
     get_kafka_config,
+    make_dataset,
+    make_project,
     needs_cmem,
     needs_kafka,
 )
@@ -48,93 +43,69 @@ XML_PROJECT_LINK = "https://download.eccenca.com/cmem-plugin-kafka/kafka_perform
 JSON_PROJECT_LINK = "https://download.eccenca.com/cmem-plugin-kafka/kafka_json_perf_project.zip"
 
 
+def download(url: str, path: Path) -> None:
+    """Download a remote file to a local path"""
+    with (
+        httpx.stream("GET", url, timeout=10, follow_redirects=True) as response,
+        path.open("wb") as local_file,
+    ):
+        response.raise_for_status()
+        for chunk in response.iter_bytes():
+            local_file.write(chunk)
+
+
+def import_project(url: str, project_id: str, archive_name: str) -> None:
+    """Download a project archive and import it, replacing an existing project"""
+    archive = Path(archive_name)
+    download(url, archive)
+    client = get_client(project_id)
+    client.projects.import_item(
+        path=archive, key=project_id, on_conflict=ImportConflictPolicy.REPLACE
+    )
+
+
 @pytest.fixture
 def xml_dataset_project() -> Generator:
     """Provide the DI build project incl. assets."""
-    setup_cmempy_user_access(context=TestUserContext())
-    with suppress(Exception):
-        delete_project(PROJECT_NAME)
-
-    with (
-        requests.get(url=XML_PROJECT_LINK, timeout=10, stream=True) as response,
-        Path("kafka_performance_project.zip").open("wb") as project_file,
-    ):
-        shutil.copyfileobj(response.raw, project_file)
-
-    validation_response = upload_project("kafka_performance_project.zip")
-    import_id = validation_response["projectImportId"]
-    project_id = validation_response["projectId"]
-
-    import_from_upload_start(import_id=import_id, project_id=project_id, overwrite_existing=True)
-    # loop until "success" boolean is in status response
-    status = import_from_upload_status(import_id)
-    while "success" not in status:
-        status = import_from_upload_status(import_id)
-
-    make_new_dataset(
-        project_name=PROJECT_NAME,
-        dataset_name=CONSUMER_DATASET_NAME,
-        dataset_type=DATASET_TYPE,
-        parameters={"file": CONSUMER_RESOURCE_NAME},
-        autoconfigure=False,
+    import_project(XML_PROJECT_LINK, PROJECT_NAME, "kafka_performance_project.zip")
+    make_dataset(
+        get_client(PROJECT_NAME),
+        PROJECT_NAME,
+        CONSUMER_DATASET_NAME,
+        DATASET_TYPE,
+        CONSUMER_RESOURCE_NAME,
     )
     yield PROJECT_NAME
     with suppress(Exception):
-        setup_cmempy_user_access(context=TestUserContext())
         Path("kafka_performance_project.zip").unlink()
-        delete_project(PROJECT_NAME)
+        get_client(PROJECT_NAME).projects.delete_item(PROJECT_NAME)
 
 
 @pytest.fixture
 def entities_project() -> Generator:
     """Provide the DI build project incl. assets."""
-    setup_cmempy_user_access(context=TestUserContext())
     project_name = "kafka_entities_perf_project"
-    with suppress(Exception):
-        delete_project(project_name)
-    make_new_project(project_name)
+    make_project(project_name)
     yield project_name
-    setup_cmempy_user_access(context=TestUserContext())
-    delete_project(project_name)
+    get_client(project_name).projects.delete_item(project_name)
 
 
 @pytest.fixture
 def json_dataset_project() -> Generator:
     """Provide the DI build project incl. assets."""
-    setup_cmempy_user_access(context=TestUserContext())
-
     project_name = "kafka_json_perf_project"
-    with suppress(Exception):
-        delete_project(project_name)
-
-    with (
-        requests.get(url=JSON_PROJECT_LINK, timeout=10, stream=True) as response,
-        Path("kafka_json_perf_project.zip").open("wb") as project_file,
-    ):
-        shutil.copyfileobj(response.raw, project_file)
-
-    validation_response = upload_project("kafka_json_perf_project.zip")
-    import_id = validation_response["projectImportId"]
-    project_id = validation_response["projectId"]
-
-    import_from_upload_start(import_id=import_id, project_id=project_id, overwrite_existing=True)
-    # loop until "success" boolean is in status response
-    status = import_from_upload_status(import_id)
-    while "success" not in status:
-        status = import_from_upload_status(import_id)
-
-    make_new_dataset(
-        project_name=project_id,
-        dataset_name="json_dataset_result",
-        dataset_type="json",
-        parameters={"file": "json_dataset_result.json"},
-        autoconfigure=False,
+    import_project(JSON_PROJECT_LINK, project_name, "kafka_json_perf_project.zip")
+    make_dataset(
+        get_client(project_name),
+        project_name,
+        "json_dataset_result",
+        "json",
+        "json_dataset_result.json",
     )
-    yield project_id
+    yield project_name
     with suppress(Exception):
-        setup_cmempy_user_access(context=TestUserContext())
         Path("kafka_json_perf_project.zip").unlink()
-        delete_project(project_id)
+        get_client(project_name).projects.delete_item(project_name)
 
 
 @needs_cmem
@@ -170,11 +141,12 @@ def test_perf_kafka_producer_consumer_xml_dataset(xml_dataset_project: str, topi
     # Ensure producer and consumer are working properly
     resource, _ = get_resource_from_dataset(
         dataset_id=f"{PROJECT_NAME}:{CONSUMER_DATASET_NAME}",
-        context=TestUserContext(),
+        client=get_client(PROJECT_NAME),
     )
     with resource as consumer_file:
-        consumer_file.raw.decode_content = True
-        assert XMLUtils.get_elements_len_from_stream(consumer_file.raw) == 286918  # noqa: PLR2004
+        consumer_file.raise_for_status()
+        count = XMLUtils.get_message_count_from_stream(as_file_object(consumer_file))
+        assert count == 286918  # noqa: PLR2004
 
 
 @needs_cmem
@@ -242,7 +214,6 @@ def test_perf_kafka_producer_consumer_with_json_dataset(
         kafka_topic=topic,
         client_id="",
     ).execute([], TestExecutionContext(project_id=json_dataset_project))
-    setup_cmempy_user_access(context=TestUserContext())
     # Consumer
     KafkaConsumerPlugin(
         message_dataset=consumer_dataset,
@@ -260,11 +231,12 @@ def test_perf_kafka_producer_consumer_with_json_dataset(
     # Ensure producer and consumer are working properly
     resource, _ = get_resource_from_dataset(
         dataset_id=f"{json_dataset_project}:{consumer_dataset}",
-        context=TestUserContext(),
+        client=get_client(json_dataset_project),
     )
     with resource as json_file:
+        json_file.raise_for_status()
         count = 0
-        data = json_stream.requests.load(json_file)
+        data = json_stream.httpx.load(json_file)
         for _ in data:
             count += 1
         assert count == 1000000  # noqa: PLR2004

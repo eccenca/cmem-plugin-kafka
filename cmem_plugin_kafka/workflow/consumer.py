@@ -1,12 +1,11 @@
 """Kafka consumer plugin module"""
 
-from collections.abc import Sequence
-from typing import Any, BinaryIO
+from collections.abc import Iterable, Sequence
+from typing import Any
 
-from cmem.cmempy.api import request
-from cmem.cmempy.workspace.projects.datasets.dataset import get_dataset_file_uri
-from cmem.cmempy.workspace.tasks import get_task
-from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport, UserContext
+import httpx
+from cmem_client.client import Client
+from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.description import Plugin, PluginParameter
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
@@ -14,9 +13,8 @@ from cmem_plugin_base.dataintegration.parameter.password import Password, Passwo
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs, FixedSchemaPort
 from cmem_plugin_base.dataintegration.types import BoolParameterType, IntParameterType
-from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access, split_task_id
+from cmem_plugin_base.dataintegration.utils import split_task_id
 from confluent_kafka import KafkaError, KafkaException
-from requests import Response
 
 from cmem_plugin_kafka.constants import (
     AUTO_OFFSET_RESET,
@@ -43,6 +41,7 @@ from cmem_plugin_kafka.kafka_handlers import (
 from cmem_plugin_kafka.utils import (
     DatasetParameterType,
     KafkaConsumer,
+    get_dataset,
     get_default_client_id,
     get_kafka_statistics,
     validate_kafka_config,
@@ -155,7 +154,9 @@ from cmem_plugin_kafka.utils import (
 class KafkaConsumerPlugin(WorkflowPlugin):
     """Kafka Consumer Plugin"""
 
-    def __init__(  # noqa: PLR0913
+    client: Client
+
+    def __init__(  # noqa: PLR0913 PLR0917
         self,
         message_dataset: str,
         bootstrap_servers: str,
@@ -215,7 +216,9 @@ class KafkaConsumerPlugin(WorkflowPlugin):
 
     def get_config(self, project_id: str = "", task_id: str = "") -> dict[str, Any]:
         """Construct and return kafka connection configuration"""
-        default_client_id = get_default_client_id(project_id=project_id, task_id=task_id)
+        default_client_id = get_default_client_id(
+            client=self.client, project_id=project_id, task_id=task_id
+        )
         config = {
             "bootstrap.servers": self.bootstrap_servers,
             "security.protocol": self.security_protocol,
@@ -245,6 +248,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         """Execute the workflow plugin on a given collection of entities."""
         _ = inputs
         self.log.info("Kafka Consumer Started")
+        self.client = Client.from_context(context=context)
         self.validate()
 
         kafka_consumer = KafkaConsumer(
@@ -262,9 +266,12 @@ class KafkaConsumerPlugin(WorkflowPlugin):
             return KafkaEntitiesDataHandler(
                 context=context, plugin_logger=self.log, kafka_consumer=kafka_consumer
             ).consume_messages()
-        setup_cmempy_user_access(context=context.user)
-        task_meta_data = get_task(project=context.task.project_id(), task=self.message_dataset)
-        if task_meta_data["data"]["type"] == "json":
+        dataset = get_dataset(
+            project_id=context.task.project_id(),
+            dataset_id=self.message_dataset,
+            client=self.client,
+        )
+        if dataset.data.type == "json":
             handler: KafkaDatasetHandler = KafkaJSONDataHandler(
                 context=context, plugin_logger=self.log, kafka_consumer=kafka_consumer
             )
@@ -277,7 +284,7 @@ class KafkaConsumerPlugin(WorkflowPlugin):
         write_to_dataset(
             dataset_id=self.message_dataset,
             file_resource=handler,  # type: ignore[arg-type]
-            context=context.user,
+            client=self.client,
         )
         context.report.update(
             ExecutionReport(
@@ -292,59 +299,63 @@ class KafkaConsumerPlugin(WorkflowPlugin):
 
 
 def write_to_dataset(
-    dataset_id: str, file_resource: BinaryIO, context: UserContext | None = None
-) -> Response:
+    dataset_id: str, file_resource: Iterable[bytes], client: Client
+) -> httpx.Response:
     """Write to a dataset.
 
     Args:
     ----
         dataset_id (str): The combined task ID.
-        file_resource (file stream): Already opened byte file stream
-        context (UserContext):
-            The user context to setup environment for accessing CMEM with cmempy.
+        file_resource (Iterable[bytes]): Context manager providing the byte chunks
+        client (Client): The client used to talk to Corporate Memory
 
     Returns:
     -------
-        requests.Response object
+        httpx.Response object
 
     Raises:
     ------
         ValueError: in case the task ID is not splittable
-        ValueError: missing parameter
 
     """
-    setup_cmempy_user_access(context=context)
     project_id, task_id = split_task_id(dataset_id)
 
     return post_resource(
         project_id=project_id,
         dataset_id=task_id,
         file_resource=file_resource,
+        client=client,
     )
 
 
-def post_resource(project_id: str, dataset_id: str, file_resource: BinaryIO) -> Response:
+def post_resource(
+    project_id: str, dataset_id: str, file_resource: Iterable[bytes], client: Client
+) -> httpx.Response:
     """Post a resource to a dataset.
 
     If the dataset resource already exists, posting a new resource will replace it.
+
+    The resource is uploaded as a streamed request body, so consuming an arbitrary
+    amount of messages never needs to be held in memory. This is why the request is
+    issued here instead of using ``client.datasets.post_file_resource``, which reads
+    the whole resource into memory first.
 
     Args:
     ----
         project_id (str): The ID of the project.
         dataset_id (str): The ID of the dataset.
-        file_resource (io Binary Object, optional): The file resource to be uploaded.
+        file_resource (Iterable[bytes]): Context manager providing the byte chunks
+        client (Client): The client used to talk to Corporate Memory
 
     Returns:
     -------
-        Response: The response from the request.
+        httpx.Response: The response from the request.
 
     """
-    endpoint = get_dataset_file_uri().format(project_id, dataset_id)
+    url = client.config.url_build_api / "workspace/projects" / project_id / "datasets"
+    url = url / dataset_id / "file"
 
-    with file_resource as file:
-        return request(  # type: ignore[no-any-return]
-            endpoint,
-            method="PUT",
-            stream=True,
-            data=file,
-        )
+    with file_resource as chunks:  # type: ignore[attr-defined]
+        response: httpx.Response = client.http.put(url, content=chunks)
+    response.raise_for_status()
+    return response
