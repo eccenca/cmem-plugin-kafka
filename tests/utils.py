@@ -23,16 +23,15 @@ from cmem_plugin_kafka.utils import get_dataset, get_resource_name
 
 __all__ = [
     "FIXTURES_DIR",
+    "KAFKA_CONFIG",
     "TestExecutionContext",
     "TestPluginContext",
     "TestUserContext",
     "XMLUtils",
     "get_client",
-    "get_kafka_config",
     "make_dataset",
     "make_project",
     "needs_cmem",
-    "needs_kafka",
     "read_dataset_resource",
     "upload_resource",
 ]
@@ -43,22 +42,15 @@ needs_cmem: MarkDecorator = pytest.mark.skipif(
     "CMEM_BASE_URI" not in os.environ, reason="Needs CMEM configuration"
 )
 
-needs_kafka: MarkDecorator = pytest.mark.skipif(
-    "KAFKA_BOOTSTRAP_SERVER" not in os.environ,
-    "KAFKA_SECURITY_PROTOCOL" not in os.environ,
-    reason="Needs Kafka service configuration",
-)
-
-
-def get_kafka_config() -> dict:
-    """To get the kafka configuration from environment variables"""
-    return {
-        "bootstrap_server": os.environ.get("KAFKA_BOOTSTRAP_SERVER", ""),
-        "security_protocol": os.environ.get("KAFKA_SECURITY_PROTOCOL", "PLAINTEXT"),
-        "sasl_mechanisms": os.environ.get("KAFKA_SASL_MECHANISMS", ""),
-        "sasl_username": os.environ.get("KAFKA_SASL_USERNAME", ""),
-        "sasl_password": os.environ.get("KAFKA_SASL_PASSWORD", ""),
-    }
+# security_protocol/sasl_* are always PLAINTEXT/empty for the testcontainers-managed
+# broker; only bootstrap_server is filled in, by the kafka_broker fixture in conftest.py
+KAFKA_CONFIG: dict[str, str] = {
+    "bootstrap_server": "",
+    "security_protocol": "PLAINTEXT",
+    "sasl_mechanisms": "",
+    "sasl_username": "",
+    "sasl_password": "",
+}
 
 
 def get_client(project_id: str = "dummyProject") -> Client:

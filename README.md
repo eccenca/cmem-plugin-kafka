@@ -19,31 +19,17 @@ This eccenca Corporate Memory plugin allows for sending and receiving messages f
 
 ### Running Test
 
-This plugin needs needs running Kafka and Corporate Memory orchestrations:
+This plugin needs a reachable Corporate Memory instance. Kafka is provided
+automatically by the test suite itself (via `testcontainers`, which needs a
+running local Docker daemon) - no manual Kafka setup or `.env` entries are
+needed for it.
 
 In order to setup access to your Corporate Memory uses [cmemc](https://eccenca.com/go/cmemc)'s config eval command to fill environment variables:
 ```shell-session
 $ eval $(cmemc -c my-cmem config eval)
 ```
 
-In order to setup access to your Kafka, write the connection details to the `.env` file:
-```shell-session
-$ cat .env
-KAFKA_BOOTSTRAP_SERVER=localhost:9093
-KAFKA_SECURITY_PROTOCOL=PLAINTEXT
-```
-
-To run a Kafka orchestration locally, you can use task:
-```shell-session
-$ task custom:kafka:start
-task: [custom:kafka:start] docker-compose -f docker/docker-compose.yml up --wait --no-color --force-recreate --renew-anon-volumes
-
-[+] Running 2/2
- ⠿ Container docker-zookeeper-1  Healthy                                          1.1s
- ⠿ Container docker-kafka-1      Healthy                                          1.1s
-```
-
-Having Kafka as well as Corporate Memory in place, run the test suite with `task check`.
+Having Corporate Memory in place and Docker running, run the test suite with `task check`.
 
 ### confluent-python installation
 
@@ -61,6 +47,11 @@ export LIBRARY_PATH=/opt/homebrew/lib
 * then try `poetry install`
 
 ### Kafka CLI Utility
+
+To manually poke at a broker outside of a test run (e.g. with the CLI tool below), you can
+start one via `task kafka:start` (and stop it again with `task kafka:stop`) - it brings up
+`docker/docker-compose.yml` on `localhost:9093`, independent of the test suite's own
+testcontainers-managed broker.
 
 kcat (formerly kafkacat) is a command-line utility that you can use to test and debug Apache Kafka® deployments. 
 kcat is an open-source utility, available at https://github.com/edenhill/kcat. 

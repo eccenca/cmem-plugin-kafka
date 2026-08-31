@@ -50,12 +50,6 @@ jobs:
         run: |
           poetry self add "poetry-dynamic-versioning[plugin]"
 
-      - name: run kafka docker container
-        id: kafka-docker-container
-        uses: isbang/compose-action@v1.5.1
-        with:
-          compose-file: "./docker/docker-compose.yml"
-
       - name: mypy
         run: |
           task check:mypy
@@ -68,8 +62,6 @@ jobs:
         env:
           CMEM_BASE_URI: ${{ secrets.CMEM_BASE_URI }}
           OAUTH_CLIENT_SECRET: ${{ secrets.OAUTH_CLIENT_SECRET }}
-          KAFKA_BOOTSTRAP_SERVER: ${{ secrets.KAFKA_BOOTSTRAP_SERVER }}
-          KAFKA_SECURITY_PROTOCOL: ${{ secrets.KAFKA_SECURITY_PROTOCOL }}
         run: |
           task check:pytest
 

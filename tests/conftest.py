@@ -7,15 +7,27 @@ from collections.abc import Generator
 import pytest
 from confluent_kafka.admin import AdminClient
 from confluent_kafka.cimpl import NewTopic
+from testcontainers.community.kafka import KafkaContainer
 
-from .utils import get_kafka_config
+from .utils import KAFKA_CONFIG
 
-KAFKA_CONFIG = get_kafka_config()
 TOPIC_PREFIX = "cmem"
 
 
+@pytest.fixture(scope="session")
+def kafka_broker() -> Generator[KafkaContainer]:
+    """Start a single KRaft-mode Kafka broker for the whole test session.
+
+    Always started fresh and always torn down at the end of the run - no reuse
+    detection of an already-running broker, no opt-out.
+    """
+    with KafkaContainer().with_kraft() as broker:
+        KAFKA_CONFIG["bootstrap_server"] = broker.get_bootstrap_server()
+        yield broker
+
+
 @pytest.fixture
-def topic() -> Generator:
+def topic(kafka_broker: KafkaContainer) -> Generator:
     """Create a test topic"""
     kafka_service = KAFKA_CONFIG["bootstrap_server"]
     a = AdminClient({"bootstrap.servers": kafka_service})

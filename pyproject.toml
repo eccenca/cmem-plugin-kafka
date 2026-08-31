@@ -50,6 +50,7 @@ pytest-html = "^4.2.0"
 xmltodict = "^1.0.3"
 pytest-memray = { version = "^1.10.0",  markers = "platform_system != 'Windows'" }
 ruff = "^0.16.2"
+testcontainers = {extras = ["kafka"], version = "^4.9"}
 trivy-py-ecc = "^0.73.0.1"
 
 [build-system]
