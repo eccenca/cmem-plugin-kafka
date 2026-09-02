@@ -51,7 +51,8 @@ from cmem_plugin_kafka.utils import (
 @Plugin(
     label="Kafka Consumer (Receive Messages)",
     plugin_id="cmem_plugin_kafka-ReceiveMessages",
-    description="Reads messages from a Kafka topic and saves it to a messages dataset (Consumer).",
+    description="Reads messages from a Kafka topic as entities, or saves them to a dataset "
+    "(Consumer).",
     documentation=PLUGIN_DOCUMENTATION,
     parameters=[
         PluginParameter(

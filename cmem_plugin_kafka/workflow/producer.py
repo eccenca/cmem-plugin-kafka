@@ -58,19 +58,24 @@ This is especially true for a kafka cluster hosted at
 @Plugin(
     label="Kafka Producer (Send Messages)",
     plugin_id="cmem_plugin_kafka-SendMessages",
-    description="Reads a messages dataset and sends records to a Kafka topic (Producer).",
+    description="Sends entities, or messages from a dataset, to a Kafka topic (Producer).",
     documentation=f"""This workflow operator uses the Kafka Producer API to send
-messages to a [Apache Kafka](https://kafka.apache.org/).
+messages to an [Apache Kafka](https://kafka.apache.org/) topic.
 
-Accepts entities as input, and, if desired, accepts a pre-constructed XML/JSON dataset,
-which is transformed into messages and sent to a designated Kafka topic based
-on configuration.
+By default, each input entity is sent as one message, serialized as JSON with the
+entity's URI, schema type and property values; the message key is always empty in
+this mode. If a Messages Dataset is configured instead, the input port is replaced
+by that dataset, and messages are read from a pre-constructed XML or JSON document
+instead of the workflow's entities. This task has no output port: it is a terminal
+step and hands nothing on to further operators.
 
 <details>
   <summary>Sample XML format</summary>
 
   An example XML document is shown below. This document will be sent as two messages
-  to the configured topic. Each message is created as a proper XML document.
+  to the configured topic. Each message is created as a proper XML document. A
+  `<Message>` element with more than one child cannot be turned into a single XML
+  document; it is skipped, and an error is logged.
 
 {XML_SAMPLE}
 </details>
@@ -92,7 +97,7 @@ on configuration.
             description="Where do you want to retrieve the messages from?"
             " The dropdown lists usable datasets from the current"
             " project only. In case you miss your dataset, check for"
-            " the correct type (XML/JSON) and build project)."
+            " the correct type (XML/JSON) and build project."
             " The messages will be retrieved from the entities if no dataset is provided.",
             param_type=DatasetParameterType(dataset_type="xml,json"),
             default_value="",
