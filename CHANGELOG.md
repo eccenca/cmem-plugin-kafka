@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/)
 
+## [Unreleased]
+
+### Changed
+
+- upgrade template
+- clarify Producer and Consumer task documentation (ports, entity serialization, dataset advanced-options reference) and fix minor typos in parameter descriptions
+
+
 ## [3.5.0] 2026-08-24
 
 ### Changed

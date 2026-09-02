@@ -40,20 +40,24 @@ poetry run pytest -k tombstone
 
 ## Test environment
 
-Almost every test is an integration test. Tests are decorated with `needs_cmem` and
-`needs_kafka` (`tests/utils.py`), which skip on missing `CMEM_BASE_URI` /
-`KAFKA_BOOTSTRAP_SERVER`. A green run with everything skipped is not a passing run — check
-the skip count.
+Almost every test is an integration test. Tests are decorated with `needs_cmem`
+(`tests/utils.py`), which skips on missing `CMEM_BASE_URI`. A green run with everything
+skipped is not a passing run — check the skip count.
 
-Both orchestrations must be reachable:
+CMEM must be reachable:
 
 ```shell
 eval $(cmemc -c my-cmem config eval)   # CMEM credentials into the environment
-task kafka:start                       # local broker on localhost:9093
 ```
 
-`pytest-dotenv` loads `.env` (git-ignored) for `KAFKA_BOOTSTRAP_SERVER` /
-`KAFKA_SECURITY_PROTOCOL` and CMEM connection variables.
+Kafka needs no manual setup: the session-scoped `kafka_broker` fixture in `tests/conftest.py`
+starts a `testcontainers`-managed single-node KRaft broker automatically for any test module
+that needs one (via `pytestmark = pytest.mark.usefixtures("kafka_broker")`), and tears it down
+at the end of the run — this just needs a running local Docker daemon, nothing else. To poke at
+a broker by hand instead (e.g. with a CLI tool), `task kafka:start`/`task kafka:stop` still
+bring up `docker/docker-compose.yml` on `localhost:9093`, independent of the test suite.
+
+`pytest-dotenv` loads `.env` (git-ignored) for CMEM connection variables.
 
 Tests create and delete real CMEM projects (`kafka_test_project`, `kafka_consumer_project`, …)
 and real Kafka topics (the `topic` fixture in `tests/conftest.py` makes a randomly suffixed

@@ -12,9 +12,9 @@ from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
 
 from .utils import (
     FIXTURES_DIR,
+    KAFKA_CONFIG,
     TestExecutionContext,
     get_client,
-    get_kafka_config,
     make_dataset,
     make_project,
     needs_cmem,
@@ -28,7 +28,8 @@ DATASET_TYPE = "json"
 RESOURCE_NAME = f"{DATASET_NAME}.{DATASET_TYPE}"
 DATASET_ID = f"{DATASET_NAME}"
 
-KAFKA_CONFIG = get_kafka_config()
+pytestmark = pytest.mark.usefixtures("kafka_broker")
+
 DEFAULT_TOPIC = "eccenca_kafka_handler_workflow"
 DEFAULT_GROUP = "workflow"
 

@@ -11,13 +11,12 @@ from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
 
 from .utils import (
     FIXTURES_DIR,
+    KAFKA_CONFIG,
     TestExecutionContext,
     get_client,
-    get_kafka_config,
     make_dataset,
     make_project,
     needs_cmem,
-    needs_kafka,
     upload_resource,
 )
 
@@ -27,8 +26,9 @@ DATASET_TYPE = "xml"
 RESOURCE_NAME = f"{DATASET_NAME}.{DATASET_TYPE}"
 DATASET_ID = f"{DATASET_NAME}"
 
-KAFKA_CONFIG = get_kafka_config()
 DEFAULT_TOPIC = "eccenca_kafka_workflow"
+
+pytestmark = pytest.mark.usefixtures("kafka_broker")
 
 
 @pytest.fixture
@@ -43,7 +43,6 @@ def project() -> Generator[str]:
 
 
 @needs_cmem
-@needs_kafka
 def test_execution_plain_kafka(project: str, topic: str) -> None:
     """Test plugin execution for Plain Kafka"""
     KafkaProducerPlugin(
@@ -58,7 +57,6 @@ def test_execution_plain_kafka(project: str, topic: str) -> None:
 
 
 @needs_cmem
-@needs_kafka
 def test_validate_invalid_inputs(project: str, topic: str) -> None:
     """Test producer plugin validation with invalid inputs"""
     # Invalid Dataset

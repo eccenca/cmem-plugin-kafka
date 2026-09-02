@@ -16,14 +16,13 @@ from cmem_plugin_kafka.workflow.consumer import KafkaConsumerPlugin
 from cmem_plugin_kafka.workflow.producer import KafkaProducerPlugin
 
 from .utils import (
+    KAFKA_CONFIG,
     TestExecutionContext,
     XMLUtils,
     get_client,
-    get_kafka_config,
     make_dataset,
     make_project,
     needs_cmem,
-    needs_kafka,
 )
 
 PROJECT_NAME = "kafka_performance_project"
@@ -35,7 +34,8 @@ CONSUMER_RESOURCE_NAME = f"{CONSUMER_DATASET_NAME}.{DATASET_TYPE}"
 PRODUCER_DATASET_ID = f"{PRODUCER_DATASET_NAME}"
 CONSUMER_DATASET_ID = f"{CONSUMER_DATASET_NAME}"
 
-KAFKA_CONFIG = get_kafka_config()
+pytestmark = pytest.mark.usefixtures("kafka_broker")
+
 DEFAULT_GROUP = ""
 DEFAULT_TOPIC = "eccenca_kafka_workflow"
 DEFAULT_RESET = "earliest"
@@ -109,7 +109,6 @@ def json_dataset_project() -> Generator:
 
 
 @needs_cmem
-@needs_kafka
 def test_perf_kafka_producer_consumer_xml_dataset(xml_dataset_project: str, topic: str) -> None:
     """Test plugin execution for Plain Kafka"""
     # Producer
@@ -150,7 +149,6 @@ def test_perf_kafka_producer_consumer_xml_dataset(xml_dataset_project: str, topi
 
 
 @needs_cmem
-@needs_kafka
 def test_perf_kafka_producer_consumer_with_entities(entities_project: str, topic: str) -> None:
     """Test plugin execution for Plain Kafka"""
     no_of_entities = 1000000
@@ -196,7 +194,6 @@ def test_perf_kafka_producer_consumer_with_entities(entities_project: str, topic
 
 
 @needs_cmem
-@needs_kafka
 def test_perf_kafka_producer_consumer_with_json_dataset(
     json_dataset_project: str, topic: str
 ) -> None:

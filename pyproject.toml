@@ -31,7 +31,7 @@ cmem-client = "^1.0.0"
 httpx = "*"
 
 [tool.poetry.dependencies.cmem-plugin-base]
-version = "^4.19.0"
+version = "^4.20.0"
 allow-prereleases = false
 
 [tool.poetry.group.dev.dependencies.cmem-cmemc]
@@ -50,6 +50,7 @@ pytest-html = "^4.2.0"
 xmltodict = "^1.0.3"
 pytest-memray = { version = "^1.10.0",  markers = "platform_system != 'Windows'" }
 ruff = "^0.16.2"
+testcontainers = {extras = ["kafka"], version = "^4.9"}
 trivy-py-ecc = "^0.73.0.1"
 
 [build-system]
@@ -65,9 +66,6 @@ bump = true
 [tool.mypy]
 warn_return_any = true
 ignore_missing_imports = true
-
-[tool.pytest.ini_options]
-addopts = ""
 
 [tool.coverage.report]
 exclude_also = [
@@ -93,6 +91,7 @@ select = ["ALL"]
 ignore = [
     "ANN204",  # Missing return type annotation for special method `__init__`
     "COM812",  # missing-trailing-comma
+    "CPY001",  # Missing copyright notice
     "D107",    # Missing docstring in __init__
     "D203",    # [*] 1 blank line required before class docstring
     "D211",    # No blank lines allowed before class docstring
@@ -105,7 +104,11 @@ ignore = [
     "G004",    # Logging statement uses f-string
     "ISC001",  # single-line-implicit-string-concatenation
     "PD",      # opinionated linting for pandas code
-    "S101",    # use of assert detected
     "TRY003",  # Avoid specifying long messages outside the exception class
-    "CPY001",  # Missing copyright notice
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101",    # asserts allowed in tests
+    "ARG",     # unused function args (pytest fixtures)
 ]
