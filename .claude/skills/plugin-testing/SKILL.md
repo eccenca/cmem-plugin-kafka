@@ -1,13 +1,13 @@
 ---
 name: plugin-testing
-description: Write or fix tests for a DataIntegration task - what can be tested standalone, when a test needs a Corporate Memory deployment and how to mark it, and how to create and clean up test assets. Use when adding, changing or debugging tests in this project.
+description: Write or fix tests for a DataIntegration task - what can be tested standalone, when a test needs an eccenca Corporate Memory deployment and how to mark it, and how to create and clean up test assets. Use when adding, changing or debugging tests in this project.
 ---
 
 # Testing a DataIntegration task
 
 Tests run with `task check:pytest`, which collects coverage and a memray
-report. `pytest-dotenv` loads `.env`, so the same Corporate Memory credentials
-the plugin uses are available to the tests.
+report. `pytest-dotenv` loads `.env`, so the same eccenca Corporate Memory
+credentials the plugin uses are available to the tests.
 
 ## Two kinds of test, and the line between them
 
@@ -18,7 +18,8 @@ Everything else needs a deployment and is marked:
 
 ```python
 needs_cmem = pytest.mark.skipif(
-    os.environ.get("CMEM_BASE_URI", "") == "", reason="Needs CMEM configuration"
+    os.environ.get("CMEM_BASE_URI", "") == "",
+    reason="Needs eccenca Corporate Memory configuration",
 )
 ```
 
@@ -30,6 +31,28 @@ pipeline without secrets. A missing marker turns a contributor's first
 which fetches a real OAuth token on construction. Any test that constructs one
 is an integration test and must carry `@needs_cmem`, even when the plugin
 itself never calls out. The same is true of `TestPluginContext`.
+
+A test that needs anything *else* - a third party API, a scratch instance to
+run integration tests against - declares its own environment variables, named
+`TESTING_<SERVICE>_<THING>`, and gates on them the same way:
+
+```python
+needs_hcloud = pytest.mark.skipif(
+    os.environ.get("TESTING_HCLOUD_TOKEN", "") == "",
+    reason="Needs a Hetzner Cloud API token",
+)
+```
+
+The prefix is what makes it possible to tell, in a `.env` file or in a
+group-level list of CI variables, which entries drive the test suite and which
+configure the product. Pick it before writing the `skipif`: the name ends up in
+`.env`, in the pipeline configuration and in every marker that reads it, so
+renaming it later is a change in three places at once.
+
+The Corporate Memory connection variables are the exception. `CMEM_BASE_URI`,
+`OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET` and `OAUTH_GRANT_TYPE` keep their
+established `cmemc` names, because the plugin and `cmemc` read them too - they
+configure the product and are not test-only.
 
 ## Testing a workflow plugin
 
