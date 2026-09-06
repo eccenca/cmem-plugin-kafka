@@ -404,39 +404,38 @@ xdg-base-dirs = ">=6.0.2,<7.0.0"
 
 [[package]]
 name = "cmem-cmemc"
-version = "25.6.2"
+version = "26.2.1"
 description = "Command line client for eccenca Corporate Memory"
 optional = false
-python-versions = "<4.0,>=3.10"
+python-versions = "<4,>=3.13"
 groups = ["dev"]
 files = [
-    {file = "cmem_cmemc-25.6.2-py3-none-any.whl", hash = "sha256:e411a9677ccd384aec609bb7e0dadc8a9805bda5ad19c37d000531bf46e9beab"},
-    {file = "cmem_cmemc-25.6.2.tar.gz", hash = "sha256:d1e55a0ddf338603d76d1e87660e6e0767b550d7814e70f06fe3771c3603b2fc"},
+    {file = "cmem_cmemc-26.2.1-py3-none-any.whl", hash = "sha256:2214372210783fe8f3617b4f63b8d71952109d00d30e3d9f6c46184dcfc4cbbd"},
+    {file = "cmem_cmemc-26.2.1.tar.gz", hash = "sha256:25d0c37e2b120c6f94c63763118802a244fde5ae16fed3c3f0ade3a1dd53f0ca"},
 ]
 
 [package.dependencies]
-beautifulsoup4 = ">=4.13.3,<5.0.0"
-certifi = ">=2024.2.2"
-click = ">=8.3.0,<9.0.0"
+beautifulsoup4 = ">=4.14.3,<5.0.0"
+certifi = ">=2026.1.4"
+click = ">=8.3.1,<9.0.0"
 click-didyoumean = ">=0.3.1,<0.4.0"
 click-help-colors = ">=0.9.4,<0.10.0"
-cmem-cmempy = "25.4.0"
+cmem-client = ">=1.1.0,<2.0.0"
 configparser = ">=7.2.0,<8.0.0"
-humanize = ">=4.14.0,<5.0.0"
+humanize = ">=4.15.0,<5.0.0"
 jinja2 = ">=3.1.6,<4.0.0"
 junit-xml = ">=1.9,<2.0"
 natsort = ">=8.4.0,<9.0.0"
-packaging = ">=24.2,<25.0"
-prometheus-client = ">=0.21.1,<0.22.0"
-pygments = ">=2.19.1,<3.0.0"
-pyjwt = ">=2.10.1,<3.0.0"
+packaging = ">=26.0,<27.0"
+prometheus-client = ">=0.24.1,<0.25.0"
+pygments = ">=2.19.2,<3.0.0"
+pyjwt = ">=2.11.0,<3.0.0"
 python-dateutil = ">=2.9.0.post0,<3.0.0"
-requests = ">=2.32.3,<3.0.0"
-rich = ">=14.0.0,<15.0.0"
+requests = ">=2.32.5,<3.0.0"
+rich = ">=14.3.2,<15.0.0"
 six = ">=1.17.0,<2.0.0"
-smart-open = ">=7.1.0,<8.0.0"
-timeago = ">=1.0.16,<2.0.0"
-treelib = ">=1.7.1,<2.0.0"
+smart-open = ">=7.5.0,<8.0.0"
+treelib = ">=1.8.0,<2.0.0"
 urllib3 = ">=2.6.3,<3.0.0"
 
 [[package]]
@@ -1695,14 +1694,14 @@ icu = ["PyICU (>=1.0.0)"]
 
 [[package]]
 name = "packaging"
-version = "24.2"
+version = "26.3"
 description = "Core utilities for Python packages"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 groups = ["dev"]
 files = [
-    {file = "packaging-24.2-py3-none-any.whl", hash = "sha256:09abb1bccd265c01f4a3aa3f7a7db064b36514d2cba19a2f694fe6150451a759"},
-    {file = "packaging-24.2.tar.gz", hash = "sha256:c228a6dc5e932d346bc5739379109d49e8853dd8223571c7c5b55260edc0b97f"},
+    {file = "packaging-26.3-py3-none-any.whl", hash = "sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"},
+    {file = "packaging-26.3.tar.gz", hash = "sha256:94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79"},
 ]
 
 [[package]]
@@ -1870,17 +1869,19 @@ testing = ["coverage", "pytest", "pytest-benchmark"]
 
 [[package]]
 name = "prometheus-client"
-version = "0.21.1"
+version = "0.24.1"
 description = "Python client for the Prometheus monitoring system."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 groups = ["dev"]
 files = [
-    {file = "prometheus_client-0.21.1-py3-none-any.whl", hash = "sha256:594b45c410d6f4f8888940fe80b5cc2521b305a1fafe1c58609ef715a001f301"},
-    {file = "prometheus_client-0.21.1.tar.gz", hash = "sha256:252505a722ac04b0456be05c05f75f45d760c2911ffc45f2a06bcaed9f3ae3fb"},
+    {file = "prometheus_client-0.24.1-py3-none-any.whl", hash = "sha256:150db128af71a5c2482b36e588fc8a6b95e498750da4b17065947c16070f4055"},
+    {file = "prometheus_client-0.24.1.tar.gz", hash = "sha256:7e0ced7fbbd40f7b84962d5d2ab6f17ef88a72504dcf7c0b40737b43b2a461f9"},
 ]
 
 [package.extras]
+aiohttp = ["aiohttp"]
+django = ["django"]
 twisted = ["twisted"]
 
 [[package]]
@@ -2613,17 +2614,6 @@ typing-extensions = ">=4.4.0,<5.0.0"
 syntax = ["tree-sitter (>=0.25.0) ; python_version >= \"3.10\"", "tree-sitter-bash (>=0.23.0) ; python_version >= \"3.10\"", "tree-sitter-css (>=0.23.0) ; python_version >= \"3.10\"", "tree-sitter-go (>=0.23.0) ; python_version >= \"3.10\"", "tree-sitter-html (>=0.23.0) ; python_version >= \"3.10\"", "tree-sitter-java (>=0.23.0) ; python_version >= \"3.10\"", "tree-sitter-javascript (>=0.23.0) ; python_version >= \"3.10\"", "tree-sitter-json (>=0.24.0) ; python_version >= \"3.10\"", "tree-sitter-markdown (>=0.3.0) ; python_version >= \"3.10\"", "tree-sitter-python (>=0.23.0) ; python_version >= \"3.10\"", "tree-sitter-regex (>=0.24.0) ; python_version >= \"3.10\"", "tree-sitter-rust (>=0.23.0) ; python_version >= \"3.10\"", "tree-sitter-sql (>=0.3.11) ; python_version >= \"3.10\"", "tree-sitter-toml (>=0.6.0) ; python_version >= \"3.10\"", "tree-sitter-xml (>=0.7.0) ; python_version >= \"3.10\"", "tree-sitter-yaml (>=0.6.0) ; python_version >= \"3.10\""]
 
 [[package]]
-name = "timeago"
-version = "1.0.16"
-description = "A very simple python library, used to format datetime with `*** time ago` statement. eg: \"3 hours ago\"."
-optional = false
-python-versions = "*"
-groups = ["dev"]
-files = [
-    {file = "timeago-1.0.16-py3-none-any.whl", hash = "sha256:9b8cb2e3102b329f35a04aa4531982d867b093b19481cfbb1dac7845fa2f79b0"},
-]
-
-[[package]]
 name = "tomli"
 version = "2.4.1"
 description = "A lil' TOML parser"
@@ -2897,4 +2887,4 @@ test = ["pytest", "pytest-cov"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.13"
-content-hash = "d7bf5747fc657ec684913c822d91f0e0a9a0980e75e23e65097a2fc5297bec88"
+content-hash = "35c231be87ecdb28d5eb04e0ae802bfd38687dfecfa35f8f2c88fa8ed9400f41"
