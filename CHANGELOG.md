@@ -9,9 +9,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Changed
 
+- updated dependencies and template
 - upgrade template
 - clarify Producer and Consumer task documentation (ports, entity serialization, dataset advanced-options reference) and fix minor typos in parameter descriptions
-
 
 ## [3.5.0] 2026-08-24
 
