@@ -13,6 +13,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - upgrade template
 - clarify Producer and Consumer task documentation (ports, entity serialization, dataset advanced-options reference) and fix minor typos in parameter descriptions
 
+### Fixed
+
+- Consumer and Producer tasks no longer convert non-ASCII characters to unicode escape
+  sequences when wrapping consumed Kafka messages into JSON, or when producing messages
+  from a JSON dataset or from entities
+
 ## [3.5.0] 2026-08-24
 
 ### Changed

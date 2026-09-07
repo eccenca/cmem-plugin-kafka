@@ -2,7 +2,20 @@
 
 import json
 
-from cmem_plugin_kafka.utils import get_kafka_statistics
+from cmem_plugin_kafka.utils import (
+    KafkaMessage,
+    get_kafka_statistics,
+    get_message_with_json_wrapper,
+)
+
+
+def test_get_message_with_json_wrapper_keeps_unicode_characters() -> None:
+    """Test that non-ASCII characters in the message value are not escaped"""
+    message = KafkaMessage(key="1", value='{"city": "Köln", "name": "Müller"}')
+    wrapped = get_message_with_json_wrapper(message)
+    assert "\\u00f6" not in wrapped
+    assert "\\u00fc" not in wrapped
+    assert json.loads(wrapped)["message"]["content"] == {"city": "Köln", "name": "Müller"}
 
 
 def test_get_kafka_statistics() -> None:
