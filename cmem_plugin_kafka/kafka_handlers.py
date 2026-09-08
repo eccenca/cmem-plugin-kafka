@@ -181,7 +181,7 @@ class KafkaJSONDataHandler(KafkaDatasetHandler):
             content = None
             if not tombstone:
                 _content = _message.get("content")
-                content = json.dumps(_content) if _content else None
+                content = json.dumps(_content, ensure_ascii=False) if _content else None
             yield KafkaMessage(key=key, value=content, headers=headers, tombstone=tombstone)
 
     def _aggregate_data(self) -> Generator:
@@ -361,7 +361,7 @@ class KafkaEntitiesDataHandler(KafkaDataHandler):
             for i, path in enumerate(paths):
                 values[path.path] = list(entity.values[i])
             result["entity"] = {"uri": entity.uri, "values": values}
-            kafka_payload = json.dumps(result, indent=4)
+            kafka_payload = json.dumps(result, indent=4, ensure_ascii=False)
             yield KafkaMessage(key=None, value=kafka_payload)
 
     def _aggregate_data(self) -> Entities:
