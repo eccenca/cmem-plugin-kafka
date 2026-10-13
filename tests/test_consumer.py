@@ -197,7 +197,7 @@ def test_validate_message_limit_parameter(project: str, topic: str) -> None:
     # Ensure producer and consumer are working properly
     resource = read_dataset_resource(PROJECT_NAME, CONSUMER_DATASET_NAME)
     data_dict = xmltodict.parse(resource)
-    assert len(data_dict["KafkaMessages"]["Message"]) == 2  # noqa: PLR2004
+    assert len(data_dict["KafkaMessages"]["Message"]) == 2
 
 
 @needs_cmem
@@ -231,7 +231,7 @@ def test_validate_disable_commit_parameter(project: str, topic: str) -> None:
     # Ensure producer and consumer are working properly
     resource = read_dataset_resource(project, CONSUMER_DATASET_NAME)
     data_dict = xmltodict.parse(resource)
-    assert len(data_dict["KafkaMessages"]["Message"]) == 3  # noqa: PLR2004
+    assert len(data_dict["KafkaMessages"]["Message"]) == 3
 
     # Consumer
     KafkaConsumerPlugin(
@@ -250,7 +250,7 @@ def test_validate_disable_commit_parameter(project: str, topic: str) -> None:
     # Ensure producer and consumer are working properly
     resource = read_dataset_resource(PROJECT_NAME, CONSUMER_DATASET_NAME)
     data_dict = xmltodict.parse(resource)
-    assert len(data_dict["KafkaMessages"]["Message"]) == 3  # noqa: PLR2004
+    assert len(data_dict["KafkaMessages"]["Message"]) == 3
     # Consumer
     KafkaConsumerPlugin(
         message_dataset=CONSUMER_DATASET_ID,
@@ -304,11 +304,11 @@ def test_execution_kafka_producer_consumer_with_entities(project: str, topic: st
         consumer_entities.schema.type_uri
         == "https://github.com/eccenca/cmem-plugin-kafka#PlainMessage"
     )
-    assert len(consumer_entities.schema.paths) == 5  # noqa: PLR2004
+    assert len(consumer_entities.schema.paths) == 5
     for _ in consumer_entities.entities:
         count += 1
 
-    assert count == 10  # noqa: PLR2004
+    assert count == 10
 
 
 @needs_cmem
