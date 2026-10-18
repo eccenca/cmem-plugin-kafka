@@ -13,7 +13,10 @@ the next `copier update` either reverts them or turns them into a merge
 conflict.
 
 Add project specific build steps to `TaskfileCustom.yaml` instead - note the
-`.yaml` spelling, since only that one is included. Project specific agent
+`.yaml` spelling, since only that one is included. A GitLab pipeline takes
+project specific jobs from `.gitlab-ci-custom.yml` the same way, included when
+that file exists; it can add to a templated job but not redefine one, and
+`.github/workflows/` has no equivalent hook. Project specific agent
 instructions belong in `CLAUDE.md`, which the template never writes and which
 is read alongside these rules. Personal tool permissions belong in
 `.claude/settings.local.json`, which is git-ignored.
@@ -48,6 +51,22 @@ comment above it - never a new entry in the `ignore` list, which would also
 silence the rule for code nobody has looked at. Report it with the
 `template-feedback` skill too, since a rule that is wrong here is usually wrong
 in other projects as well.
+
+One class of that is already settled and needs neither a human nor a report:
+`PLR0913` and `PLR0917` on a signature whose arity a framework fixes rather
+than the author - a plugin constructor with one argument per `PluginParameter`,
+a Click command with one per option. Suppress both on the `def`, with the
+reason above it. Neither escape ruff suggests is available, since keyword-only
+arguments answer `PLR0917` but not `PLR0913`, and folding the arguments into
+one object breaks the one-argument-per-option mapping the framework relies on.
+
+`ARG002` is settled on the same grounds, one argument further in: a method the
+framework calls has the signature the framework declares, so an argument the
+implementation does not need cannot be dropped - a workflow task with no input
+ports never reads `inputs`. Suppress it on the argument, again with the reason
+above it. Renaming it to `_inputs` silences ruff as well, and is wrong here:
+the name belongs to an API the caller may use by keyword, as this project's own
+tests do.
 
 ## Every user visible change gets a changelog entry
 

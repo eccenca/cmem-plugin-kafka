@@ -2095,14 +2095,14 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pyjwt"
-version = "2.13.0"
+version = "2.15.1"
 description = "JSON Web Token implementation in Python"
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "dev"]
 files = [
-    {file = "pyjwt-2.13.0-py3-none-any.whl", hash = "sha256:66adcc2aff09b3f1bbd95fc1e1577df8ac8723c978552fd43304c8a290ac5728"},
-    {file = "pyjwt-2.13.0.tar.gz", hash = "sha256:41571c89ca91598c79e8ef18a2d07367d4810fbbd6f637794879baf1b7703423"},
+    {file = "pyjwt-2.15.1-py3-none-any.whl", hash = "sha256:42d59d631f7768a1028a64c7ff581a9bf7519804daf91fc5b6c56e30eec5e193"},
+    {file = "pyjwt-2.15.1.tar.gz", hash = "sha256:4f259e80cdfb6b3fc18a7de51fd1ef9ec79652f25019bae68975ca2468a34df8"},
 ]
 
 [package.extras]
@@ -2688,14 +2688,14 @@ six = ">=1.13.0"
 
 [[package]]
 name = "trivy-py-ecc"
-version = "0.73.0.1"
+version = "0.76.0.1"
 description = "Python wrapper around invoking trivy (https://trivy.dev/)"
 optional = false
 python-versions = ">=3.9"
 groups = ["dev"]
 files = [
-    {file = "trivy_py_ecc-0.73.0.1-py2.py3-none-manylinux2014_x86_64.whl", hash = "sha256:93e4bbd0ff677fbbfa5b58123714e2a96279da5a281826685b17927a7f75e7d5"},
-    {file = "trivy_py_ecc-0.73.0.1.tar.gz", hash = "sha256:550ed85b5f7ca0230cfe0a73ad79f7acf894df8a436968c22beeff2a6ae604af"},
+    {file = "trivy_py_ecc-0.76.0.1-py2.py3-none-manylinux2014_x86_64.whl", hash = "sha256:9b426f382743a37d74c693ba0dbccc01b8941cb55a69922fff2d0f1d436ad931"},
+    {file = "trivy_py_ecc-0.76.0.1.tar.gz", hash = "sha256:9385d46a4a3865106aee8a64964c64b5f95cf0dff1e4e30d993fc1c50cf34a89"},
 ]
 
 [[package]]
@@ -2727,14 +2727,14 @@ typing-extensions = ">=4.15.0"
 
 [[package]]
 name = "urllib3"
-version = "2.7.0"
+version = "2.8.0"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 optional = false
 python-versions = ">=3.10"
 groups = ["main", "dev"]
 files = [
-    {file = "urllib3-2.7.0-py3-none-any.whl", hash = "sha256:9fb4c81ebbb1ce9531cce37674bbc6f1360472bc18ca9a553ede278ef7276897"},
-    {file = "urllib3-2.7.0.tar.gz", hash = "sha256:231e0ec3b63ceb14667c67be60f2f2c40a518cb38b03af60abc813da26505f4c"},
+    {file = "urllib3-2.8.0-py3-none-any.whl", hash = "sha256:0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3"},
+    {file = "urllib3-2.8.0.tar.gz", hash = "sha256:63bf2ead4c879426ebf22ef2a781eeb4aa3b4ae798a0435506f8687fd5bb9b63"},
 ]
 
 [package.extras]
@@ -2887,4 +2887,4 @@ test = ["pytest", "pytest-cov"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.13"
-content-hash = "35c231be87ecdb28d5eb04e0ae802bfd38687dfecfa35f8f2c88fa8ed9400f41"
+content-hash = "19aff400d416a069cee5a48238059dff851628d1ef1d96d26a0b960d9cb10f52"

@@ -145,7 +145,7 @@ def test_perf_kafka_producer_consumer_xml_dataset(xml_dataset_project: str, topi
     with resource as consumer_file:
         consumer_file.raise_for_status()
         count = XMLUtils.get_message_count_from_stream(as_file_object(consumer_file))
-        assert count == 286918  # noqa: PLR2004
+        assert count == 286918
 
 
 @needs_cmem
@@ -186,7 +186,7 @@ def test_perf_kafka_producer_consumer_with_entities(entities_project: str, topic
         consumer_entities.schema.type_uri
         == "https://github.com/eccenca/cmem-plugin-kafka#PlainMessage"
     )
-    assert len(consumer_entities.schema.paths) == 5  # noqa: PLR2004
+    assert len(consumer_entities.schema.paths) == 5
     for _ in consumer_entities.entities:
         count += 1
 
@@ -236,4 +236,4 @@ def test_perf_kafka_producer_consumer_with_json_dataset(
         data = json_stream.httpx.load(json_file)
         for _ in data:
             count += 1
-        assert count == 1000000  # noqa: PLR2004
+        assert count == 1000000

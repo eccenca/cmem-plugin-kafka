@@ -51,7 +51,7 @@ xmltodict = "^1.0.3"
 pytest-memray = { version = "^1.10.0",  markers = "platform_system != 'Windows'" }
 ruff = "^0.16.2"
 testcontainers = {extras = ["kafka"], version = "^4.9"}
-trivy-py-ecc = "^0.73.0.1"
+trivy-py-ecc = "^0.76.0.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
@@ -112,10 +112,12 @@ ignore = [
     "ISC001",  # single-line-implicit-string-concatenation
     "PD",      # opinionated linting for pandas code
     "TRY003",  # Avoid specifying long messages outside the exception class
+    "TRY400",  # PluginLogger has no exception(), so error() is the only option
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = [
     "S101",    # asserts allowed in tests
     "ARG",     # unused function args (pytest fixtures)
+    "PLR2004", # in an assertion the expected value is the literal
 ]
